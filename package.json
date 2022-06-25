@@ -1,0 +1,53 @@
+{
+  "name": "@maverick-js/observables",
+  "description": "A lightweight (~750B) library for creating reactive observables via functions.",
+  "license": "MIT",
+  "version": "0.0.2",
+  "type": "module",
+  "module": "dist/prod/index.js",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "development": "./dist/dev/index.js",
+      "test": "./dist/dev/index.js",
+      "default": "./dist/prod/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "bundle": "rimraf dist && node .scripts/bundle.js",
+    "types": "tsc -p tsconfig-build.json && api-extractor run -c types.json && rimraf dist/*.d.ts",
+    "test": "vitest --run",
+    "format": "prettier src --write --loglevel warn",
+    "test:watch": "vitest --watch",
+    "release": "pnpm test && pnpm bundle && pnpm types && npm publish",
+    "size": "pnpm bundle && export-size ."
+  },
+  "contributors": [
+    "Rahim Alwer <rahim.alwer@gmail.com>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maverick-js/observables.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maverick-js/observables/issues"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.25.3",
+    "@types/node": "^18.0.0",
+    "esbuild": "^0.14.47",
+    "export-size": "^0.5.2",
+    "prettier": "^2.7.1",
+    "rimraf": "^3.0.2",
+    "vite": "^2.9.12",
+    "vitest": "^0.15.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
