@@ -7,11 +7,11 @@
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
 > do any unnecessary work and don't place the burden of figuring it out on the developer.
 
-This is a tiny (~750B minzipped) library for creating reactive observables via functions. You
+This is a tiny (~850B minzipped) library for creating reactive observables via functions. You
 can use observables to store state, create computed properties (`y = mx + b`), and subscribe to
 updates as its value changes.
 
-- 🪶 Light (~750B minzipped)
+- 🪶 Light (~850B minzipped)
 - 🌎 All types are observable (i.e., string, array, object, etc.)
 - 🕵️‍♀️ Only updates when value has changed
 - ⏱️ Batched updates via microtask scheduler
@@ -65,7 +65,7 @@ stop();
 
 <img src="./export-sizes.png" alt="Library export sizes" width="250px" />
 
-**Total:** if you import everything it'll be ~750B.
+**Total:** if you import everything it'll be ~850B.
 
 You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
 

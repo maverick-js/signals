@@ -1,8 +1,8 @@
 {
   "name": "@maverick-js/observables",
-  "description": "A lightweight (~750B) library for creating reactive observables via functions.",
+  "description": "A lightweight (~850B) library for creating reactive observables via functions.",
   "license": "MIT",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "module": "dist/prod/index.js",
   "sideEffects": false,
