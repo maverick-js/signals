@@ -168,6 +168,17 @@ const stop = $effect(() => console.log($c()));
 stop();
 ```
 
+You can optionally destroy all inner observables when stopping the effect by passing in `true`
+to the stop effect function:
+
+```js
+// `$c` is from the example above.
+const stop = $effect(() => console.log($c()));
+
+// This will dispose of `$a`, `$b`, `$c`, and the effect itself.
+stop(true); // <- deep flag
+```
+
 ### `$peek`
 
 Returns the current value stored inside an observable without triggering a dependency.
@@ -236,7 +247,8 @@ $a.set(30);
 
 ### `$dispose`
 
-Unsubscribes the given observable.
+Unsubscribes the given observable and optionally all inner computations. Disposed functions will
+retain their current value but are no longer reactive.
 
 ```js
 import { $observable, $dispose } from '@maverick-js/observables';
@@ -244,9 +256,24 @@ import { $observable, $dispose } from '@maverick-js/observables';
 const $a = $observable(10);
 const $b = $computed(() => $a());
 
+// `$b` will no longer update if `$a` is updated.
 $dispose($a);
 
-// `$b` will no longer update if `$a` is updated.
+$a.set(100);
+console.log($b()); // still logs `10`
+```
+
+The second argument to `$dispose` is a `deep` flag which specifies whether all inner computations
+should also be disposed of:
+
+```js
+const $a = $observable();
+const $b = $computed(() => $a());
+const $c = $effect(() => $b());
+
+$dispose($c, true); // <- deep flag
+
+// `$a`, `$b`, and `$c` are all disposed.
 ```
 
 ### `isComputed`

@@ -178,6 +178,43 @@ describe('$effect', () => {
     await $tick();
     expect(effect).to.toHaveBeenCalledTimes(3);
   });
+
+  it('should stop effect', async () => {
+    const effect = vi.fn();
+
+    const $a = $observable(10);
+
+    const stop = $effect(() => {
+      effect();
+      $a();
+    });
+
+    stop();
+
+    $a.set(20);
+    await $tick();
+    expect(effect).toHaveBeenCalledTimes(1);
+  });
+
+  it('should stop effect (deep)', async () => {
+    const effect = vi.fn();
+
+    const $a = $observable(10);
+    const $b = $computed(() => $a());
+
+    const stop = $effect(() => {
+      effect();
+      $b();
+    });
+
+    stop(true);
+
+    $a.set(20);
+    await $tick();
+
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect($b()).toEqual(10);
+  });
 });
 
 describe('$peek', () => {
@@ -247,23 +284,6 @@ describe('$peek', () => {
     expect(effect).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(2);
     expect($d()).toEqual(50);
-  });
-
-  it('should stop effect', async () => {
-    const effect = vi.fn();
-
-    const $a = $observable(10);
-
-    const stop = $effect(() => {
-      effect();
-      $a();
-    });
-
-    stop();
-
-    $a.set(20);
-    await $tick();
-    expect(effect).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -337,15 +357,48 @@ describe('$dispose', () => {
   it('should dispose', async () => {
     const $a = $observable(10);
     const $b = $computed(() => $a() + 10);
-    const $c = $computed(() => $a() + $b());
+    const $c = $observable(10);
+    const $d = $computed(() => $c() + 10);
+    const $e = $computed(() => $a() + $b() + $d());
 
-    expect($c()).toEqual(30);
+    expect($e()).toEqual(50);
 
     $dispose($a);
 
     $a.set(20);
     await $tick();
-    expect($c()).toEqual(30);
+
+    expect($b()).toEqual(20);
+    expect($e()).toEqual(50);
+
+    // $c/$d should keep working.
+    $c.set(20);
+    await $tick();
+    expect($d()).toEqual(30);
+  });
+
+  it('should dispose (deep)', async () => {
+    const $a = $observable(10);
+    const $_b = $observable(20);
+    const $b = $computed(() => $_b());
+    const $c = $computed(() => $a() + $b() + 10);
+    const $d = $computed(() => $a() + $c() + 10);
+    const $e = $computed(() => $a() + $c() + $d());
+
+    $e();
+
+    $dispose($e, true);
+
+    $a.set(20);
+    await $tick();
+
+    expect($a()).toEqual(10);
+    expect($c()).toEqual(40);
+    expect($d()).toEqual(60);
+    expect($e()).toEqual(110);
+
+    $_b.set(100);
+    expect($b()).to.equal(20);
   });
 });
 

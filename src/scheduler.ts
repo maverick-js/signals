@@ -40,7 +40,7 @@ export function createScheduler(onFlush?: () => void) {
 
   function flush() {
     do {
-      for (const task of new Set(queue)) {
+      for (const task of queue) {
         task();
         seen.add(task);
         queue.delete(task);

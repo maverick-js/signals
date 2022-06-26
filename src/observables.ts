@@ -15,13 +15,12 @@ export type Computation<T> = {
 export type Dispose = () => void;
 export type StopEffect = (deep?: boolean) => void;
 
-const COMPUTED = Symbol();
-const DIRTY = Symbol();
-const DISPOSED = Symbol();
-const OBSERVERS = Symbol();
-const DEPENDENCIES = Symbol();
+const COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : '');
+const DIRTY = Symbol(__DEV__ ? 'DIRTY' : '');
+const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : '');
+const OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : '');
+const DEPENDENCIES = Symbol(__DEV__ ? 'DEPENDENCIES' : '');
 
-let _parent: Computable | null = null;
 let _peeking: Computable | null = null;
 
 // Used only for debugging to determine how a cycle occurred.
@@ -167,26 +166,38 @@ export function $computed<T>(fn: () => T, $id?: string): Computation<T> {
 }
 
 /**
- * Unsubscribes the given observable.
+ * Unsubscribes the given observable and optionally all inner computations. Disposed functions will
+ * retain their current value but are no longer reactive.
  *
  * @example
  * ```js
  * const $a = $observable(10);
+ * const $b = $computed(() => $a());
+ *
+ * // `$b` will no longer update if `$a` is updated.
  * $dispose($a);
+ *
+ * $a.set(100);
+ * console.log($b()); // still logs `10`
  * ```
  */
 export function $dispose(fn: () => void, deep?: boolean) {
   const dependencies = (fn as Computable)[DEPENDENCIES];
+
   if (dependencies) {
     for (const dep of dependencies) {
-      if (deep) $dispose(dep);
+      if (deep) $dispose(dep, deep);
       dep[OBSERVERS]?.delete(fn);
     }
 
     dependencies.clear();
+    fn[DEPENDENCIES] = undefined;
   }
 
   fn[OBSERVERS]?.clear();
+  fn[OBSERVERS] = undefined;
+
+  fn[DIRTY] = false;
   fn[DISPOSED] = true;
 }
 
