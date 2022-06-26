@@ -2,6 +2,7 @@
 
 [![package-badge]][package]
 [![license-badge]][license]
+[![size-badge]][bundlephobia]
 
 > 🏆 The goal of this library is to provide a lightweight reactivity API for other UI libraries to
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
@@ -12,6 +13,7 @@ can use observables to store state, create computed properties (`y = mx + b`), a
 updates as its value changes.
 
 - 🪶 Light (~850B minzipped)
+- 💽 Works in both browsers and Node.js
 - 🌎 All types are observable (i.e., string, array, object, etc.)
 - 🕵️‍♀️ Only updates when value has changed
 - ⏱️ Batched updates via microtask scheduler
@@ -366,6 +368,7 @@ Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their wo
 [package-badge]: https://img.shields.io/npm/v/@maverick-js/observables/latest
 [license]: https://github.com/maverick-js/observables/blob/main/LICENSE
 [license-badge]: https://img.shields.io/github/license/maverick-js/observables
+[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@latest
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
