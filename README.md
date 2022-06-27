@@ -81,7 +81,8 @@ $root((dispose) => {
 
 <img src="./export-sizes.png" alt="Library export sizes" width="250px" />
 
-**Total:** if you import everything it'll be ~850B.
+**Average:** ~600B.
+**Total:** ~850B.
 
 You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
 
