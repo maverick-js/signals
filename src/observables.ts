@@ -423,7 +423,7 @@ function observe(node: Computable, observer: Computable) {
 }
 
 function dirty(node: Computable) {
-  if (_scheduler.seen.has(node)) return;
+  if (_scheduler.served(node)) return;
 
   const observers = node[OBSERVERS];
 

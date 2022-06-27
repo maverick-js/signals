@@ -1,3 +1,13 @@
+export type ScheduledTask = () => void;
+export type SchedulerFlushed = () => void;
+
+export type Scheduler = {
+  enqueue: (task: ScheduledTask) => void;
+  served: (task: ScheduledTask) => boolean;
+  flush: () => void;
+  tick: Promise<void>;
+};
+
 /**
  * Creates a scheduler which batches tasks and runs them in the microtask queue.
  *
@@ -18,15 +28,15 @@
  * await scheduler.tick;
  * ```
  */
-export function createScheduler(onFlush?: () => void) {
-  const seen = new Set<() => void>();
-  const queue = new Set<() => void>();
+export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
+  const processed = new Set<ScheduledTask>();
+  const queue = new Set<ScheduledTask>();
   const microtask = Promise.resolve();
   const queueTask = typeof queueMicrotask !== 'undefined' ? queueMicrotask : microtask.then;
 
-  function enqueue(task: () => void) {
-    // `seen` is only populated during a flush.
-    if (!seen.has(task)) queue.add(task);
+  function enqueue(task: ScheduledTask) {
+    // `processed` is only populated during a flush.
+    if (!processed.has(task)) queue.add(task);
     scheduleFlush();
   }
 
@@ -42,15 +52,20 @@ export function createScheduler(onFlush?: () => void) {
     do {
       for (const task of queue) {
         task();
-        seen.add(task);
+        processed.add(task);
         queue.delete(task);
       }
     } while (queue.size > 0);
 
-    seen.clear();
+    processed.clear();
     flushing = false;
     onFlush?.();
   }
 
-  return { seen, enqueue, flush: scheduleFlush, tick: microtask };
+  return {
+    enqueue,
+    served: (task) => processed.has(task),
+    flush: scheduleFlush,
+    tick: microtask,
+  };
 }
