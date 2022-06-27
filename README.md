@@ -98,6 +98,7 @@ $: yarn add @maverick-js/observables
 - [`$readonly`](#readonly)
 - [`$tick`](#tick)
 - [`$dispose`](#dispose)
+- [`isObservable`](#isobservable)
 - [`isComputed`](#iscomputed)
 
 ## `$root`
@@ -324,6 +325,21 @@ const $c = $effect(() => $b());
 $dispose($c, true); // <- deep flag
 
 // `$a`, `$b`, and `$c` are all disposed.
+```
+
+### `isObservable`
+
+Whether the given function is an observable.
+
+```js
+import { $observable, $computed, $effect, isObservable } from '@maverick-js/observables';
+
+const $a = $observable(10);
+isObservable($a); // true
+
+isObservable(() => {}); // false
+isObservable($computed(() => 10)); // false
+isObservable($effect(() => {})); // false
 ```
 
 ### `isComputed`

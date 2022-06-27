@@ -10,6 +10,7 @@ import {
   $root,
   type Computation,
   type Observable,
+  isObservable,
 } from '../src';
 
 afterEach(() => $tick());
@@ -33,7 +34,7 @@ describe('$root', () => {
       dispose();
     });
 
-    expect($b!()).toEqual(20);
+    expect($b!()).toBe(20);
     expect(computeB).toHaveBeenCalledTimes(1);
 
     await $tick();
@@ -41,7 +42,7 @@ describe('$root', () => {
     $a!.set(50);
     await $tick();
 
-    expect($b!()).toEqual(20);
+    expect($b!()).toBe(20);
     expect(computeB).toHaveBeenCalledTimes(1);
   });
 
@@ -51,7 +52,7 @@ describe('$root', () => {
       return 10;
     });
 
-    expect(result).toEqual(10);
+    expect(result).toBe(10);
   });
 });
 
@@ -59,19 +60,31 @@ describe('$observable', () => {
   it('should store and return value on read', () => {
     const $a = $observable(10);
     expect($a).toBeInstanceOf(Function);
-    expect($a()).toEqual(10);
+    expect($a()).toBe(10);
   });
 
   it('should update observable via `set()`', () => {
     const $a = $observable(10);
     $a.set(20);
-    expect($a()).toEqual(20);
+    expect($a()).toBe(20);
   });
 
   it('should update observable via `next()`', () => {
     const $a = $observable(10);
     $a.next((n) => n + 10);
-    expect($a()).toEqual(20);
+    expect($a()).toBe(20);
+  });
+});
+
+describe('isObservable', () => {
+  it('should return true if given observable', () => {
+    expect(isObservable($observable(10))).toBe(true);
+  });
+
+  it('should return false if given non-observable', () => {
+    expect(isObservable(() => {})).toBe(false);
+    expect(isObservable($computed(() => 10))).toBe(false);
+    expect(isObservable($effect(() => {}))).toBe(false);
   });
 });
 
@@ -81,11 +94,11 @@ describe('$computed', () => {
     const $b = $observable(10);
     const $c = $computed(() => $a() + $b());
 
-    expect($c()).toEqual(20);
+    expect($c()).toBe(20);
     await $tick();
 
     // Try again to ensure state is maintained.
-    expect($c()).toEqual(20);
+    expect($c()).toBe(20);
   });
 
   it('should update when dependency is updated', () => {
@@ -94,10 +107,10 @@ describe('$computed', () => {
     const $c = $computed(() => $a() + $b());
 
     $a.set(20);
-    expect($c()).toEqual(30);
+    expect($c()).toBe(30);
 
     $b.set(20);
-    expect($c()).toEqual(40);
+    expect($c()).toBe(40);
   });
 
   it('should update when deep dependency is updated', async () => {
@@ -107,7 +120,7 @@ describe('$computed', () => {
     const $d = $computed(() => $c());
 
     $a.set(20);
-    expect($d()).toEqual(30);
+    expect($d()).toBe(30);
   });
 
   it('should update when deep computed dependency is updated', () => {
@@ -118,7 +131,7 @@ describe('$computed', () => {
     const $e = $computed(() => $d());
 
     $a.set(20);
-    expect($e()).toEqual(30);
+    expect($e()).toBe(30);
   });
 
   it('should only re-compute when needed', () => {
@@ -173,7 +186,7 @@ describe('$computed', () => {
     $e();
     expect(computeC).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(1);
-    expect($e()).toEqual(20);
+    expect($e()).toBe(20);
 
     $a.set(20);
     await $tick();
@@ -181,7 +194,7 @@ describe('$computed', () => {
     $e();
     expect(computeC).toHaveBeenCalledTimes(2);
     expect(computeD).toHaveBeenCalledTimes(1);
-    expect($e()).toEqual(30);
+    expect($e()).toBe(30);
 
     $b.set(20);
     await $tick();
@@ -189,7 +202,7 @@ describe('$computed', () => {
     $e();
     expect(computeC).toHaveBeenCalledTimes(2);
     expect(computeD).toHaveBeenCalledTimes(2);
-    expect($e()).toEqual(40);
+    expect($e()).toBe(40);
   });
 });
 
@@ -257,7 +270,7 @@ describe('$effect', () => {
     await $tick();
 
     expect(effect).toHaveBeenCalledTimes(1);
-    expect($b()).toEqual(10);
+    expect($b()).toBe(10);
   });
 });
 
@@ -275,9 +288,9 @@ describe('$peek', () => {
 
     $effect(() => {
       effect();
-      expect($peek($a)).toEqual(10);
-      expect($peek($b)).toEqual(20);
-      expect($peek($c)).toEqual(30);
+      expect($peek($a)).toBe(10);
+      expect($peek($b)).toBe(20);
+      expect($peek($c)).toBe(30);
     });
 
     expect(effect).toHaveBeenCalledTimes(1);
@@ -303,31 +316,31 @@ describe('$peek', () => {
 
     $effect(() => {
       effect();
-      expect($peek($a)).toEqual(10);
-      expect($peek($d)).toEqual(40);
+      expect($peek($a)).toBe(10);
+      expect($peek($d)).toBe(40);
     });
 
     expect(effect).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(1);
-    expect($d()).toEqual(40);
+    expect($d()).toBe(40);
 
     $a.set(20);
     await $tick();
     expect(effect).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(2);
-    expect($d()).toEqual(50);
+    expect($d()).toBe(50);
 
     $b.set(20);
     await $tick();
     expect(effect).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(2);
-    expect($d()).toEqual(50);
+    expect($d()).toBe(50);
 
     $c.set(20);
     await $tick();
     expect(effect).toHaveBeenCalledTimes(1);
     expect(computeD).toHaveBeenCalledTimes(2);
-    expect($d()).toEqual(50);
+    expect($d()).toBe(50);
   });
 });
 
@@ -389,11 +402,11 @@ describe('$readonly', () => {
     }).toThrow();
 
     await $tick();
-    expect($b()).toEqual(10);
+    expect($b()).toBe(10);
 
     $a.set(20);
     await $tick();
-    expect($b()).toEqual(20);
+    expect($b()).toBe(20);
   });
 });
 
@@ -405,20 +418,20 @@ describe('$dispose', () => {
     const $d = $computed(() => $c() + 10);
     const $e = $computed(() => $a() + $b() + $d());
 
-    expect($e()).toEqual(50);
+    expect($e()).toBe(50);
 
     $dispose($a);
 
     $a.set(20);
     await $tick();
 
-    expect($b()).toEqual(20);
-    expect($e()).toEqual(50);
+    expect($b()).toBe(20);
+    expect($e()).toBe(50);
 
     // $c/$d should keep working.
     $c.set(20);
     await $tick();
-    expect($d()).toEqual(30);
+    expect($d()).toBe(30);
   });
 
   it('should dispose (deep)', async () => {
@@ -436,10 +449,10 @@ describe('$dispose', () => {
     $a.set(20);
     await $tick();
 
-    expect($a()).toEqual(10);
-    expect($c()).toEqual(40);
-    expect($d()).toEqual(60);
-    expect($e()).toEqual(110);
+    expect($a()).toBe(10);
+    expect($c()).toBe(40);
+    expect($d()).toBe(60);
+    expect($e()).toBe(110);
 
     $_b.set(100);
     expect($b()).to.equal(20);
@@ -448,18 +461,18 @@ describe('$dispose', () => {
 
 describe('isComputed', () => {
   it('should return false given function', () => {
-    expect(isComputed(() => {})).toEqual(false);
+    expect(isComputed(() => {})).toBe(false);
   });
 
   it('should return false given observable', () => {
-    expect(isComputed($observable(10))).toEqual(false);
+    expect(isComputed($observable(10))).toBe(false);
   });
 
   it('should return false given effect', () => {
-    expect(isComputed($effect(() => {}))).toEqual(false);
+    expect(isComputed($effect(() => {}))).toBe(false);
   });
 
   it('should return true given computed', () => {
-    expect(isComputed($computed(() => {}))).toEqual(true);
+    expect(isComputed($computed(() => {}))).toBe(true);
   });
 });

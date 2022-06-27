@@ -15,6 +15,7 @@ export type Computation<T> = {
 export type Dispose = () => void;
 export type StopEffect = (deep?: boolean) => void;
 
+const OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : '');
 const COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : '');
 const DIRTY = Symbol(__DEV__ ? 'DIRTY' : '');
 const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : '');
@@ -123,7 +124,27 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
 
   if (__DEV__) $observable.$id = $id ?? '$observable';
 
+  $observable[OBSERVABLE] = true;
   return $observable;
+}
+
+/**
+ * Whether the given function is an observable.
+ *
+ * @example
+ * ```js
+ * const $a = $observable(10);
+ * isObservable($a); // true
+ *
+ * const $b = $computed(() => 10);
+ * isObservable($b); // false
+ *
+ * const $c = $effect(() => {});
+ * isObservable($c); // false
+ * ```
+ */
+export function isObservable<T>(fn: () => T): fn is Observable<T> {
+  return OBSERVABLE in fn;
 }
 
 /**
@@ -323,6 +344,7 @@ export function safeNotEqual(a, b) {
 type Computable = {
   $id?: string;
   (): any;
+  [OBSERVABLE]?: boolean;
   [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
   [DISPOSED]?: boolean;
