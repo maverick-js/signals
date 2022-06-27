@@ -246,12 +246,12 @@ export function onDispose(fn?: MaybeDispose): Dispose {
     console.warn('[maverick]: trying to add a `onDispose` function but no parent exists.');
   }
 
-  if (valid) (compute[DISPOSAL] ??= new Set()).add(fn);
+  if (valid) (compute[DISPOSAL] ??= new Set()).add(fn as Dispose);
 
   return valid
     ? () => {
-        fn();
-        compute[DISPOSAL]?.delete(fn);
+        (fn as Dispose)();
+        compute[DISPOSAL]?.delete(fn as Dispose);
       }
     : NOOP;
 }
@@ -405,7 +405,7 @@ type Computable = {
   [DISPOSED]?: boolean;
   [OBSERVERS]?: Set<Computable>;
   [DEPENDENCIES]?: Set<Computable>;
-  [DISPOSAL]?: Set<() => void>;
+  [DISPOSAL]?: Set<Dispose>;
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
