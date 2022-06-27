@@ -114,7 +114,7 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
   };
 
   $observable.set = (nextValue: T) => {
-    if (!$observable[DISPOSED] && safeNotEqual(nextValue, currentValue)) {
+    if (!$observable[DISPOSED] && nextValue !== currentValue) {
       currentValue = nextValue!;
       dirty($observable);
     }
@@ -375,10 +375,6 @@ export function $tick() {
  */
 export function isComputed<T>(fn: MaybeComputed<T>): fn is Computed<T> {
   return fn ? COMPUTED in fn : false;
-}
-
-export function safeNotEqual(a, b) {
-  return a != a ? b == b : a !== b || (a && typeof a === 'object') || typeof a === 'function';
 }
 
 type Computable = {
