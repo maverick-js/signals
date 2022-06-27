@@ -4,7 +4,7 @@ export type Observable<T> = {
   $id?: string;
   (): T;
   set: (nextValue: T) => void;
-  update: (next: (prevValue: T) => T) => void;
+  next: (next: (prevValue: T) => T) => void;
 };
 
 export type Computation<T> = {
@@ -84,7 +84,7 @@ export function $peek<T>(fn: () => T): T {
 
 /**
  * Wraps the given value into an observable function. The observable function will return the
- * current value when invoked `fn()`, and provide a simple write API via `set()` and `update()`. The
+ * current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
  * value can now be observed when used inside other computations created with `$computed` and `$effect`.
  *
  * @example
@@ -93,7 +93,7 @@ export function $peek<T>(fn: () => T): T {
  *
  * $a(); // read
  * $a.set(20); // write (1)
- * $a.update(prev => prev + 10); // write (2)
+ * $a.next(prev => prev + 10); // write (2)
  * ```
  */
 export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
@@ -117,7 +117,7 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
     }
   };
 
-  $observable.update = (next: (prevValue: T) => T) => {
+  $observable.next = (next: (prevValue: T) => T) => {
     $observable.set(next(currentValue));
   };
 
@@ -251,7 +251,7 @@ export function $effect(fn: () => void, $id?: string): StopEffect {
 
 /**
  * Takes in the given observable and makes it read only by removing access to write
- * operations (i.e., `set()` and `update()`).
+ * operations (i.e., `set()` and `next()`).
  *
  * @example
  * ```js

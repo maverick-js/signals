@@ -52,7 +52,7 @@ $root((dispose) => {
   // Wait a tick so update is applied and effect is run.
   await $tick();
 
-  $b.update((prev) => prev + 5); // logs `15` inside effect
+  $b.next((prev) => prev + 5); // logs `15` inside effect
 
   // Wait a tick so effect runs last update.
   await $tick();
@@ -143,7 +143,7 @@ console.log(result); // logs `10`
 ### `$observable`
 
 Wraps the given value into an observable function. The observable function will return the
-current value when invoked `fn()`, and provide a simple write API via `set()` and `update()`. The
+current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
 value can now be observed when used inside other computations created with [`$computed`](#computed)
 and [`$effect`](#effect).
 
@@ -154,7 +154,7 @@ const $a = $observable(10);
 
 $a(); // read
 $a.set(20); // write (1)
-$a.update((prev) => prev + 10); // write (2)
+$a.next((prev) => prev + 10); // write (2)
 ```
 
 > **Warning**
@@ -247,7 +247,7 @@ $computed(() => {
 ### `$readonly`
 
 Takes in the given observable and makes it read only by removing access to write
-operations (i.e., `set()` and `update()`).
+operations (i.e., `set()` and `next()`).
 
 ```js
 import { $observable, $readonly } from '@maverick-js/observables';

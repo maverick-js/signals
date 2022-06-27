@@ -68,9 +68,9 @@ describe('$observable', () => {
     expect($a()).toEqual(20);
   });
 
-  it('should update observable via `update()`', () => {
+  it('should update observable via `next()`', () => {
     const $a = $observable(10);
-    $a.update((n) => n + 10);
+    $a.next((n) => n + 10);
     expect($a()).toEqual(20);
   });
 });
@@ -385,7 +385,7 @@ describe('$readonly', () => {
 
     expect(() => {
       // @ts-expect-error
-      $b.update((n) => n + 10);
+      $b.next((n) => n + 10);
     }).toThrow();
 
     await $tick();
