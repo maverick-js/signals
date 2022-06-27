@@ -24,7 +24,8 @@
     "test": "vitest --run",
     "format": "prettier src --write --loglevel warn",
     "test:watch": "vitest --watch",
-    "release": "pnpm test && pnpm bundle && pnpm types && standard-version",
+    "validate": "pnpm test && pnpm bundle && pnpm types",
+    "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish",
     "size": "pnpm bundle && export-size ."
   },
   "contributors": [
