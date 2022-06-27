@@ -22,7 +22,7 @@ export function createScheduler(onFlush?: () => void) {
   const seen = new Set<() => void>();
   const queue = new Set<() => void>();
   const microtask = Promise.resolve();
-  const queueTask = queueMicrotask ?? microtask.then;
+  const queueTask = typeof queueMicrotask !== 'undefined' ? queueMicrotask : microtask.then;
 
   function enqueue(task: () => void) {
     // `seen` is only populated during a flush.
