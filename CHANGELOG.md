@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.2](https://github.com/maverick-js/observables/compare/v2.0.1...v2.0.2) (2022-06-27)
+
+
+### Bug Fixes
+
+* dont need safe inequality check ([368af0c](https://github.com/maverick-js/observables/commit/368af0ccc594654defe619763935376abbdfb56c))
+
 ### [2.0.1](https://github.com/maverick-js/observables/compare/v2.0.0...v2.0.1) (2022-06-27)
 
 
