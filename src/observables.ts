@@ -28,29 +28,25 @@ export type MaybeStopEffect = Maybe<StopEffect>;
 
 const NOOP = () => {};
 
-const OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : '');
-const COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : '');
-const DIRTY = Symbol(__DEV__ ? 'DIRTY' : '');
-const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : '');
-const OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : '');
-const DEPENDENCIES = Symbol(__DEV__ ? 'DEPENDENCIES' : '');
-const DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : '');
+const OBSERVABLE = Symbol();
+const COMPUTED = Symbol();
+const DIRTY = Symbol();
+const DISPOSED = Symbol();
+const OBSERVERS = Symbol();
+const DEPENDENCIES = Symbol();
+const DISPOSAL = Symbol();
 
-let _peeking: Computable | null = null;
+const _scheduler = __DEV__
+  ? createScheduler(() => {
+      _callStack = [];
+    })
+  : createScheduler();
 
-// Used only for debugging to determine how a cycle occurred.
+let _computation: Computable | undefined;
+
+// These are used only for debugging to determine how a cycle occurred.
 let _callStack: Computable[] = [];
-
-const _computeStack: Computable[] = [];
-const _currentCompute = () => _computeStack[_computeStack.length - 1];
-
-const _scheduler = createScheduler(
-  __DEV__
-    ? () => {
-        _callStack = [];
-      }
-    : undefined,
-);
+let _computeStack: Computable[] = [];
 
 /**
  * Creates a computation root which is given a `dispose()` function to dispose of all inner
@@ -87,9 +83,10 @@ export function $root<T>(fn: (dispose: Dispose) => T): T {
  * ```
  */
 export function $peek<T>(fn: () => T): T {
-  _peeking = fn;
+  const prev = _computation;
+  _computation = undefined;
   const result = fn();
-  _peeking = null;
+  _computation = prev;
   return result;
 }
 
@@ -112,12 +109,7 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
 
   const $observable: Observable<T> = () => {
     if (__DEV__) _callStack.push($observable);
-
-    if (_computeStack.length) {
-      const observer = _computeStack[_computeStack.length - 1];
-      observe($observable, observer);
-    }
-
+    if (_computation) observe($observable, _computation);
     return currentValue;
   };
 
@@ -182,23 +174,17 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  */
 export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
   let currentValue;
+
   const $computed: Computed<T> = () => {
+    if (__DEV__ && _computeStack.includes($computed)) {
+      const calls = _callStack.map((c) => c.$id ?? '?').join(' --> ');
+      throw Error(`cyclic dependency detected\n\n${calls}\n`);
+    }
+
     if (__DEV__) _callStack.push($computed);
 
     // Computed is observing another computed.
-    if (_computeStack.length) {
-      if (_computeStack.includes($computed)) {
-        if (__DEV__) {
-          const calls = _callStack.map((c) => c.$id ?? '?').join(' --> ');
-          throw Error(`cyclic dependency detected\n\n${calls}\n`);
-        }
-
-        return currentValue;
-      }
-
-      const observer = _computeStack[_computeStack.length - 1];
-      observe($computed, observer);
-    }
+    if (_computation) observe($computed, _computation);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       currentValue = compute($computed, fn);
@@ -239,19 +225,18 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
  * ```
  */
 export function onDispose(fn?: MaybeDispose): Dispose {
-  const compute = _currentCompute() as Computable;
-  const valid = fn && compute;
-
-  if (__DEV__ && !compute) {
+  if (__DEV__ && !_computation) {
     console.warn('[maverick]: trying to add a `onDispose` function but no parent exists.');
   }
 
-  if (valid) (compute[DISPOSAL] ??= new Set()).add(fn as Dispose);
+  const valid = fn && _computation;
+
+  if (valid) (_computation![DISPOSAL] ??= new Set()).add(fn as Dispose);
 
   return valid
     ? () => {
         (fn as Dispose)();
-        compute[DISPOSAL]?.delete(fn as Dispose);
+        _computation![DISPOSAL]?.delete(fn as Dispose);
       }
     : NOOP;
 }
@@ -409,14 +394,17 @@ type Computable = {
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
-  _computeStack.push(parent);
+  const prev = _computation;
+  _computation = parent;
+  if (__DEV__) _computeStack.push(parent);
   const nextValue = child();
-  _computeStack.pop();
+  _computation = prev;
+  if (__DEV__) _computeStack.pop();
   return nextValue;
 }
 
 function observe(node: Computable, observer: Computable) {
-  if (!node[DISPOSED] && node !== _peeking) {
+  if (!node[DISPOSED]) {
     (node[OBSERVERS] ??= new Set()).add(observer);
     (observer[DEPENDENCIES] ??= new Set()).add(node);
   }
@@ -428,9 +416,8 @@ function dirty(node: Computable) {
   const observers = node[OBSERVERS];
 
   if (observers) {
-    const computation = _computeStack[_computeStack.length - 1];
     for (const observer of observers) {
-      if (observer[COMPUTED] && observer !== computation) {
+      if (observer[COMPUTED] && observer !== _computation) {
         observer[DIRTY] = true;
         _scheduler.enqueue(observer);
       }

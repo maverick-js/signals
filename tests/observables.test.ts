@@ -205,6 +205,14 @@ describe('$computed', () => {
     expect(computeD).toHaveBeenCalledTimes(2);
     expect($e()).toBe(40);
   });
+
+  it('should throw on cyclic computation', () => {
+    expect(() => {
+      const $a = $computed(() => $b(), '$a');
+      const $b = $computed(() => $a(), '$b');
+      $b();
+    }).toThrow(/cyclic dependency detected/);
+  });
 });
 
 describe('$effect', () => {
