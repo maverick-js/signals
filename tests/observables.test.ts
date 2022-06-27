@@ -9,6 +9,7 @@ import {
   $dispose,
   isObservable,
   isComputed,
+  onDispose,
   type Computed,
   type Observable,
 } from '../src';
@@ -468,5 +469,25 @@ describe('isComputed', () => {
     ([false, () => {}, $observable(10), $effect(() => {})] as const).forEach((type) =>
       expect(isComputed(type)).toBe(false),
     );
+  });
+});
+
+describe('onDispose', () => {
+  it('should be invoked when computation is disposed', () => {
+    const callback1 = vi.fn();
+    const callback2 = vi.fn();
+    const callback3 = vi.fn();
+
+    const stop = $effect(() => {
+      onDispose(callback1);
+      onDispose(callback2);
+      onDispose(callback3);
+    });
+
+    stop();
+
+    expect(callback1).toHaveBeenCalled();
+    expect(callback2).toHaveBeenCalled();
+    expect(callback3).toHaveBeenCalled();
   });
 });

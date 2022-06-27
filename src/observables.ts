@@ -27,6 +27,7 @@ const DIRTY = Symbol(__DEV__ ? 'DIRTY' : '');
 const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : '');
 const OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : '');
 const DEPENDENCIES = Symbol(__DEV__ ? 'DEPENDENCIES' : '');
+const DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : '');
 
 let _peeking: Computable | null = null;
 
@@ -34,6 +35,7 @@ let _peeking: Computable | null = null;
 let _callStack: Computable[] = [];
 
 const _computeStack: Computable[] = [];
+const _currentCompute = () => _computeStack[_computeStack.length - 1];
 
 const _scheduler = createScheduler(
   __DEV__
@@ -61,12 +63,7 @@ const _scheduler = createScheduler(
 export function $root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => fn(dispose);
   const dispose = () => $dispose($root, true);
-
-  _computeStack.push($root);
-  const result = $root();
-  _computeStack.pop();
-
-  return result;
+  return compute($root, $root);
 }
 
 /**
@@ -197,11 +194,7 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
     }
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
-      _computeStack.push($computed);
-      const nextValue = fn();
-      _computeStack.pop();
-
-      currentValue = nextValue;
+      currentValue = compute($computed, fn);
       $computed[DIRTY] = false;
       dirty($computed);
     }
@@ -216,6 +209,36 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
   $computed[COMPUTED] = true;
 
   return $computed;
+}
+
+/**
+ * Runs the given function when the parent computation is being disposed.
+ *
+ * @example
+ * ```js
+ * const listen = (type, callback) => {
+ *   window.addEventListener(type, callback);
+ *   onDispose(() => window.removeEventListener(type, callback));
+ * };
+ *
+ * const stop = $effect(() => {
+ *   // This will be disposed of when the effect is.
+ *   listen('click', () => {
+ *     // ...
+ *   });
+ * });
+ *
+ * stop(); // `onDispose` is called
+ * ```
+ */
+export function onDispose(fn?: () => void) {
+  const compute = _currentCompute() as Computable;
+
+  if (__DEV__ && !compute) {
+    console.warn('[maverick]: trying to add a `onDispose` function but no parent exists.');
+  }
+
+  if (fn && compute) (compute[DISPOSAL] ??= new Set()).add(fn);
 }
 
 /**
@@ -235,20 +258,21 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
  * ```
  */
 export function $dispose(fn: () => void, deep?: boolean) {
-  const dependencies = (fn as Computable)[DEPENDENCIES];
-
-  if (dependencies) {
-    for (const dep of dependencies) {
+  if ((fn as Computable)[DEPENDENCIES]) {
+    for (const dep of fn[DEPENDENCIES]) {
       if (deep) $dispose(dep, deep);
       dep[OBSERVERS]?.delete(fn);
     }
 
-    dependencies.clear();
-    fn[DEPENDENCIES] = undefined;
+    unrefSet(fn, DEPENDENCIES);
   }
 
-  fn[OBSERVERS]?.clear();
-  fn[OBSERVERS] = undefined;
+  if ((fn as Computable)[DISPOSAL]) {
+    for (const dispose of fn[DISPOSAL]) dispose();
+    unrefSet(fn, DISPOSAL);
+  }
+
+  unrefSet(fn, OBSERVERS);
 
   fn[DIRTY] = false;
   fn[DISPOSED] = true;
@@ -357,7 +381,15 @@ type Computable = {
   [DISPOSED]?: boolean;
   [OBSERVERS]?: Set<Computable>;
   [DEPENDENCIES]?: Set<Computable>;
+  [DISPOSAL]?: Set<() => void>;
 };
+
+function compute<T>(parent: () => void, child: () => T): T {
+  _computeStack.push(parent);
+  const nextValue = child();
+  _computeStack.pop();
+  return nextValue;
+}
 
 function observe(node: Computable, observer: Computable) {
   if (!node[DISPOSED] && node !== _peeking) {
@@ -380,4 +412,9 @@ function dirty(node: Computable) {
       }
     }
   }
+}
+
+function unrefSet(parent: any, key: symbol) {
+  parent[key]?.clear();
+  parent[key] = undefined;
 }

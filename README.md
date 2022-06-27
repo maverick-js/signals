@@ -100,6 +100,7 @@ $: yarn add @maverick-js/observables
 - [`$readonly`](#readonly)
 - [`$tick`](#tick)
 - [`$dispose`](#dispose)
+- [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isComputed`](#iscomputed)
 
@@ -327,6 +328,27 @@ const $c = $effect(() => $b());
 $dispose($c, true); // <- deep flag
 
 // `$a`, `$b`, and `$c` are all disposed.
+```
+
+## `onDispose`
+
+Runs the given function when the parent computation is disposed of:
+
+```js
+import { $effect, onDispose } from '@maverick-js/observables';
+
+const listen = (type, callback) => {
+  window.addEventListener(type, callback);
+  onDispose(() => window.removeEventListener(type, callback));
+};
+
+const stop = $effect(
+  listen('click', () => {
+    // ...
+  }),
+);
+
+stop(); // `onDispose` is called
 ```
 
 ### `isObservable`
