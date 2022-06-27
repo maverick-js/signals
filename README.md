@@ -33,34 +33,41 @@ Here's a simple demo to see how it works:
 > Interact with the demo live on [StackBlitz][stackblitz-demo].
 
 ```js
-import { $observable, $computed, $effect, $tick } from '@maverick-js/observables';
+import { $root, $observable, $computed, $effect, $tick } from '@maverick-js/observables';
 
-// Create - all types supported (string, array, object, etc.)
-const $m = $observable(1);
-const $x = $observable(1);
-const $b = $observable(0);
+$root((dispose) => {
+  // Create - all types supported (string, array, object, etc.)
+  const $m = $observable(1);
+  const $x = $observable(1);
+  const $b = $observable(0);
 
-// Compute - only re-computed when `$m`, `$x`, or `$b` changes.
-const $y = $computed(() => $m() * $x() + $b());
+  // Compute - only re-computed when `$m`, `$x`, or `$b` changes.
+  const $y = $computed(() => $m() * $x() + $b());
 
-// Effect - this will run whenever `$y` is updated.
-const stop = $effect(() => console.log($y()));
+  // Effect - this will run whenever `$y` is updated.
+  const stop = $effect(() => console.log($y()));
 
-$m.set(10); // logs `10` inside effect
+  $m.set(10); // logs `10` inside effect
 
-// Wait a tick so update is applied and effect is run.
-await $tick();
+  // Wait a tick so update is applied and effect is run.
+  await $tick();
 
-$b.update((prev) => prev + 5); // logs `15` inside effect
+  $b.update((prev) => prev + 5); // logs `15` inside effect
 
-// Wait a tick so effect runs last update.
-await $tick();
+  // Wait a tick so effect runs last update.
+  await $tick();
 
-// Nothing has changed - no re-compute.
-$y();
+  // Nothing has changed - no re-compute.
+  $y();
 
-// Stop running effect.
-stop();
+  // Stop running effect.
+  stop();
+
+  // ...
+
+  // Dispose of all observables inside `$root`.
+  dispose();
+});
 ```
 
 ## Export Sizes
@@ -83,6 +90,7 @@ $: yarn add @maverick-js/observables
 
 ## API
 
+- [`$root`](#root)
 - [`$observable`](#observable)
 - [`$computed`](#computed)
 - [`$effect`](#effect)
@@ -91,6 +99,46 @@ $: yarn add @maverick-js/observables
 - [`$tick`](#tick)
 - [`$dispose`](#dispose)
 - [`isComputed`](#iscomputed)
+
+## `$root`
+
+Computations are generally child computations. When their respective parent is destroyed so are
+they. You _can_ create orphan computations (i.e., no parent). Orphans will live in memory until
+their internal object references are garbage collected (GC) (i.e., dropped from memory):
+
+```js
+import { $computed } from '@maverick-js/observables';
+
+const obj = {};
+
+// This is an orphan - GC'd when `obj` is.
+const $b = $computed(() => obj);
+```
+
+Orphans can make it hard to determine when a computation is disposed so you'll generally want to
+ensure you only create child computations. The `$root` function stores all inner computations as
+a child and provides a function to easily dispose of them all:
+
+```js
+import { $root, $observable, $computed, $effect } from '@maverick-js/observables';
+
+$root((dispose) => {
+  const $a = $observable(10);
+  const $b = $computed(() => $a());
+
+  $effect(() => console.log($b()));
+
+  // Disposes of `$a`, $b`, and `$effect`.
+  dispose();
+});
+```
+
+```js
+// `$root` returns the result of the given function.
+const result = $root(() => 10);
+
+console.log(result); // logs `10`
+```
 
 ### `$observable`
 

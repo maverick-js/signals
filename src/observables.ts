@@ -37,6 +37,32 @@ const _scheduler = createScheduler(
 );
 
 /**
+ * Creates a computation root which is given a `dispose()` function to dispose of all inner
+ * computations.
+ *
+ * @example
+ * ```js
+ * const result = $root((dispose) => {
+ *   // ...
+ *   dispose();
+ *   return 10;
+ * });
+ *
+ * console.log(result); // logs `10`
+ * ```
+ */
+export function $root<T>(fn: (dispose: Dispose) => T): T {
+  const $root = () => fn(dispose);
+  const dispose = () => $dispose($root, true);
+
+  _computeStack.push($root);
+  const result = $root();
+  _computeStack.pop();
+
+  return result;
+}
+
+/**
  * Returns the current value stored inside an observable without triggering a dependency.
  *
  * @example

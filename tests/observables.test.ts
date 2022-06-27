@@ -7,9 +7,53 @@ import {
   isComputed,
   $readonly,
   $dispose,
+  $root,
+  type Computation,
+  type Observable,
 } from '../src';
 
 afterEach(() => $tick());
+
+describe('$root', () => {
+  it('should dispose of inner computations', async () => {
+    const computeB = vi.fn();
+
+    let $a: Observable<number>;
+    let $b: Computation<number>;
+
+    $root((dispose) => {
+      $a = $observable(10);
+
+      $b = $computed(() => {
+        computeB();
+        return $a() + 10;
+      });
+
+      $b();
+      dispose();
+    });
+
+    expect($b!()).toEqual(20);
+    expect(computeB).toHaveBeenCalledTimes(1);
+
+    await $tick();
+
+    $a!.set(50);
+    await $tick();
+
+    expect($b!()).toEqual(20);
+    expect(computeB).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return result', () => {
+    const result = $root((dispose) => {
+      dispose();
+      return 10;
+    });
+
+    expect(result).toEqual(10);
+  });
+});
 
 describe('$observable', () => {
   it('should store and return value on read', () => {
