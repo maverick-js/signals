@@ -273,6 +273,31 @@ describe('$effect', () => {
     expect(effect).toHaveBeenCalledTimes(1);
     expect($b()).toBe(10);
   });
+
+  it('should call returned dispose function', async () => {
+    const dispose = vi.fn();
+
+    const $a = $observable(10);
+
+    const stop = $effect(() => {
+      $a();
+      return dispose;
+    });
+
+    expect(dispose).toHaveBeenCalledTimes(0);
+
+    $a.set(20);
+    await $tick();
+    expect(dispose).toHaveBeenCalledTimes(1);
+
+    $a.set(30);
+    await $tick();
+    expect(dispose).toHaveBeenCalledTimes(2);
+
+    stop();
+    await $tick();
+    expect(dispose).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe('$peek', () => {
@@ -353,7 +378,7 @@ describe('$tick', () => {
 
     $effect(() => {
       effect();
-      return $a();
+      $a();
     });
 
     $a.set(20);
@@ -372,7 +397,7 @@ describe('$tick', () => {
 
     $effect(() => {
       effect();
-      return $a();
+      $a();
     });
 
     expect(effect).to.toHaveBeenCalledTimes(1);
@@ -489,5 +514,21 @@ describe('onDispose', () => {
     expect(callback1).toHaveBeenCalled();
     expect(callback2).toHaveBeenCalled();
     expect(callback3).toHaveBeenCalled();
+  });
+
+  it('should clear dispose early', async () => {
+    const dispose = vi.fn();
+
+    const stop = $effect(() => {
+      const early = onDispose(dispose);
+      early();
+    });
+
+    expect(dispose).toHaveBeenCalledTimes(1);
+
+    stop();
+    await $tick();
+
+    expect(dispose).toHaveBeenCalledTimes(1);
   });
 });

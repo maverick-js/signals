@@ -14,12 +14,19 @@ export type ReadonlyObservable<T> = {
 
 export type Computed<T> = ReadonlyObservable<T>;
 
-export type MaybeFunction = ((...args: any) => any) | null | undefined | false;
+export type Dispose = () => void;
+
+export type Effect = () => MaybeStopEffect;
+export type StopEffect = (deep?: boolean) => void;
+
+export type Maybe<T> = T | void | null | undefined | false;
+export type MaybeFunction = Maybe<(...args: any) => any>;
 export type MaybeObservable<T = unknown> = MaybeFunction | Observable<T>;
 export type MaybeComputed<T = unknown> = MaybeFunction | Computed<T>;
+export type MaybeDispose = Maybe<Dispose>;
+export type MaybeStopEffect = Maybe<StopEffect>;
 
-export type Dispose = () => void;
-export type StopEffect = (deep?: boolean) => void;
+const NOOP = () => {};
 
 const OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : '');
 const COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : '');
@@ -231,14 +238,22 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
  * stop(); // `onDispose` is called
  * ```
  */
-export function onDispose(fn?: () => void) {
+export function onDispose(fn?: MaybeDispose): Dispose {
   const compute = _currentCompute() as Computable;
+  const valid = fn && compute;
 
   if (__DEV__ && !compute) {
     console.warn('[maverick]: trying to add a `onDispose` function but no parent exists.');
   }
 
-  if (fn && compute) (compute[DISPOSAL] ??= new Set()).add(fn);
+  if (valid) (compute[DISPOSAL] ??= new Set()).add(fn);
+
+  return valid
+    ? () => {
+        fn();
+        compute[DISPOSAL]?.delete(fn);
+      }
+    : NOOP;
 }
 
 /**
@@ -294,8 +309,17 @@ export function $dispose(fn: () => void, deep?: boolean) {
  * stop();
  * ```
  */
-export function $effect(fn: () => void, $id?: string): StopEffect {
-  const $compute = $computed(fn, __DEV__ ? $id ?? '$effect' : $id);
+export function $effect(fn: Effect, $id?: string): StopEffect {
+  let dispose: ReturnType<Effect>;
+
+  const $compute = $computed(
+    () => {
+      if (dispose) dispose();
+      dispose = onDispose(fn());
+    },
+    __DEV__ ? $id ?? '$effect' : $id,
+  );
+
   $compute();
   return (deep?: boolean) => $dispose($compute, deep);
 }

@@ -47,7 +47,12 @@ $root((dispose) => {
   const $y = $computed(() => $m() * $x() + $b());
 
   // Effect - this will run whenever `$y` is updated.
-  const stop = $effect(() => console.log($y()));
+  const stop = $effect(() => {
+    console.log($y());
+
+    // Called each time `$effect` ends and when finally disposed.
+    return () => {};
+  });
 
   $m.set(10); // logs `10` inside effect
 
@@ -222,6 +227,17 @@ const stop = $effect(() => console.log($c()));
 stop();
 ```
 
+You can optionally return a function from inside the `$effect` that will be run each time the
+effect re-runs and when it's finally stopped/disposed of:
+
+```js
+$effect(() => {
+  return () => {
+    // Called each time effect re-runs and when disposed of.
+  };
+});
+```
+
 You can optionally destroy all inner observables when stopping the effect by passing in `true`
 to the stop effect function:
 
@@ -349,6 +365,18 @@ const stop = $effect(
 );
 
 stop(); // `onDispose` is called
+```
+
+The `onDispose` callback will return a function to clear the disposal early if it's no longer
+required:
+
+```js
+$effect(() => {
+  const dispose = onDispose(() => {});
+  // ...
+  // Call early if it's no longer required.
+  dispose();
+});
 ```
 
 ### `isObservable`
