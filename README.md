@@ -26,6 +26,8 @@ updates as its value changes.
 
 ⏭️ **[Skip to API](#api)**
 
+⏭️ **[Skip to TypeScript](#typescript)**
+
 Here's a simple demo to see how it works:
 
 > **Note**
@@ -334,28 +336,34 @@ Whether the given function is an observable.
 ```js
 import { $observable, $computed, $effect, isObservable } from '@maverick-js/observables';
 
-const $a = $observable(10);
-isObservable($a); // true
+// True
+isObservable($observable(10));
 
-isObservable(() => {}); // false
-isObservable($computed(() => 10)); // false
-isObservable($effect(() => {})); // false
+// False
+isObservable(false);
+isObservable(null);
+isObservable(undefined);
+isObservable(() => {});
+isObservable($computed(() => 10));
+isObservable($effect(() => {}));
 ```
 
 ### `isComputed`
 
-Whether the given function is a computed observable.
+Whether the given function is computed.
 
 ```js
-import { $observable, $computed, isComputed } from '@maverick-js/observables';
+import { $observable, $computed, $effect, isComputed } from '@maverick-js/observables';
 
-isComputed(() => {}); // false
+// True
+isComputed($computed(() => 10));
 
-const $a = $observable(10);
-isComputed($a); // false
-
-const $b = $computed(() => $a() + 10);
-isComputed($b); // true
+// False
+isComputed(false);
+isComputed(null);
+isComputed(undefined);
+isComputed($observable(10));
+isComputed($effect(() => {}));
 ```
 
 ## Debugging
@@ -405,16 +413,37 @@ await scheduler.tick;
 > **Note**
 > You can read more about microtasks on [MDN][mdn-microtasks].
 
-## Types
+## TypeScript
 
 ```ts
-import { $computed, type Observable, type Computation } from '@maverick-js/observables';
+import {
+  $computed,
+  isComputed,
+  isObservable,
+  type Observable,
+  type Computed,
+  type MaybeObservable,
+  type MaybeComputed,
+} from '@maverick-js/observables';
 
+// Types
 const observable: Observable<number>;
-const computed: Computation<number>;
+const computed: Computed<number>;
 
 // Provide generic if TS fails to infer correct type.
 const $a = $computed<string>(() => /* ... */);
+
+// Observable type inference
+const $b: MaybeObservable<number> = null;
+if (isObservable($b)) {
+  $b(); // Observable<number>
+}
+
+// Computed type inference
+const $c: MaybeComputed<number> = null;
+if (isComputed($c)) {
+  $c(); // Computed<number>
+}
 ```
 
 ## Inspiration

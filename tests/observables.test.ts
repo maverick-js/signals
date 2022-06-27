@@ -1,16 +1,16 @@
 import {
+  $root,
   $computed,
   $observable,
   $peek,
   $effect,
   $tick,
-  isComputed,
   $readonly,
   $dispose,
-  $root,
-  type Computation,
-  type Observable,
   isObservable,
+  isComputed,
+  type Computed,
+  type Observable,
 } from '../src';
 
 afterEach(() => $tick());
@@ -20,7 +20,7 @@ describe('$root', () => {
     const computeB = vi.fn();
 
     let $a: Observable<number>;
-    let $b: Computation<number>;
+    let $b: Computed<number>;
 
     $root((dispose) => {
       $a = $observable(10);
@@ -82,9 +82,9 @@ describe('isObservable', () => {
   });
 
   it('should return false if given non-observable', () => {
-    expect(isObservable(() => {})).toBe(false);
-    expect(isObservable($computed(() => 10))).toBe(false);
-    expect(isObservable($effect(() => {}))).toBe(false);
+    ([false, () => {}, $computed(() => 10), $effect(() => {})] as const).forEach((type) =>
+      expect(isObservable(type)).toBe(false),
+    );
   });
 });
 
@@ -460,19 +460,13 @@ describe('$dispose', () => {
 });
 
 describe('isComputed', () => {
-  it('should return false given function', () => {
-    expect(isComputed(() => {})).toBe(false);
-  });
-
-  it('should return false given observable', () => {
-    expect(isComputed($observable(10))).toBe(false);
-  });
-
-  it('should return false given effect', () => {
-    expect(isComputed($effect(() => {}))).toBe(false);
-  });
-
   it('should return true given computed', () => {
-    expect(isComputed($computed(() => {}))).toBe(true);
+    expect(isComputed($computed(() => 10))).toBe(true);
+  });
+
+  it('should return false if given non-computed', () => {
+    ([false, () => {}, $observable(10), $effect(() => {})] as const).forEach((type) =>
+      expect(isComputed(type)).toBe(false),
+    );
   });
 });

@@ -3,14 +3,20 @@ import { createScheduler } from './scheduler';
 export type Observable<T> = {
   $id?: string;
   (): T;
-  set: (nextValue: T) => void;
+  set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
 };
 
-export type Computation<T> = {
+export type ReadonlyObservable<T> = {
   $id?: string;
   (): T;
 };
+
+export type Computed<T> = ReadonlyObservable<T>;
+
+export type MaybeFunction = ((...args: any) => any) | null | undefined | false;
+export type MaybeObservable<T = unknown> = MaybeFunction | Observable<T>;
+export type MaybeComputed<T = unknown> = MaybeFunction | Computed<T>;
 
 export type Dispose = () => void;
 export type StopEffect = (deep?: boolean) => void;
@@ -133,18 +139,18 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
  *
  * @example
  * ```js
- * const $a = $observable(10);
- * isObservable($a); // true
- *
- * const $b = $computed(() => 10);
- * isObservable($b); // false
- *
- * const $c = $effect(() => {});
- * isObservable($c); // false
+ * // True
+ * isObservable($observable(10));
+ * // False
+ * isObservable(false);
+ * isObservable(null);
+ * isObservable(undefined);
+ * isObservable($computed(() => 10));
+ * isObservable($effect(() => {}));
  * ```
  */
-export function isObservable<T>(fn: () => T): fn is Observable<T> {
-  return OBSERVABLE in fn;
+export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
+  return fn ? OBSERVABLE in fn : false;
 }
 
 /**
@@ -170,9 +176,9 @@ export function isObservable<T>(fn: () => T): fn is Observable<T> {
  * console.log($c()); // logs 40
  * ```
  */
-export function $computed<T>(fn: () => T, $id?: string): Computation<T> {
+export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
   let currentValue;
-  const $computed: Computation<T> = () => {
+  const $computed: Computed<T> = () => {
     if (__DEV__) _callStack.push($computed);
 
     // Computed is observing another computed.
@@ -287,7 +293,7 @@ export function $effect(fn: () => void, $id?: string): StopEffect {
  * console.log($b()); // logs 20
  * ```
  */
-export function $readonly<T>($observable: Observable<T>): Computation<T> {
+export function $readonly<T>($observable: Observable<T>): ReadonlyObservable<T> {
   return () => $observable();
 }
 
@@ -320,21 +326,22 @@ export function $tick() {
 }
 
 /**
- * Whether the given function is a computed observable.
+ * Whether the given function is computed.
  *
  * @example
  * ```js
- * isComputed(() => {}); // false
- *
- * const $a = $observable(10);
- * isComputed($a); // false
- *
- * const $b = $computed(() => $a() + 10);
- * isComputed($b); // true
+ * // True
+ * isComputed($computed(() => 10));
+ * // False
+ * isComputed(false);
+ * isComputed(null);
+ * isComputed(undefined);
+ * isComputed($observable(10));
+ * isComputed($effect(() => {}));
  * ```
  */
-export function isComputed(fn: () => void) {
-  return COMPUTED in fn;
+export function isComputed<T>(fn: MaybeComputed<T>): fn is Computed<T> {
+  return fn ? COMPUTED in fn : false;
 }
 
 export function safeNotEqual(a, b) {
