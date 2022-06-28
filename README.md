@@ -28,6 +28,8 @@ updates as its value changes.
 
 ⏭️ **[Skip to TypeScript](#typescript)**
 
+⏭️ **[Skip to Benchmarks](#benchmarks)**
+
 Here's a simple demo to see how it works:
 
 > **Note**
@@ -496,6 +498,21 @@ if (isComputed($c)) {
   $c(); // Computed<number>
 }
 ```
+
+## Benchmarks
+
+### Layers
+
+This benchmark was taken from [`cellx`](https://github.com/Riim/cellx#benchmark). It
+tests how long it takes for an `n` deeply layered computation to update. The benchmark can be
+found [here](./bench/layers.js).
+
+Each column represents how deep computations were layered. The average time taken to update the
+computation out of a 100 runs is used for each library.
+
+> **Don't take this benchmark too seriously because it hasn't been reviewed properly at all.**
+
+<img src="./bench/layers.png" alt="Layers benchmark" width="350px" />
 
 ## Inspiration
 
