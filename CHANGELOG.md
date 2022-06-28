@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.3](https://github.com/maverick-js/observables/compare/v2.0.2...v2.0.3) (2022-06-28)
+
+
+### Bug Fixes
+
+* track parent separately to handle disposals correctly ([50110d4](https://github.com/maverick-js/observables/commit/50110d4d8fa590310a24d3e9b4433463c455c189))
+
 ### [2.0.2](https://github.com/maverick-js/observables/compare/v2.0.1...v2.0.2) (2022-06-27)
 
 
