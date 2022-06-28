@@ -512,11 +512,11 @@ Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their wo
 [package-badge]: https://img.shields.io/npm/v/@maverick-js/observables/latest
 [license]: https://github.com/maverick-js/observables/blob/main/LICENSE
 [license-badge]: https://img.shields.io/github/license/maverick-js/observables
-[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@latest
+[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^2.0.0
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
 [svelte-scheduler]: https://github.com/sveltejs/svelte/blob/master/src/runtime/internal/scheduler.ts
 [mdn-microtasks]: https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide
 [stackblitz-demo]: https://stackblitz.com/edit/maverick-observables?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
-[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@latest
+[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^2.0.0
