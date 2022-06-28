@@ -42,6 +42,8 @@ const _scheduler = __DEV__
     })
   : createScheduler();
 
+// We track parent separately to ensure disposals are handled correctly while peeking.
+let _parent: Computable | undefined;
 let _computation: Computable | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
@@ -84,9 +86,11 @@ export function $root<T>(fn: (dispose: Dispose) => T): T {
  */
 export function $peek<T>(fn: () => T): T {
   const prev = _computation;
+
   _computation = undefined;
   const result = fn();
   _computation = prev;
+
   return result;
 }
 
@@ -109,6 +113,7 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
 
   const $observable: Observable<T> = () => {
     if (__DEV__) _callStack.push($observable);
+    if (_parent) dependency(_parent, $observable);
     if (_computation) observe($observable, _computation);
     return currentValue;
   };
@@ -184,6 +189,7 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
     if (__DEV__) _callStack.push($computed);
 
     // Computed is observing another computed.
+    if (_parent) dependency(_parent, $computed);
     if (_computation) observe($computed, _computation);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
@@ -225,18 +231,14 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
  * ```
  */
 export function onDispose(fn?: MaybeDispose): Dispose {
-  if (__DEV__ && !_computation) {
-    console.warn('[maverick]: trying to add a `onDispose` function but no parent exists.');
-  }
+  const valid = fn && _parent;
 
-  const valid = fn && _computation;
-
-  if (valid) (_computation![DISPOSAL] ??= new Set()).add(fn as Dispose);
+  if (valid) addNode(_parent!, DISPOSAL, fn as Dispose);
 
   return valid
     ? () => {
         (fn as Dispose)();
-        _computation![DISPOSAL]?.delete(fn as Dispose);
+        _parent![DISPOSAL]?.delete(fn as Dispose);
       }
     : NOOP;
 }
@@ -297,7 +299,7 @@ export function $dispose(fn: () => void, deep?: boolean) {
 export function $effect(fn: Effect, $id?: string): StopEffect {
   let dispose: ReturnType<Effect>;
 
-  const $compute = $computed(
+  const $effect = $computed(
     () => {
       if (dispose) dispose();
       dispose = onDispose(fn());
@@ -305,8 +307,8 @@ export function $effect(fn: Effect, $id?: string): StopEffect {
     __DEV__ ? $id ?? '$effect' : $id,
   );
 
-  $compute();
-  return (deep?: boolean) => $dispose($compute, deep);
+  $effect();
+  return (deep?: boolean) => $dispose($effect, deep);
 }
 
 /**
@@ -390,20 +392,28 @@ type Computable = {
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
-  const prev = _computation;
+  const prevParent = _parent;
+  const prevComputation = _computation;
+
+  _parent = parent;
   _computation = parent;
   if (__DEV__) _computeStack.push(parent);
+
   const nextValue = child();
-  _computation = prev;
+
+  _parent = prevParent;
+  _computation = prevComputation;
   if (__DEV__) _computeStack.pop();
+
   return nextValue;
 }
 
 function observe(node: Computable, observer: Computable) {
-  if (!node[DISPOSED]) {
-    (node[OBSERVERS] ??= new Set()).add(observer);
-    (observer[DEPENDENCIES] ??= new Set()).add(node);
-  }
+  addNode(node, OBSERVERS, observer);
+}
+
+function dependency(node: Computable, dependency: Computable) {
+  addNode(node, DEPENDENCIES, dependency);
 }
 
 function dirty(node: Computable) {
@@ -419,6 +429,10 @@ function dirty(node: Computable) {
       }
     }
   }
+}
+
+function addNode(node: Computable, key: symbol, item: () => void) {
+  if (!node[DISPOSED]) (node[key] ??= new Set<() => void>()).add(item);
 }
 
 function unrefSet(parent: any, key: symbol) {

@@ -376,6 +376,28 @@ describe('$peek', () => {
     expect(computeD).toHaveBeenCalledTimes(2);
     expect($d()).toBe(50);
   });
+
+  it('should not affect deep `onDispose`', async () => {
+    const effect = vi.fn();
+    const dispose = vi.fn();
+
+    function runEffect() {
+      $effect(() => {
+        effect();
+        onDispose(dispose);
+      }, 'b');
+    }
+
+    const stop = $effect(() => {
+      $peek(() => runEffect());
+    }, 'a');
+
+    stop(true);
+    await $tick();
+
+    expect(effect).to.toHaveBeenCalledTimes(1);
+    expect(dispose).to.toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('$tick', () => {
