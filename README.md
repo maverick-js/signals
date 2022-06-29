@@ -32,9 +32,7 @@ updates as its value changes.
 
 Here's a simple demo to see how it works:
 
-> **Note**
->
-> Interact with the demo live on [StackBlitz][stackblitz-demo].
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)][stackblitz-demo]
 
 ```js
 import { $root, $observable, $computed, $effect, $tick } from '@maverick-js/observables';
