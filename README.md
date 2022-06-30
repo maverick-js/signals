@@ -37,7 +37,7 @@ Here's a simple demo to see how it works:
 ```js
 import { $root, $observable, $computed, $effect, $tick } from '@maverick-js/observables';
 
-$root((dispose) => {
+$root(async (dispose) => {
   // Create - all types supported (string, array, object, etc.)
   const $m = $observable(1);
   const $x = $observable(1);
@@ -108,7 +108,7 @@ $: yarn add @maverick-js/observables
 - [`$dispose`](#dispose)
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
-- [`isComputed`](#iscomputed)
+- [`isSubject`](#issubject)
 
 ## `$root`
 
@@ -382,39 +382,36 @@ $effect(() => {
 
 ### `isObservable`
 
-Whether the given function is an observable.
+Whether the given value is an observable (readonly).
 
 ```js
-import { $observable, $computed, $effect, isObservable } from '@maverick-js/observables';
-
 // True
 isObservable($observable(10));
+isObservable($computed(() => 10));
+isObservable($readonly($observable(10)));
 
 // False
 isObservable(false);
 isObservable(null);
 isObservable(undefined);
 isObservable(() => {});
-isObservable($computed(() => 10));
-isObservable($effect(() => {}));
 ```
 
-### `isComputed`
+### `isSubject`
 
-Whether the given function is computed.
+Whether the given value is an observable subject (i.e., can produce new values via write API).
 
 ```js
-import { $observable, $computed, $effect, isComputed } from '@maverick-js/observables';
-
 // True
-isComputed($computed(() => 10));
+isSubject($observable(10));
 
 // False
-isComputed(false);
-isComputed(null);
-isComputed(undefined);
-isComputed($observable(10));
-isComputed($effect(() => {}));
+isSubject(false);
+isSubject(null);
+isSubject(undefined);
+isSubject(() => {});
+isSubject($computed(() => 10));
+isSubject($readonly($observable(10)));
 ```
 
 ## Debugging
@@ -468,32 +465,29 @@ await scheduler.tick;
 
 ```ts
 import {
-  $computed,
-  isComputed,
   isObservable,
+  isSubject,
+  type Effect,
   type Observable,
-  type Computed,
   type MaybeObservable,
-  type MaybeComputed,
 } from '@maverick-js/observables';
 
 // Types
 const observable: Observable<number>;
-const computed: Computed<number>;
+const computed: Observable<string>;
+const effect: Effect;
 
 // Provide generic if TS fails to infer correct type.
 const $a = $computed<string>(() => /* ... */);
 
-// Observable type inference
-const $b: MaybeObservable<number> = null;
+const $b: MaybeObservable<number>;
+
 if (isObservable($b)) {
   $b(); // Observable<number>
 }
 
-// Computed type inference
-const $c: MaybeComputed<number> = null;
-if (isComputed($c)) {
-  $c(); // Computed<number>
+if (isSubject($b)) {
+  $b.set(10); // ObservableSubject<number>
 }
 ```
 
@@ -527,11 +521,11 @@ Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their wo
 [package-badge]: https://img.shields.io/npm/v/@maverick-js/observables/latest
 [license]: https://github.com/maverick-js/observables/blob/main/LICENSE
 [license-badge]: https://img.shields.io/github/license/maverick-js/observables
-[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^2.0.0
+[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^3.0.0
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
 [svelte-scheduler]: https://github.com/sveltejs/svelte/blob/master/src/runtime/internal/scheduler.ts
 [mdn-microtasks]: https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide
 [stackblitz-demo]: https://stackblitz.com/edit/maverick-observables?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
-[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^2.0.0
+[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^3.0.0

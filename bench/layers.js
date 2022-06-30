@@ -12,7 +12,7 @@ import * as solid from './solid-js-baseline.js';
 import * as maverick from '../dist/prod/index.js';
 import Table from 'cli-table';
 
-const RUNS_PER_TIER = 100;
+const RUNS_PER_TIER = 150;
 const LAYER_TIERS = [10, 100, 500, 1000, 2000, 2500];
 
 const sum = (array) => array.reduce((a, b) => a + b, 0);
@@ -35,10 +35,10 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 
 async function main() {
   const report = {
+    maverick: { fn: runMaverick, runs: [], avg: [] },
     cellx: { fn: runCellx, runs: [] },
     solid: { fn: runSolid, runs: [] },
     S: { fn: runS, runs: [] },
-    maverick: { fn: runMaverick, runs: [], avg: [] },
     // Can't get it to work for some reason.
     // sinuous: { fn: runSinuous, runs: [] },
   };
@@ -296,13 +296,6 @@ function runSolid(layers, done) {
           c: solid.createMemo(() => m.b() + m.d()),
           d: solid.createMemo(() => m.c()),
         };
-
-        solid.createComputed(props.a),
-          solid.createComputed(props.b),
-          solid.createComputed(props.c),
-          solid.createComputed(props.d);
-
-        props.a(), props.b(), props.c(), props.d();
 
         return props;
       })(layer);

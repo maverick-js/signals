@@ -3,28 +3,22 @@ import { createScheduler } from './scheduler';
 export type Observable<T> = {
   $id?: string;
   (): T;
+};
+
+export type ObservableSubject<T> = Observable<T> & {
   set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
 };
 
-export type ReadonlyObservable<T> = {
-  $id?: string;
-  (): T;
-};
-
-export type Computed<T> = ReadonlyObservable<T>;
-
 export type Dispose = () => void;
-
 export type Effect = () => MaybeStopEffect;
 export type StopEffect = (deep?: boolean) => void;
 
 export type Maybe<T> = T | void | null | undefined | false;
 export type MaybeFunction = Maybe<(...args: any) => any>;
-export type MaybeObservable<T = unknown> = MaybeFunction | Observable<T>;
-export type MaybeComputed<T = unknown> = MaybeFunction | Computed<T>;
 export type MaybeDispose = Maybe<Dispose>;
 export type MaybeStopEffect = Maybe<StopEffect>;
+export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 
 const NOOP = () => {};
 
@@ -97,7 +91,8 @@ export function $peek<T>(fn: () => T): T {
 /**
  * Wraps the given value into an observable function. The observable function will return the
  * current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
- * value can now be observed when used inside other computations created with `$computed` and `$effect`.
+ * value can now be observed when used inside other computations created with `$computed` and
+ * `$effect`.
  *
  * @example
  * ```
@@ -108,10 +103,10 @@ export function $peek<T>(fn: () => T): T {
  * $a.next(prev => prev + 10); // write (2)
  * ```
  */
-export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
+export function $observable<T>(initialValue: T, $id?: string): ObservableSubject<T> {
   let currentValue = initialValue;
 
-  const $observable: Observable<T> = () => {
+  const $observable: ObservableSubject<T> = () => {
     if (__DEV__) _callStack.push($observable);
     if (_parent) dependency(_parent, $observable);
     if (_computation) observe($observable, _computation);
@@ -132,26 +127,28 @@ export function $observable<T>(initialValue: T, $id?: string): Observable<T> {
   if (__DEV__) $observable.$id = $id ?? '$observable';
 
   $observable[OBSERVABLE] = true;
+
   return $observable;
 }
 
 /**
- * Whether the given function is an observable.
+ * Whether the given value is an observable (readonly).
  *
  * @example
  * ```js
  * // True
  * isObservable($observable(10));
+ * isObservable($computed(() => 10));
+ * isObservable($readonly($observable(10)));
  * // False
  * isObservable(false);
  * isObservable(null);
  * isObservable(undefined);
- * isObservable($computed(() => 10));
- * isObservable($effect(() => {}));
+ * isObservable(() => {});
  * ```
  */
 export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
-  return fn ? OBSERVABLE in fn : false;
+  return !!fn?.[OBSERVABLE];
 }
 
 /**
@@ -177,10 +174,10 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  * console.log($c()); // logs 40
  * ```
  */
-export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
+export function $computed<T>(fn: () => T, $id?: string): Observable<T> {
   let currentValue;
 
-  const $computed: Computed<T> = () => {
+  const $computed: Observable<T> = () => {
     if (__DEV__ && _computeStack.includes($computed)) {
       const calls = _callStack.map((c) => c.$id ?? '?').join(' --> ');
       throw Error(`cyclic dependency detected\n\n${calls}\n`);
@@ -205,6 +202,7 @@ export function $computed<T>(fn: () => T, $id?: string): Computed<T> {
 
   // Starts off dirty because it hasn't run yet.
   $computed[DIRTY] = true;
+  $computed[OBSERVABLE] = true;
   $computed[COMPUTED] = true;
 
   return $computed;
@@ -328,8 +326,10 @@ export function $effect(fn: Effect, $id?: string): StopEffect {
  * console.log($b()); // logs 20
  * ```
  */
-export function $readonly<T>($observable: Observable<T>): ReadonlyObservable<T> {
-  return () => $observable();
+export function $readonly<T>($observable: Observable<T>): Observable<T> {
+  const $readonly = () => $observable();
+  $readonly[OBSERVABLE] = true;
+  return $readonly;
 }
 
 /**
@@ -361,22 +361,23 @@ export function $tick() {
 }
 
 /**
- * Whether the given function is computed.
+ * Whether the given value is an observable subject (i.e., can produce new values via write API).
  *
  * @example
  * ```js
  * // True
- * isComputed($computed(() => 10));
+ * isSubject($observable(10));
  * // False
- * isComputed(false);
- * isComputed(null);
- * isComputed(undefined);
- * isComputed($observable(10));
- * isComputed($effect(() => {}));
+ * isSubject(false);
+ * isSubject(null);
+ * isSubject(undefined);
+ * isSubject(() => {});
+ * isSubject($computed(() => 10));
+ * isSubject($readonly($observable(10)));
  * ```
  */
-export function isComputed<T>(fn: MaybeComputed<T>): fn is Computed<T> {
-  return fn ? COMPUTED in fn : false;
+export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
+  return isObservable(fn) && !!(fn as ObservableSubject<T>).set;
 }
 
 type Computable = {
