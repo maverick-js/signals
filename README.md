@@ -416,18 +416,18 @@ isSubject($readonly($observable(10)));
 
 ## Debugging
 
-The `$observable`, `$computed`, and `$effect` functions accept a debugging ID (string) as
-their second argument. This can be helpful when logging a cyclic dependency chain to understand
+The `$observable`, `$computed`, and `$effect` functions accept a debugging ID (string) as part
+of their options. This can be helpful when logging a cyclic dependency chain to understand
 where it's occurring.
 
 ```js
 import { $observable, $computed } from '@maverick-js/observables';
 
-const $a = $observable(10, 'a');
+const $a = $observable(10, { id: 'a' });
 
 // Cyclic dependency chain.
-const $b = $computed(() => $a() + $c(), 'b');
-const $c = $computed(() => $a() + $b(), 'c');
+const $b = $computed(() => $a() + $c(), { id: 'b' });
+const $c = $computed(() => $a() + $b(), { id: 'c' });
 
 // This will throw an error in the form:
 // $: Error: cyclic dependency detected

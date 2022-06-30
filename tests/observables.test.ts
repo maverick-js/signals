@@ -210,8 +210,8 @@ describe('$computed', () => {
 
   it('should throw on cyclic computation', () => {
     expect(() => {
-      const $a = $computed(() => $b(), '$a');
-      const $b = $computed(() => $a(), '$b');
+      const $a = $computed(() => $b());
+      const $b = $computed(() => $a());
       $b();
     }).toThrow(/cyclic dependency detected/);
   });
@@ -387,12 +387,12 @@ describe('$peek', () => {
       $effect(() => {
         effect();
         onDispose(dispose);
-      }, 'b');
+      });
     }
 
     const stop = $effect(() => {
       $peek(() => runEffect());
-    }, 'a');
+    });
 
     stop(true);
     await $tick();

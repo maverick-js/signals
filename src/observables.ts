@@ -1,7 +1,7 @@
 import { createScheduler } from './scheduler';
 
 export type Observable<T> = {
-  $id?: string;
+  id?: string;
   (): T;
 };
 
@@ -103,7 +103,7 @@ export function $peek<T>(fn: () => T): T {
  * $a.next(prev => prev + 10); // write (2)
  * ```
  */
-export function $observable<T>(initialValue: T, $id?: string): ObservableSubject<T> {
+export function $observable<T>(initialValue: T, opts?: { id?: string }): ObservableSubject<T> {
   let currentValue = initialValue;
 
   const $observable: ObservableSubject<T> = () => {
@@ -124,7 +124,7 @@ export function $observable<T>(initialValue: T, $id?: string): ObservableSubject
     $observable.set(next(currentValue));
   };
 
-  if (__DEV__) $observable.$id = $id ?? '$observable';
+  if (__DEV__) $observable.id = opts?.id ?? '$observable';
 
   $observable[OBSERVABLE] = true;
 
@@ -174,12 +174,12 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  * console.log($c()); // logs 40
  * ```
  */
-export function $computed<T>(fn: () => T, $id?: string): Observable<T> {
+export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T> {
   let currentValue;
 
   const $computed: Observable<T> = () => {
     if (__DEV__ && _computeStack.includes($computed)) {
-      const calls = _callStack.map((c) => c.$id ?? '?').join(' --> ');
+      const calls = _callStack.map((c) => c.id ?? '?').join(' --> ');
       throw Error(`cyclic dependency detected\n\n${calls}\n`);
     }
 
@@ -198,7 +198,7 @@ export function $computed<T>(fn: () => T, $id?: string): Observable<T> {
     return currentValue;
   };
 
-  if (__DEV__) $computed.$id = $id ?? `$computed`;
+  if (__DEV__) $computed.id = opts?.id ?? `$computed`;
 
   // Starts off dirty because it hasn't run yet.
   $computed[DIRTY] = true;
@@ -294,7 +294,7 @@ export function $dispose(fn: () => void, deep?: boolean) {
  * stop();
  * ```
  */
-export function $effect(fn: Effect, $id?: string): StopEffect {
+export function $effect(fn: Effect, opts?: { id?: string }): StopEffect {
   let dispose: ReturnType<Effect>;
 
   const $effect = $computed(
@@ -302,7 +302,7 @@ export function $effect(fn: Effect, $id?: string): StopEffect {
       if (dispose) dispose();
       dispose = onDispose(fn());
     },
-    __DEV__ ? $id ?? '$effect' : $id,
+    { id: __DEV__ ? opts?.id ?? '$effect' : opts?.id },
   );
 
   $effect();
@@ -381,7 +381,7 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
 }
 
 type Computable = {
-  $id?: string;
+  id?: string;
   (): any;
   [OBSERVABLE]?: boolean;
   [COMPUTED]?: boolean;
