@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.0](https://github.com/maverick-js/observables/compare/v2.0.3...v3.0.0) (2022-06-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* - computed type `Computed` -> `Observable`
+- observable return type is now `ObservableSubject`
+- dropped `isComputed`
+- `isObservable` checks readonly
+- `isObservable` passes for computed observables
+
+### Bug Fixes
+
+* all types extend observable ([bef215c](https://github.com/maverick-js/observables/commit/bef215c1ec98cb3593e1f9daea71bb6b6974ee2f))
+
 ### [2.0.3](https://github.com/maverick-js/observables/compare/v2.0.2...v2.0.3) (2022-06-28)
 
 
