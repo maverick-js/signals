@@ -37,12 +37,12 @@ const _scheduler = __DEV__
   : createScheduler();
 
 // We track parent separately to ensure disposals are handled correctly while peeking.
-let _parent: Computable | undefined;
-let _computation: Computable | undefined;
+let _parent: Node | undefined;
+let _computation: Node | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
-let _callStack: Computable[] = [];
-let _computeStack: Computable[] = [];
+let _callStack: Node[] = [];
+let _computeStack: Node[] = [];
 
 /**
  * Creates a computation root which is given a `dispose()` function to dispose of all inner
@@ -108,8 +108,8 @@ export function $observable<T>(initialValue: T, opts?: { id?: string }): Observa
 
   const $observable: ObservableSubject<T> = () => {
     if (__DEV__) _callStack.push($observable);
-    if (_parent) dependency(_parent, $observable);
-    if (_computation) observe($observable, _computation);
+    if (_parent) addDependency(_parent, $observable);
+    if (_computation) addObserver($observable, _computation);
     return currentValue;
   };
 
@@ -186,8 +186,8 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
     if (__DEV__) _callStack.push($computed);
 
     // Computed is observing another computed.
-    if (_parent) dependency(_parent, $computed);
-    if (_computation) observe($computed, _computation);
+    if (_parent) addDependency(_parent, $computed);
+    if (_computation) addObserver($computed, _computation);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       currentValue = compute($computed, fn);
@@ -258,20 +258,18 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  * ```
  */
 export function $dispose(fn: () => void, deep?: boolean) {
-  if ((fn as Computable)[DEPENDENCIES]) {
-    for (const dep of fn[DEPENDENCIES]) {
-      if (deep) $dispose(dep, deep);
-      dep[OBSERVERS]?.delete(fn);
+  forEachDependency(fn, (dependency) => {
+    if (deep) {
+      $dispose(dependency, deep);
+    } else {
+      dependency[OBSERVERS]?.delete(fn);
     }
+  });
 
-    unrefSet(fn, DEPENDENCIES);
-  }
+  emptyDisposal(fn);
 
-  if ((fn as Computable)[DISPOSAL]) {
-    for (const dispose of fn[DISPOSAL]) dispose();
-    unrefSet(fn, DISPOSAL);
-  }
-
+  unrefSet(fn, DEPENDENCIES);
+  unrefSet(fn, DISPOSAL);
   unrefSet(fn, OBSERVERS);
 
   fn[DIRTY] = false;
@@ -295,12 +293,11 @@ export function $dispose(fn: () => void, deep?: boolean) {
  * ```
  */
 export function $effect(fn: Effect, opts?: { id?: string }): StopEffect {
-  let dispose: ReturnType<Effect>;
-
   const $effect = $computed(
     () => {
-      if (dispose) dispose();
-      dispose = onDispose(fn());
+      walkDependencies($effect, emptyDisposal);
+      emptyDisposal($effect);
+      onDispose(fn());
     },
     { id: __DEV__ ? opts?.id ?? '$effect' : opts?.id },
   );
@@ -380,15 +377,15 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
   return isObservable(fn) && !!(fn as ObservableSubject<T>).set;
 }
 
-type Computable = {
+type Node = {
   id?: string;
   (): any;
   [OBSERVABLE]?: boolean;
   [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
   [DISPOSED]?: boolean;
-  [OBSERVERS]?: Set<Computable>;
-  [DEPENDENCIES]?: Set<Computable>;
+  [OBSERVERS]?: Set<Node>;
+  [DEPENDENCIES]?: Set<Node>;
   [DISPOSAL]?: Set<Dispose>;
 };
 
@@ -409,21 +406,39 @@ function compute<T>(parent: () => void, child: () => T): T {
   return nextValue;
 }
 
-function observe(node: Computable, observer: Computable) {
+function addObserver(node: Node, observer: Node) {
   addNode(node, OBSERVERS, observer);
 }
 
-function dependency(node: Computable, dependency: Computable) {
+function addDependency(node: Node, dependency: Node) {
   addNode(node, DEPENDENCIES, dependency);
 }
 
-function dirty(node: Computable) {
-  if (_scheduler.served(node)) return;
+function addNode(node: Node, key: symbol, item: () => void) {
+  if (!node[DISPOSED]) (node[key] ??= new Set<() => void>()).add(item);
+}
 
-  const observers = node[OBSERVERS];
+function walkDependencies(node: Node, callback: (node: Node) => void) {
+  forEachDependency(node, (dependency) => {
+    walkDependencies(dependency, callback);
+    callback(dependency);
+  });
+}
 
-  if (observers) {
-    for (const observer of observers) {
+function forEachDependency(node: Node, callback: (node: Node) => void) {
+  if (node[DEPENDENCIES]) for (const dependency of node[DEPENDENCIES]) callback(dependency);
+}
+
+function emptyDisposal(node: Node) {
+  if (node[DISPOSAL]) {
+    for (const dispose of node[DISPOSAL]) dispose();
+    node[DISPOSAL].clear();
+  }
+}
+
+function dirty(node: Node) {
+  if (node[OBSERVERS] && !_scheduler.served(node)) {
+    for (const observer of node[OBSERVERS]) {
       if (observer[COMPUTED] && observer !== _computation) {
         observer[DIRTY] = true;
         _scheduler.enqueue(observer);
@@ -432,11 +447,6 @@ function dirty(node: Computable) {
   }
 }
 
-function addNode(node: Computable, key: symbol, item: () => void) {
-  if (!node[DISPOSED]) (node[key] ??= new Set<() => void>()).add(item);
-}
-
 function unrefSet(parent: any, key: symbol) {
-  parent[key]?.clear();
   parent[key] = undefined;
 }

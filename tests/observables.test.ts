@@ -308,6 +308,43 @@ describe('$effect', () => {
     await $tick();
     expect(dispose).toHaveBeenCalledTimes(3);
   });
+
+  it('should run all disposals before each new run', async () => {
+    const effect = vi.fn();
+    const disposeA = vi.fn();
+    const disposeB = vi.fn();
+
+    function fn() {
+      onDispose(disposeA);
+    }
+
+    const $a = $observable(10);
+    const $b = $computed(() => {
+      $a();
+      onDispose(disposeB);
+    });
+
+    $effect(() => {
+      effect();
+      fn(), $b();
+    });
+
+    expect(effect).toHaveBeenCalledTimes(1);
+    expect(disposeA).toHaveBeenCalledTimes(0);
+    expect(disposeB).toHaveBeenCalledTimes(0);
+
+    $a.set(20);
+    await $tick();
+    expect(effect).toHaveBeenCalledTimes(2);
+    expect(disposeA).toHaveBeenCalledTimes(1);
+    expect(disposeB).toHaveBeenCalledTimes(1);
+
+    $a.set(30);
+    await $tick();
+    expect(effect).toHaveBeenCalledTimes(3);
+    expect(disposeA).toHaveBeenCalledTimes(2);
+    expect(disposeB).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('$peek', () => {
