@@ -103,8 +103,13 @@ export function $peek<T>(fn: () => T): T {
  * $a.next(prev => prev + 10); // write (2)
  * ```
  */
-export function $observable<T>(initialValue: T, opts?: { id?: string }): ObservableSubject<T> {
+export function $observable<T>(
+  initialValue: T,
+  opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
+): ObservableSubject<T> {
   let currentValue = initialValue;
+
+  const isDirty = opts?.dirty ?? notEqual;
 
   const $observable: ObservableSubject<T> = () => {
     if (__DEV__) _callStack.push($observable);
@@ -114,9 +119,9 @@ export function $observable<T>(initialValue: T, opts?: { id?: string }): Observa
   };
 
   $observable.set = (nextValue: T) => {
-    if (!$observable[DISPOSED] && nextValue !== currentValue) {
+    if (!$observable[DISPOSED] && isDirty(currentValue, nextValue)) {
       currentValue = nextValue!;
-      dirty($observable);
+      dirtyNode($observable);
     }
   };
 
@@ -192,7 +197,7 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       currentValue = compute($computed, fn);
       $computed[DIRTY] = false;
-      dirty($computed);
+      dirtyNode($computed);
     }
 
     return currentValue;
@@ -418,6 +423,17 @@ function addNode(node: Node, key: symbol, item: () => void) {
   if (!node[DISPOSED]) (node[key] ??= new Set<() => void>()).add(item);
 }
 
+function dirtyNode(node: Node) {
+  if (node[OBSERVERS] && !_scheduler.served(node)) {
+    for (const observer of node[OBSERVERS]) {
+      if (observer[COMPUTED] && observer !== _computation) {
+        observer[DIRTY] = true;
+        _scheduler.enqueue(observer);
+      }
+    }
+  }
+}
+
 function walkDependencies(node: Node, callback: (node: Node) => void) {
   forEachDependency(node, (dependency) => {
     walkDependencies(dependency, callback);
@@ -436,17 +452,10 @@ function emptyDisposal(node: Node) {
   }
 }
 
-function dirty(node: Node) {
-  if (node[OBSERVERS] && !_scheduler.served(node)) {
-    for (const observer of node[OBSERVERS]) {
-      if (observer[COMPUTED] && observer !== _computation) {
-        observer[DIRTY] = true;
-        _scheduler.enqueue(observer);
-      }
-    }
-  }
-}
-
 function unrefSet(parent: any, key: symbol) {
   parent[key] = undefined;
+}
+
+function notEqual(a: unknown, b: unknown) {
+  return a !== b;
 }
