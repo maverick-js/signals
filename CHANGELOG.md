@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.1.0](https://github.com/maverick-js/observables/compare/v3.0.0...v3.1.0) (2022-07-01)
+
+
+### Features
+
+* `$observable` accepts dirty check option ([0c7a55d](https://github.com/maverick-js/observables/commit/0c7a55d9b71463200e90413a1d6987b00451e9ae))
+
+
+### Bug Fixes
+
+* effect should run all disposals on each new run ([3217217](https://github.com/maverick-js/observables/commit/3217217a85c232e6e0311d31ea3fd9d9b25db825))
+* second argument to observables is an options object (prev debug id) ([d0c31e7](https://github.com/maverick-js/observables/commit/d0c31e745867283e190a6c1626c8156b624aeeda))
+
 ## [3.0.0](https://github.com/maverick-js/observables/compare/v2.0.3...v3.0.0) (2022-06-30)
 
 ### ⚠ BREAKING CHANGES
