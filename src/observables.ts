@@ -391,7 +391,7 @@ type Node = {
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
-  const prevParent = parent;
+  const prevParent = _parent;
   const prevComputation = _computation;
 
   _parent = parent;
