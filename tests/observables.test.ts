@@ -55,6 +55,30 @@ describe('$root', () => {
 
     expect(result).toBe(10);
   });
+
+  it('should create new tracking scope', async () => {
+    const innerEffect = vi.fn();
+
+    const $a = $observable(0);
+    const stop = $effect(() => {
+      $a();
+      $root(() => {
+        $effect(() => {
+          innerEffect($a());
+        });
+      });
+    });
+
+    expect(innerEffect).toHaveBeenCalledWith(0);
+    expect(innerEffect).toHaveBeenCalledTimes(1);
+
+    stop();
+
+    $a.set(10);
+    await $tick();
+    expect(innerEffect).toHaveBeenCalledWith(10);
+    expect(innerEffect).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('$observable', () => {
@@ -266,6 +290,26 @@ describe('$effect', () => {
     expect(effect).to.toHaveBeenCalledTimes(3);
   });
 
+  it('should handle nested effect', async () => {
+    const $a = $observable(0);
+    const innerEffect = vi.fn();
+
+    $effect(() => {
+      $a();
+      $effect(() => {
+        innerEffect();
+      });
+    });
+
+    expect(innerEffect).toHaveBeenCalledTimes(1);
+
+    for (let i = 1; i <= 3; i += 1) {
+      $a.set(i);
+      await $tick();
+      expect(innerEffect).toHaveBeenCalledTimes(i + 1);
+    }
+  });
+
   it('should stop effect', async () => {
     const effect = vi.fn();
 
@@ -283,30 +327,10 @@ describe('$effect', () => {
     expect(effect).toHaveBeenCalledTimes(1);
   });
 
-  it('should stop effect (deep)', async () => {
-    const effect = vi.fn();
-
-    const $a = $observable(10);
-    const $b = $computed(() => $a());
-
-    const stop = $effect(() => {
-      effect();
-      $b();
-    });
-
-    stop(true);
-
-    $a.set(20);
-    await $tick();
-
-    expect(effect).toHaveBeenCalledTimes(1);
-    expect($b()).toBe(10);
-  });
-
   it('should call returned dispose function', async () => {
     const dispose = vi.fn();
 
-    const $a = $observable(10);
+    const $a = $observable(0);
 
     const stop = $effect(() => {
       $a();
@@ -315,17 +339,11 @@ describe('$effect', () => {
 
     expect(dispose).toHaveBeenCalledTimes(0);
 
-    $a.set(20);
-    await $tick();
-    expect(dispose).toHaveBeenCalledTimes(1);
-
-    $a.set(30);
-    await $tick();
-    expect(dispose).toHaveBeenCalledTimes(2);
-
-    stop();
-    await $tick();
-    expect(dispose).toHaveBeenCalledTimes(3);
+    for (let i = 1; i <= 3; i += 1) {
+      $a.set(i);
+      await $tick();
+      expect(dispose).toHaveBeenCalledTimes(i);
+    }
   });
 
   it('should run all disposals before each new run', async () => {
@@ -333,36 +351,49 @@ describe('$effect', () => {
     const disposeA = vi.fn();
     const disposeB = vi.fn();
 
-    function fn() {
+    function fnA() {
       onDispose(disposeA);
     }
 
-    const $a = $observable(10);
-    const $b = $computed(() => {
-      $a();
+    function fnB() {
       onDispose(disposeB);
-    });
+    }
 
+    const $a = $observable(0);
     $effect(() => {
       effect();
-      fn(), $b();
+      fnA(), fnB(), $a();
     });
 
     expect(effect).toHaveBeenCalledTimes(1);
     expect(disposeA).toHaveBeenCalledTimes(0);
     expect(disposeB).toHaveBeenCalledTimes(0);
 
-    $a.set(20);
-    await $tick();
-    expect(effect).toHaveBeenCalledTimes(2);
-    expect(disposeA).toHaveBeenCalledTimes(1);
-    expect(disposeB).toHaveBeenCalledTimes(1);
+    for (let i = 1; i <= 3; i += 1) {
+      $a.set(i);
+      await $tick();
+      expect(effect).toHaveBeenCalledTimes(i + 1);
+      expect(disposeA).toHaveBeenCalledTimes(i);
+      expect(disposeB).toHaveBeenCalledTimes(i);
+    }
+  });
 
-    $a.set(30);
+  it('should dispose of nested effect', async () => {
+    const $a = $observable(0);
+    const innerEffect = vi.fn();
+
+    const stop = $effect(() => {
+      $effect(() => {
+        innerEffect($a());
+      });
+    });
+
+    stop();
+
+    $a.set(10);
     await $tick();
-    expect(effect).toHaveBeenCalledTimes(3);
-    expect(disposeA).toHaveBeenCalledTimes(2);
-    expect(disposeB).toHaveBeenCalledTimes(2);
+    expect(innerEffect).toHaveBeenCalledTimes(1);
+    expect(innerEffect).not.toHaveBeenCalledWith(10);
   });
 });
 
@@ -435,25 +466,27 @@ describe('$peek', () => {
     expect($d()).toBe(50);
   });
 
-  it('should not affect deep `onDispose`', async () => {
-    const effect = vi.fn();
+  it('should not trigger deep `onDispose`', async () => {
     const dispose = vi.fn();
+    const computeB = vi.fn();
 
-    function runEffect() {
-      $effect(() => {
-        effect();
-        onDispose(dispose);
-      });
-    }
-
-    const stop = $effect(() => {
-      $peek(() => runEffect());
+    const $b = $computed(() => {
+      computeB();
+      onDispose(dispose);
+      return 10;
     });
 
-    stop(true);
+    const stop = $effect(() => {
+      $peek(() => $b());
+    });
+
+    stop();
     await $tick();
 
-    expect(effect).to.toHaveBeenCalledTimes(1);
+    expect(computeB).to.toHaveBeenCalledTimes(1);
+    expect(dispose).to.toHaveBeenCalledTimes(0);
+
+    $dispose($b);
     expect(dispose).to.toHaveBeenCalledTimes(1);
   });
 });
@@ -547,30 +580,6 @@ describe('$dispose', () => {
     await $tick();
     expect($d()).toBe(30);
   });
-
-  it('should dispose (deep)', async () => {
-    const $a = $observable(10);
-    const $_b = $observable(20);
-    const $b = $computed(() => $_b());
-    const $c = $computed(() => $a() + $b() + 10);
-    const $d = $computed(() => $a() + $c() + 10);
-    const $e = $computed(() => $a() + $c() + $d());
-
-    $e();
-
-    $dispose($e, true);
-
-    $a.set(20);
-    await $tick();
-
-    expect($a()).toBe(10);
-    expect($c()).toBe(40);
-    expect($d()).toBe(60);
-    expect($e()).toBe(110);
-
-    $_b.set(100);
-    expect($b()).to.equal(20);
-  });
 });
 
 describe('isSubject', () => {
@@ -604,7 +613,7 @@ describe('onDispose', () => {
     expect(callback3).toHaveBeenCalled();
   });
 
-  it('should clear dispose early', async () => {
+  it('should clear disposal early', async () => {
     const dispose = vi.fn();
 
     const stop = $effect(() => {
