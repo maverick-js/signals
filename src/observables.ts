@@ -36,7 +36,6 @@ const _scheduler = __DEV__
     })
   : createScheduler();
 
-let _parent: Node | undefined;
 let _computation: Node | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
@@ -391,16 +390,12 @@ type Node = {
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
-  const prevParent = _parent;
   const prevComputation = _computation;
-
-  _parent = parent;
   _computation = parent;
   if (__DEV__) _computeStack.push(parent);
 
   const nextValue = child();
 
-  _parent = prevParent;
   _computation = prevComputation;
   if (__DEV__) _computeStack.pop();
 
@@ -408,7 +403,7 @@ function compute<T>(parent: () => void, child: () => T): T {
 }
 
 function adoptChild(node: Node) {
-  if (_parent) addChild(_parent, node);
+  if (_computation) addChild(_computation, node);
 }
 
 function addChild(node: Node, child: Node) {
