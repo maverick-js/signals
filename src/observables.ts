@@ -425,7 +425,7 @@ function addNode(node: Node, key: symbol, item: () => void) {
 
 function dirtyNode(node: Node) {
   if (node[OBSERVERS] && !_scheduler.served(node)) {
-    for (const observer of node[OBSERVERS]) {
+    for (const observer of node[OBSERVERS]!) {
       if (observer[COMPUTED] && observer !== _computation) {
         observer[DIRTY] = true;
         _scheduler.enqueue(observer);
@@ -435,13 +435,13 @@ function dirtyNode(node: Node) {
 }
 
 function forEachChild(node: Node, callback: (node: Node) => void) {
-  if (node[CHILDREN]) for (const child of node[CHILDREN]) callback(child);
+  if (node[CHILDREN]) for (const child of node[CHILDREN]!) callback(child);
 }
 
 function emptyDisposal(node: Node) {
   if (node[DISPOSAL]) {
-    for (const dispose of node[DISPOSAL]) dispose();
-    node[DISPOSAL].clear();
+    for (const dispose of node[DISPOSAL]!) dispose();
+    node[DISPOSAL]!.clear();
   }
 }
 
