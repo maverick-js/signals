@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.5](https://github.com/maverick-js/observables/compare/v3.1.4...v3.1.5) (2022-07-03)
+
+
+### Bug Fixes
+
+* revert a39679d1ddb9b825a9e3fa8f33dc56f0bab18c43 ([88c5dbe](https://github.com/maverick-js/observables/commit/88c5dbe26c312c86c1663a71562ea1bfe1a0fad5))
+
 ### [3.1.4](https://github.com/maverick-js/observables/compare/v3.1.3...v3.1.4) (2022-07-03)
 
 
