@@ -258,6 +258,29 @@ describe('$computed', () => {
       $b();
     }).toThrow(/cyclic dependency detected/);
   });
+
+  it('should discover new dependencies', async () => {
+    const $a = $observable(1);
+    const $b = $observable(0);
+
+    const $c = $computed(() => {
+      if ($a()) {
+        return $a();
+      } else {
+        return $b();
+      }
+    });
+
+    expect($c()).toBe(1);
+
+    $a.set(0);
+    await $tick();
+    expect($c()).toBe(0);
+
+    $b.set(10);
+    await $tick();
+    expect($c()).toBe(10);
+  });
 });
 
 describe('$effect', () => {
