@@ -293,20 +293,24 @@ describe('$effect', () => {
   it('should handle nested effect', async () => {
     const $a = $observable(0);
     const innerEffect = vi.fn();
+    const innerDispose = vi.fn();
 
     $effect(() => {
       $a();
       $effect(() => {
         innerEffect();
+        onDispose(innerDispose);
       });
     });
 
     expect(innerEffect).toHaveBeenCalledTimes(1);
+    expect(innerDispose).toHaveBeenCalledTimes(0);
 
     for (let i = 1; i <= 3; i += 1) {
       $a.set(i);
       await $tick();
       expect(innerEffect).toHaveBeenCalledTimes(i + 1);
+      expect(innerDispose).toHaveBeenCalledTimes(i);
     }
   });
 

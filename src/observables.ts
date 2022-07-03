@@ -193,6 +193,7 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
     if (_computation) addObserver($computed, _computation);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
+      forEachChild($computed, $dispose);
       emptyDisposal($computed);
       currentValue = compute($computed, fn);
       $computed[DIRTY] = false;
