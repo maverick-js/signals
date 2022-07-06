@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.2.0](https://github.com/maverick-js/observables/compare/v3.1.5...v3.2.0) (2022-07-06)
+
+
+### Features
+
+* new `onFlush` method on scheduler ([0eccb59](https://github.com/maverick-js/observables/commit/0eccb59d1781795df358d99b8d1ffb99010fd1b4))
+* new export `getScheduler` ([f92183b](https://github.com/maverick-js/observables/commit/f92183bcfa8c0959c0eb68b0f3efb24087a87e08))
+
 ### [3.1.5](https://github.com/maverick-js/observables/compare/v3.1.4...v3.1.5) (2022-07-03)
 
 
