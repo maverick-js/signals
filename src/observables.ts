@@ -1,4 +1,4 @@
-import { createScheduler } from './scheduler';
+import { createScheduler, type Scheduler } from './scheduler';
 
 export type Observable<T> = {
   id?: string;
@@ -375,6 +375,13 @@ export function $tick() {
  */
 export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
   return isObservable(fn) && !!(fn as ObservableSubject<T>).set;
+}
+
+/**
+ * Returns the global scheduler.
+ */
+export function getScheduler(): Scheduler {
+  return _scheduler;
 }
 
 type Node = {

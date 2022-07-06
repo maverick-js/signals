@@ -109,6 +109,7 @@ $: yarn add @maverick-js/observables
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
+- [`getScheduler`](#getscheduler)
 
 ## `$root`
 
@@ -390,6 +391,26 @@ isSubject(() => {});
 isSubject($computed(() => 10));
 isSubject($readonly($observable(10)));
 ```
+
+### `getScheduler`
+
+Returns the global scheduler which can be used to queue additional tasks or synchronously flush
+the queue.
+
+```js
+const scheduler = getScheduler();
+
+// Queue task
+scheduler.enqueue(() => {
+  // ...
+});
+
+// Flush queue synchronously
+scheduler.syncFlush();
+```
+
+> **Note**
+> See the ['Scheduler'](#scheduler) section for more information.
 
 ## Debugging
 

@@ -5,6 +5,7 @@ export type Scheduler = {
   enqueue: (task: ScheduledTask) => void;
   served: (task: ScheduledTask) => boolean;
   flush: () => void;
+  syncFlush: () => void;
   tick: Promise<void>;
 };
 
@@ -29,14 +30,14 @@ export type Scheduler = {
  * ```
  */
 export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
-  const processed = new Set<ScheduledTask>();
+  const served = new Set<ScheduledTask>();
   const queue = new Set<ScheduledTask>();
   const microtask = Promise.resolve();
   const queueTask = typeof queueMicrotask !== 'undefined' ? queueMicrotask : microtask.then;
 
   function enqueue(task: ScheduledTask) {
     // `processed` is only populated during a flush.
-    if (!processed.has(task)) queue.add(task);
+    if (!served.has(task)) queue.add(task);
     scheduleFlush();
   }
 
@@ -52,20 +53,21 @@ export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
     do {
       for (const task of queue) {
         task();
-        processed.add(task);
+        served.add(task);
         queue.delete(task);
       }
     } while (queue.size > 0);
 
-    processed.clear();
+    served.clear();
     flushing = false;
     onFlush?.();
   }
 
   return {
     enqueue,
-    served: (task) => processed.has(task),
+    served: (task) => served.has(task),
     flush: scheduleFlush,
+    syncFlush: flush,
     tick: microtask,
   };
 }
