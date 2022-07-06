@@ -1,18 +1,18 @@
 export type ScheduledTask = () => void;
-export type SchedulerFlushed = () => void;
+export type Unsubscribe = () => void;
 
 export type Scheduler = {
+  tick: Promise<void>;
   enqueue: (task: ScheduledTask) => void;
   served: (task: ScheduledTask) => boolean;
   flush: () => void;
   syncFlush: () => void;
-  tick: Promise<void>;
+  onFlush: (callback: () => void) => Unsubscribe;
 };
 
 /**
  * Creates a scheduler which batches tasks and runs them in the microtask queue.
  *
- * @param onFlush - callback is invoked each time the queue is flushed.
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide}
  * @example
  * ```ts
@@ -29,10 +29,11 @@ export type Scheduler = {
  * await scheduler.tick;
  * ```
  */
-export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
+export function createScheduler(): Scheduler {
   const served = new Set<ScheduledTask>();
   const queue = new Set<ScheduledTask>();
   const microtask = Promise.resolve();
+  const callbacks = new Set<() => void>();
   const queueTask = typeof queueMicrotask !== 'undefined' ? queueMicrotask : microtask.then;
 
   function enqueue(task: ScheduledTask) {
@@ -60,7 +61,8 @@ export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
 
     served.clear();
     flushing = false;
-    onFlush?.();
+
+    for (const callback of callbacks) callback();
   }
 
   return {
@@ -69,5 +71,9 @@ export function createScheduler(onFlush?: SchedulerFlushed): Scheduler {
     flush: scheduleFlush,
     syncFlush: flush,
     tick: microtask,
+    onFlush: (callback) => {
+      callbacks.add(callback);
+      return () => callbacks.delete(callback);
+    },
   };
 }

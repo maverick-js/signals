@@ -30,17 +30,19 @@ const OBSERVERS = Symbol();
 const CHILDREN = Symbol();
 const DISPOSAL = Symbol();
 
-const _scheduler = __DEV__
-  ? createScheduler(() => {
-      _callStack = [];
-    })
-  : createScheduler();
+const _scheduler = createScheduler();
 
 let _computation: Node | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
 let _callStack: Node[] = [];
 let _computeStack: Node[] = [];
+
+if (__DEV__) {
+  _scheduler.onFlush(() => {
+    _callStack = [];
+  });
+}
 
 /**
  * Creates a computation root which is given a `dispose()` function to dispose of all inner
