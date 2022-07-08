@@ -164,7 +164,6 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  * are all observables that are read during execution.
  *
  * @example
- *
  * ```js
  * const $a = $observable(10);
  * const $b = $observable(10);
@@ -417,6 +416,7 @@ export function getScheduler(): Scheduler {
 type Node = {
   id?: string;
   (): any;
+  [PARENT]?: Node;
   [OBSERVABLE]?: boolean;
   [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
@@ -443,19 +443,19 @@ function compute<T>(parent: () => void, child: () => T): T {
   return nextValue;
 }
 
-function adoptChild(node: Node) {
+function adoptChild(child: Node) {
   if (_parent) {
-    node[PARENT] = _parent;
-    addChild(_parent, node);
+    child[PARENT] = _parent;
+    addChild(_parent, child);
   }
 }
 
-function addChild(node: Node, child: Node) {
-  addNode(node, CHILDREN, child);
+function addChild(parent: Node, child: Node) {
+  addNode(parent, CHILDREN, child);
 }
 
-function addObserver(node: Node, observer: Node) {
-  addNode(node, OBSERVERS, observer);
+function addObserver(observable: Node, observer: Node) {
+  addNode(observable, OBSERVERS, observer);
 }
 
 function addNode(node: Node, key: symbol, item: () => void) {
