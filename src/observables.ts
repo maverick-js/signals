@@ -32,7 +32,8 @@ const DISPOSAL = Symbol();
 
 const _scheduler = createScheduler();
 
-let _computation: Node | undefined;
+let _parent: Node | undefined;
+let _observer: Node | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
 let _callStack: Node[] = [];
@@ -79,11 +80,11 @@ export function $root<T>(fn: (dispose: Dispose) => T): T {
  * ```
  */
 export function $peek<T>(fn: () => T): T {
-  const prev = _computation;
+  const prev = _observer;
 
-  _computation = undefined;
+  _observer = undefined;
   const result = fn();
-  _computation = prev;
+  _observer = prev;
 
   return result;
 }
@@ -113,7 +114,7 @@ export function $observable<T>(
 
   const $observable: ObservableSubject<T> = () => {
     if (__DEV__) _callStack.push($observable);
-    if (_computation) addObserver($observable, _computation);
+    if (_observer) addObserver($observable, _observer);
     return currentValue;
   };
 
@@ -192,7 +193,7 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
     if (__DEV__) _callStack.push($computed);
 
     // Computed is observing another computed.
-    if (_computation) addObserver($computed, _computation);
+    if (_observer) addObserver($computed, _observer);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       forEachChild($computed, $dispose);
@@ -239,14 +240,14 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
  * ```
  */
 export function onDispose(fn?: MaybeDispose): Dispose {
-  const valid = fn && _computation;
+  const valid = fn && _parent;
 
-  if (valid) addNode(_computation!, DISPOSAL, fn as Dispose);
+  if (valid) addNode(_parent!, DISPOSAL, fn as Dispose);
 
   return valid
     ? () => {
         (fn as Dispose)();
-        _computation![DISPOSAL]?.delete(fn as Dispose);
+        _parent![DISPOSAL]?.delete(fn as Dispose);
       }
     : NOOP;
 }
@@ -399,20 +400,24 @@ type Node = {
 };
 
 function compute<T>(parent: () => void, child: () => T): T {
-  const prevComputation = _computation;
-  _computation = parent;
+  const prevParent = _parent;
+  const prevObserver = _observer;
+
+  _parent = parent;
+  _observer = parent;
   if (__DEV__) _computeStack.push(parent);
 
   const nextValue = child();
 
-  _computation = prevComputation;
+  _parent = prevParent;
+  _observer = prevObserver;
   if (__DEV__) _computeStack.pop();
 
   return nextValue;
 }
 
 function adoptChild(node: Node) {
-  if (_computation) addChild(_computation, node);
+  if (_parent) addChild(_parent, node);
 }
 
 function addChild(node: Node, child: Node) {
@@ -430,7 +435,7 @@ function addNode(node: Node, key: symbol, item: () => void) {
 function dirtyNode(node: Node) {
   if (node[OBSERVERS] && !_scheduler.served(node)) {
     for (const observer of node[OBSERVERS]!) {
-      if (observer[COMPUTED] && observer !== _computation) {
+      if (observer[COMPUTED] && observer !== _observer) {
         observer[DIRTY] = true;
         _scheduler.enqueue(observer);
       }

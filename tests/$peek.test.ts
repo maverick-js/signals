@@ -1,4 +1,4 @@
-import { $computed, $observable, $peek, $effect, $tick, $dispose, onDispose } from '../src';
+import { $computed, $observable, $peek, $effect, $tick, $dispose, onDispose, $root } from '../src';
 
 afterEach(() => $tick());
 
@@ -92,4 +92,37 @@ it('should not trigger deep `onDispose`', async () => {
 
   $dispose($b);
   expect(dispose).to.toHaveBeenCalledTimes(1);
+});
+
+it('should track parent across peeks', async () => {
+  const $a = $observable(0);
+
+  const childCompute = vi.fn();
+  const childDispose = vi.fn();
+
+  function child() {
+    const $b = $computed(() => $a() * 2);
+    $effect(() => {
+      childCompute($b());
+      onDispose(childDispose);
+    });
+  }
+
+  const dispose = $root((dispose) => {
+    $peek(() => child());
+    return dispose;
+  });
+
+  $a.set(1);
+  await $tick();
+  expect(childCompute).toHaveBeenCalledWith(2);
+  expect(childDispose).toHaveBeenCalledTimes(1);
+
+  dispose();
+  expect(childDispose).toHaveBeenCalledTimes(2);
+
+  $a.set(2);
+  await $tick();
+  expect(childCompute).not.toHaveBeenCalledWith(4);
+  expect(childDispose).toHaveBeenCalledTimes(2);
 });
