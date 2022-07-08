@@ -72,3 +72,21 @@ it('should create new tracking scope', async () => {
   expect(innerEffect).toHaveBeenCalledWith(10);
   expect(innerEffect).toHaveBeenCalledTimes(2);
 });
+
+it('should not be reactive', async () => {
+  let $a: ObservableSubject<number>;
+
+  const rootCall = vi.fn();
+
+  $root(() => {
+    $a = $observable(0);
+    $a();
+    rootCall();
+  });
+
+  expect(rootCall).toHaveBeenCalledTimes(1);
+
+  $a!.set(1);
+  await $tick();
+  expect(rootCall).toHaveBeenCalledTimes(1);
+});

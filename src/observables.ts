@@ -61,9 +61,8 @@ if (__DEV__) {
  * ```
  */
 export function $root<T>(fn: (dispose: Dispose) => T): T {
-  const $root = () => fn(dispose);
-  const dispose = () => $dispose($root);
-  return compute($root, $root);
+  const $root = () => {};
+  return compute($root, () => fn(() => $dispose($root)));
 }
 
 /**
