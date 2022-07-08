@@ -22,6 +22,7 @@ export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 
 const NOOP = () => {};
 
+const PARENT = Symbol();
 const OBSERVABLE = Symbol();
 const COMPUTED = Symbol();
 const DIRTY = Symbol();
@@ -279,6 +280,7 @@ export function $dispose(fn: () => void) {
   unrefSet(fn, DISPOSAL);
   unrefSet(fn, OBSERVERS);
 
+  fn[PARENT] = undefined;
   fn[DIRTY] = false;
   fn[DISPOSED] = true;
 }
@@ -380,6 +382,22 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
 }
 
 /**
+ * Returns the parent/owner of the given function (if defined). You can use this to walk up
+ * the computation tree.
+ *
+ * @example
+ * ```js
+ * $root(() => {
+ *   const $a = $observable(0);
+ *   getParent($a); // returns `$root`
+ * });
+ * ```
+ */
+export function getParent(fn: Observable<unknown>): Observable<unknown> | undefined {
+  return fn[PARENT];
+}
+
+/**
  * Returns the global scheduler.
  */
 export function getScheduler(): Scheduler {
@@ -416,7 +434,10 @@ function compute<T>(parent: () => void, child: () => T): T {
 }
 
 function adoptChild(node: Node) {
-  if (_parent) addChild(_parent, node);
+  if (_parent) {
+    node[PARENT] = _parent;
+    addChild(_parent, node);
+  }
 }
 
 function addChild(node: Node, child: Node) {

@@ -109,6 +109,7 @@ $: yarn add @maverick-js/observables
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
+- [`getParent`](#getparent)
 - [`getScheduler`](#getscheduler)
 
 ## `$root`
@@ -390,6 +391,18 @@ isSubject(undefined);
 isSubject(() => {});
 isSubject($computed(() => 10));
 isSubject($readonly($observable(10)));
+```
+
+### `getParent`
+
+Returns the parent/owner of the given function (if defined). You can use this function to
+recursively walk up the computation tree (useful for implementing a context API).
+
+```js
+$root(() => {
+  const $a = $observable(0);
+  getParent($a); // returns `$root`
+});
 ```
 
 ### `getScheduler`
