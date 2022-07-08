@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.3.0](https://github.com/maverick-js/observables/compare/v3.2.0...v3.3.0) (2022-07-08)
+
+
+### Features
+
+* new export `getParent` ([88310aa](https://github.com/maverick-js/observables/commit/88310aadf829b984011b9fc108997701d767c8e2))
+
+
+### Bug Fixes
+
+* track parent across peeks ([af4d561](https://github.com/maverick-js/observables/commit/af4d5615d78560f75ecea780a15ee46c33049719))
+
 ## [3.2.0](https://github.com/maverick-js/observables/compare/v3.1.5...v3.2.0) (2022-07-06)
 
 
