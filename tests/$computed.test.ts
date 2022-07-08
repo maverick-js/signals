@@ -1,4 +1,4 @@
-import { $computed, $observable, $tick } from '../src';
+import { $computed, $effect, $observable, $tick } from '../src';
 
 afterEach(() => $tick());
 
@@ -147,4 +147,33 @@ it('should discover new dependencies', async () => {
   $b.set(10);
   await $tick();
   expect($c()).toBe(10);
+});
+
+it('should accept dirty option', async () => {
+  const $a = $observable(0);
+
+  const $b = $computed(() => $a(), {
+    // Skip odd numbers.
+    dirty: (prev, next) => prev + 1 !== next,
+  });
+
+  const effect = vi.fn();
+  $effect(() => {
+    $b();
+    effect();
+  });
+
+  expect($b()).toBe(0);
+  expect(effect).toHaveBeenCalledTimes(1);
+
+  $a.set(2);
+  await $tick();
+  expect($b()).toBe(2);
+  expect(effect).toHaveBeenCalledTimes(2);
+
+  // no-change
+  $a.set(3);
+  await $tick();
+  expect($b()).toBe(2);
+  expect(effect).toHaveBeenCalledTimes(2);
 });

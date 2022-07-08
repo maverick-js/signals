@@ -181,8 +181,13 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  * console.log($c()); // logs 40
  * ```
  */
-export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T> {
+export function $computed<T>(
+  fn: () => T,
+  opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
+): Observable<T> {
   let currentValue;
+
+  const isDirty = opts?.dirty ?? notEqual;
 
   const $computed: Observable<T> = () => {
     if (__DEV__ && _computeStack.includes($computed)) {
@@ -198,9 +203,14 @@ export function $computed<T>(fn: () => T, opts?: { id?: string }): Observable<T>
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       forEachChild($computed, $dispose);
       emptyDisposal($computed);
-      currentValue = compute($computed, fn);
+
+      const nextValue = compute($computed, fn);
       $computed[DIRTY] = false;
-      dirtyNode($computed);
+
+      if (isDirty(currentValue, nextValue)) {
+        currentValue = nextValue;
+        dirtyNode($computed);
+      }
     }
 
     return currentValue;
