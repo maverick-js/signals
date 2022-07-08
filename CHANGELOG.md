@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.4.0](https://github.com/maverick-js/observables/compare/v3.3.0...v3.4.0) (2022-07-08)
+
+
+### Features
+
+* new `dirty` option for `$computed` ([7ae2e6c](https://github.com/maverick-js/observables/commit/7ae2e6cb353d571e66a56c8c90ddc2e35fe126d9))
+
 ## [3.3.0](https://github.com/maverick-js/observables/compare/v3.2.0...v3.3.0) (2022-07-08)
 
 
