@@ -423,7 +423,7 @@ scheduler.syncFlush();
 ```
 
 > **Note**
-> See the ['Scheduler'](#scheduler) section for more information.
+> See our [Scheduler][maverick-scheduler] repo for more information.
 
 ## Debugging
 
@@ -447,30 +447,6 @@ const $c = $computed(() => $a() + $b(), { id: 'c' });
 
 > **Note**
 > This feature is only available in a development or testing Node environment (i.e., `NODE_ENV`).
-
-## Scheduler
-
-We provide the underlying microtask scheduler incase you'd like to use it:
-
-```js
-import { createScheduler } from '@maverick-js/observables';
-
-// Creates a scheduler which batches tasks and runs them in the microtask queue.
-const scheduler = createScheduler();
-
-// Queue tasks.
-scheduler.enqueue(() => {});
-scheduler.enqueue(() => {});
-
-// Schedule a flush - can be invoked more than once.
-scheduler.flush();
-
-// Wait for flush to complete.
-await scheduler.tick;
-```
-
-> **Note**
-> You can read more about microtasks on [MDN][mdn-microtasks].
 
 ## TypeScript
 
@@ -540,3 +516,4 @@ Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their wo
 [mdn-microtasks]: https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide
 [stackblitz-demo]: https://stackblitz.com/edit/maverick-observables?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
 [bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^3.0.0
+[maverick-scheduler]: https://github.com/maverick-js/scheduler

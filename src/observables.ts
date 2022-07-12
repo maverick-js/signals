@@ -1,4 +1,4 @@
-import { createScheduler, type Scheduler } from './scheduler';
+import { createScheduler, type Scheduler } from '@maverick-js/scheduler';
 
 export type Observable<T> = {
   id?: string;

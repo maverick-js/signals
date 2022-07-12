@@ -58,5 +58,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "dependencies": {
+    "@maverick-js/scheduler": "^1.0.1"
   }
 }
