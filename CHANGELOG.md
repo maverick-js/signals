@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.4.1](https://github.com/maverick-js/observables/compare/v3.4.0...v3.4.1) (2022-07-12)
+
+
+### Bug Fixes
+
+* move scheduler to separate package ([83120d7](https://github.com/maverick-js/observables/commit/83120d7662daaf5e7ac2fe0ac0cceda26f80f1c5))
+
 ## [3.4.0](https://github.com/maverick-js/observables/compare/v3.3.0...v3.4.0) (2022-07-08)
 
 
