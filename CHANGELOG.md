@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.0.0](https://github.com/maverick-js/observables/compare/v3.4.1...v4.0.0) (2022-08-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* Library authors can decide how to re-export bindings
+from this package. The `$` prefix was used a little inconsistently so
+it's best to drop it completely.
+
+### Bug Fixes
+
+* drop `$` prefix on exports ([a18149b](https://github.com/maverick-js/observables/commit/a18149b929d7471f5d00597674aa1f0e5728c11a)), closes [#4](https://github.com/maverick-js/observables/issues/4) [#issuecomment-1171106602](https://github.com/maverick-js/observables/issues/issuecomment-1171106602)
+
 ### [3.4.1](https://github.com/maverick-js/observables/compare/v3.4.0...v3.4.1) (2022-07-12)
 
 ### Bug Fixes
