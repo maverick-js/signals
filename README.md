@@ -18,8 +18,8 @@ updates as its value changes.
 - 🕵️‍♀️ Only updates when value has changed
 - ⏱️ Batched updates via microtask scheduler
 - 😴 Lazy by default - efficiently re-computes only what's needed
-- 🔬 Computations via `$computed`
-- 📞 Effect subscriptions via `$effect`
+- 🔬 Computations via `computed`
+- 📞 Effect subscriptions via `effect`
 - ♻️ Detects cyclic dependencies
 - 🐛 Debugging identifiers
 - 💪 Strongly typed - built with TypeScript
@@ -35,34 +35,34 @@ Here's a simple demo to see how it works:
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)][stackblitz-demo]
 
 ```js
-import { $root, $observable, $computed, $effect, $tick } from '@maverick-js/observables';
+import { root, observable, computed, effect, tick } from '@maverick-js/observables';
 
-$root(async (dispose) => {
+root(async (dispose) => {
   // Create - all types supported (string, array, object, etc.)
-  const $m = $observable(1);
-  const $x = $observable(1);
-  const $b = $observable(0);
+  const $m = observable(1);
+  const $x = observable(1);
+  const $b = observable(0);
 
   // Compute - only re-computed when `$m`, `$x`, or `$b` changes.
-  const $y = $computed(() => $m() * $x() + $b());
+  const $y = computed(() => $m() * $x() + $b());
 
   // Effect - this will run whenever `$y` is updated.
-  const stop = $effect(() => {
+  const stop = effect(() => {
     console.log($y());
 
-    // Called each time `$effect` ends and when finally disposed.
+    // Called each time `effect` ends and when finally disposed.
     return () => {};
   });
 
   $m.set(10); // logs `10` inside effect
 
   // Wait a tick so update is applied and effect is run.
-  await $tick();
+  await tick();
 
   $b.next((prev) => prev + 5); // logs `15` inside effect
 
   // Wait a tick so effect runs last update.
-  await $tick();
+  await tick();
 
   // Nothing has changed - no re-compute.
   $y();
@@ -72,7 +72,7 @@ $root(async (dispose) => {
 
   // ...
 
-  // Dispose of all observables inside `$root`.
+  // Dispose of all observables inside `root`.
   dispose();
 });
 ```
@@ -98,71 +98,71 @@ $: yarn add @maverick-js/observables
 
 ## API
 
-- [`$root`](#root)
-- [`$observable`](#observable)
-- [`$computed`](#computed)
-- [`$effect`](#effect)
-- [`$peek`](#peek)
-- [`$readonly`](#readonly)
-- [`$tick`](#tick)
-- [`$dispose`](#dispose)
+- [`root`](#root)
+- [`observable`](#observable)
+- [`computed`](#computed)
+- [`effect`](#effect)
+- [`peek`](#peek)
+- [`readonly`](#readonly)
+- [`tick`](#tick)
+- [`dispose`](#dispose)
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
 - [`getParent`](#getparent)
 - [`getScheduler`](#getscheduler)
 
-## `$root`
+## `root`
 
 Computations are generally child computations. When their respective parent is destroyed so are
 they. You _can_ create orphan computations (i.e., no parent). Orphans will live in memory until
 their internal object references are garbage collected (GC) (i.e., dropped from memory):
 
 ```js
-import { $computed } from '@maverick-js/observables';
+import { computed } from '@maverick-js/observables';
 
 const obj = {};
 
 // This is an orphan - GC'd when `obj` is.
-const $b = $computed(() => obj);
+const $b = computed(() => obj);
 ```
 
 Orphans can make it hard to determine when a computation is disposed so you'll generally want to
-ensure you only create child computations. The `$root` function stores all inner computations as
+ensure you only create child computations. The `root` function stores all inner computations as
 a child and provides a function to easily dispose of them all:
 
 ```js
-import { $root, $observable, $computed, $effect } from '@maverick-js/observables';
+import { root, observable, computed, effect } from '@maverick-js/observables';
 
-$root((dispose) => {
-  const $a = $observable(10);
-  const $b = $computed(() => $a());
+root((dispose) => {
+  const $a = observable(10);
+  const $b = computed(() => $a());
 
-  $effect(() => console.log($b()));
+  effect(() => console.log($b()));
 
-  // Disposes of `$a`, $b`, and `$effect`.
+  // Disposes of `$a`, $b`, and `effect`.
   dispose();
 });
 ```
 
 ```js
-// `$root` returns the result of the given function.
-const result = $root(() => 10);
+// `root` returns the result of the given function.
+const result = root(() => 10);
 
 console.log(result); // logs `10`
 ```
 
-### `$observable`
+### `observable`
 
 Wraps the given value into an observable function. The observable function will return the
 current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
-value can now be observed when used inside other computations created with [`$computed`](#computed)
-and [`$effect`](#effect).
+value can now be observed when used inside other computations created with [`computed`](#computed)
+and [`effect`](#effect).
 
 ```js
-import { $observable } from '@maverick-js/observables';
+import { observable } from '@maverick-js/observables';
 
-const $a = $observable(10);
+const $a = observable(10);
 
 $a(); // read
 $a.set(20); // write (1)
@@ -170,29 +170,29 @@ $a.next((prev) => prev + 10); // write (2)
 ```
 
 > **Warning**
-> Read the [`$tick`](#tick) section below to understand batched updates.
+> Read the [`tick`](#tick) section below to understand batched updates.
 
-### `$computed`
+### `computed`
 
 Creates a new observable whose value is computed and returned by the given function. The given
 compute function is _only_ re-run when one of it's dependencies are updated. Dependencies are
 are all observables that are read during execution.
 
 ```js
-import { $observable, $computed, $tick } from '@maverick-js/observables';
+import { observable, computed, tick } from '@maverick-js/observables';
 
-const $a = $observable(10);
-const $b = $observable(10);
-const $c = $computed(() => $a() + $b());
+const $a = observable(10);
+const $b = observable(10);
+const $c = computed(() => $a() + $b());
 
 console.log($c()); // logs 20
 
 $a.set(20);
-await $tick();
+await tick();
 console.log($c()); // logs 30
 
 $b.set(20);
-await $tick();
+await tick();
 console.log($c()); // logs 40
 
 // Nothing changed - no re-compute.
@@ -200,72 +200,72 @@ console.log($c()); // logs 40
 ```
 
 ```js
-import { $observable, $computed } from '@maverick-js/observables';
+import { observable, computed } from '@maverick-js/observables';
 
-const $a = $observable(10);
-const $b = $observable(10);
-const $c = $computed(() => $a() + $b());
+const $a = observable(10);
+const $b = observable(10);
+const $c = computed(() => $a() + $b());
 
 // Computed observables can be deeply nested.
-const $d = $computed(() => $a() + $b() + $c());
-const $e = $computed(() => $d());
+const $d = computed(() => $a() + $b() + $c());
+const $e = computed(() => $d());
 ```
 
-### `$effect`
+### `effect`
 
 Invokes the given function each time any of the observables that are read inside are updated
 (i.e., their value changes). The effect is immediately invoked on initialization.
 
 ```js
-import { $observable, $computed, $effect } from '@maverick-js/observables';
+import { observable, computed, effect } from '@maverick-js/observables';
 
-const $a = $observable(10);
-const $b = $observable(20);
-const $c = $computed(() => $a() + $b());
+const $a = observable(10);
+const $b = observable(20);
+const $c = computed(() => $a() + $b());
 
 // This effect will run each time `$a` or `$b` is updated.
-const stop = $effect(() => console.log($c()));
+const stop = effect(() => console.log($c()));
 
 // Stop observing.
 stop();
 ```
 
-You can optionally return a function from inside the `$effect` that will be run each time the
+You can optionally return a function from inside the `effect` that will be run each time the
 effect re-runs and when it's finally stopped/disposed of:
 
 ```js
-$effect(() => {
+effect(() => {
   return () => {
     // Called each time effect re-runs and when disposed of.
   };
 });
 ```
 
-### `$peek`
+### `peek`
 
 Returns the current value stored inside an observable without triggering a dependency.
 
 ```js
-import { $observable, $computed, $peek } from '@maverick-js/observables';
+import { observable, computed, peek } from '@maverick-js/observables';
 
-const $a = $observable(10);
+const $a = observable(10);
 
-$computed(() => {
+computed(() => {
   // `$a` will not be considered a dependency.
-  const value = $peek($a);
+  const value = peek($a);
 });
 ```
 
-### `$readonly`
+### `readonly`
 
 Takes in the given observable and makes it read only by removing access to write
 operations (i.e., `set()` and `next()`).
 
 ```js
-import { $observable, $readonly } from '@maverick-js/observables';
+import { observable, readonly } from '@maverick-js/observables';
 
-const $a = $observable(10);
-const $b = $readonly($a);
+const $a = observable(10);
+const $b = readonly($a);
 
 console.log($b()); // logs 10
 
@@ -275,7 +275,7 @@ $a.set(20);
 console.log($b()); // logs 20
 ```
 
-### `$tick`
+### `tick`
 
 Tasks are batched onto the microtask queue. This means only the last write of multiple write
 actions performed in the same execution window is applied. You can wait for the microtask
@@ -285,9 +285,9 @@ queue to be flushed before writing a new value so it takes effect.
 > You can read more about microtasks on [MDN][mdn-microtasks].
 
 ```js
-import { $observable } from '@maverick-js/observables';
+import { observable } from '@maverick-js/observables';
 
-const $a = $observable(10);
+const $a = observable(10);
 
 $a.set(10);
 $a.set(20);
@@ -295,31 +295,31 @@ $a.set(30); // only this write is applied
 ```
 
 ```js
-import { $observable, $tick } from '@maverick-js/observables';
+import { observable, tick } from '@maverick-js/observables';
 
-const $a = $observable(10);
+const $a = observable(10);
 
 // All writes are applied.
 $a.set(10);
-await $tick();
+await tick();
 $a.set(20);
-await $tick();
+await tick();
 $a.set(30);
 ```
 
-### `$dispose`
+### `dispose`
 
 Unsubscribes the given observable and optionally all inner computations. Disposed functions will
 retain their current value but are no longer reactive.
 
 ```js
-import { $observable, $dispose } from '@maverick-js/observables';
+import { observable, dispose } from '@maverick-js/observables';
 
-const $a = $observable(10);
-const $b = $computed(() => $a());
+const $a = observable(10);
+const $b = computed(() => $a());
 
 // `$b` will no longer update if `$a` is updated.
-$dispose($a);
+dispose($a);
 
 $a.set(100);
 console.log($b()); // still logs `10`
@@ -330,7 +330,7 @@ console.log($b()); // still logs `10`
 Runs the given function when the parent computation is disposed of:
 
 ```js
-import { $effect, onDispose } from '@maverick-js/observables';
+import { effect, onDispose } from '@maverick-js/observables';
 
 const listen = (type, callback) => {
   window.addEventListener(type, callback);
@@ -338,7 +338,7 @@ const listen = (type, callback) => {
   onDispose(() => window.removeEventListener(type, callback));
 };
 
-const stop = $effect(
+const stop = effect(
   listen('click', () => {
     // ...
   }),
@@ -351,7 +351,7 @@ The `onDispose` callback will return a function to clear the disposal early if i
 required:
 
 ```js
-$effect(() => {
+effect(() => {
   const dispose = onDispose(() => {});
   // ...
   // Call early if it's no longer required.
@@ -365,9 +365,9 @@ Whether the given value is an observable (readonly).
 
 ```js
 // True
-isObservable($observable(10));
-isObservable($computed(() => 10));
-isObservable($readonly($observable(10)));
+isObservable(observable(10));
+isObservable(computed(() => 10));
+isObservable(readonly(observable(10)));
 
 // False
 isObservable(false);
@@ -382,15 +382,15 @@ Whether the given value is an observable subject (i.e., can produce new values v
 
 ```js
 // True
-isSubject($observable(10));
+isSubject(observable(10));
 
 // False
 isSubject(false);
 isSubject(null);
 isSubject(undefined);
 isSubject(() => {});
-isSubject($computed(() => 10));
-isSubject($readonly($observable(10)));
+isSubject(computed(() => 10));
+isSubject(readonly(observable(10)));
 ```
 
 ### `getParent`
@@ -399,9 +399,9 @@ Returns the parent/owner of the given function (if defined). You can use this fu
 recursively walk up the computation tree (useful for implementing a context API).
 
 ```js
-$root(() => {
-  const $a = $observable(0);
-  getParent($a); // returns `$root`
+root(() => {
+  const $a = observable(0);
+  getParent($a); // returns `root`
 });
 ```
 
@@ -427,18 +427,18 @@ scheduler.syncFlush();
 
 ## Debugging
 
-The `$observable`, `$computed`, and `$effect` functions accept a debugging ID (string) as part
+The `observable`, `computed`, and `effect` functions accept a debugging ID (string) as part
 of their options. This can be helpful when logging a cyclic dependency chain to understand
 where it's occurring.
 
 ```js
-import { $observable, $computed } from '@maverick-js/observables';
+import { observable, computed } from '@maverick-js/observables';
 
-const $a = $observable(10, { id: 'a' });
+const $a = observable(10, { id: 'a' });
 
 // Cyclic dependency chain.
-const $b = $computed(() => $a() + $c(), { id: 'b' });
-const $c = $computed(() => $a() + $b(), { id: 'c' });
+const $b = computed(() => $a() + $c(), { id: 'b' });
+const $c = computed(() => $a() + $b(), { id: 'c' });
 
 // This will throw an error in the form:
 // $: Error: cyclic dependency detected
@@ -465,7 +465,7 @@ const computed: Observable<string>;
 const effect: Effect;
 
 // Provide generic if TS fails to infer correct type.
-const $a = $computed<string>(() => /* ... */);
+const $a = computed<string>(() => /* ... */);
 
 const $b: MaybeObservable<number>;
 

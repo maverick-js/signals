@@ -52,7 +52,7 @@ if (__DEV__) {
  *
  * @example
  * ```js
- * const result = $root((dispose) => {
+ * const result = root((dispose) => {
  *   // ...
  *   dispose();
  *   return 10;
@@ -61,9 +61,9 @@ if (__DEV__) {
  * console.log(result); // logs `10`
  * ```
  */
-export function $root<T>(fn: (dispose: Dispose) => T): T {
+export function root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => {};
-  return compute($root, () => fn(() => $dispose($root)));
+  return compute($root, () => fn(() => dispose($root)));
 }
 
 /**
@@ -71,15 +71,15 @@ export function $root<T>(fn: (dispose: Dispose) => T): T {
  *
  * @example
  * ```js
- * const $a = $observable(10);
+ * const $a = observable(10);
  *
- * $computed(() => {
+ * computed(() => {
  *  // `$a` will not be considered a dependency.
- *  const value = $peek($a);
+ *  const value = peek($a);
  * });
  * ```
  */
-export function $peek<T>(fn: () => T): T {
+export function peek<T>(fn: () => T): T {
   const prev = _observer;
 
   _observer = undefined;
@@ -92,19 +92,19 @@ export function $peek<T>(fn: () => T): T {
 /**
  * Wraps the given value into an observable function. The observable function will return the
  * current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
- * value can now be observed when used inside other computations created with `$computed` and
- * `$effect`.
+ * value can now be observed when used inside other computations created with `computed` and
+ * `effect`.
  *
  * @example
  * ```
- * const $a = $observable(10);
+ * const $a = observable(10);
  *
  * $a(); // read
  * $a.set(20); // write (1)
  * $a.next(prev => prev + 10); // write (2)
  * ```
  */
-export function $observable<T>(
+export function observable<T>(
   initialValue: T,
   opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
 ): ObservableSubject<T> {
@@ -129,7 +129,7 @@ export function $observable<T>(
     $observable.set(next(currentValue));
   };
 
-  if (__DEV__) $observable.id = opts?.id ?? '$observable';
+  if (__DEV__) $observable.id = opts?.id ?? 'observable';
 
   $observable[OBSERVABLE] = true;
 
@@ -144,9 +144,9 @@ export function $observable<T>(
  * @example
  * ```js
  * // True
- * isObservable($observable(10));
- * isObservable($computed(() => 10));
- * isObservable($readonly($observable(10)));
+ * isObservable(observable(10));
+ * isObservable(computed(() => 10));
+ * isObservable(readonly(observable(10)));
  * // False
  * isObservable(false);
  * isObservable(null);
@@ -165,22 +165,22 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  *
  * @example
  * ```js
- * const $a = $observable(10);
- * const $b = $observable(10);
- * const $c = $computed(() => $a() + $b());
+ * const $a = observable(10);
+ * const $b = observable(10);
+ * const $c = computed(() => $a() + $b());
  *
  * console.log($c()); // logs 20
  *
  * $a.set(20);
- * await $tick();
+ * await tick();
  * console.log($c()); // logs 30
  *
  * $b.set(20);
- * await $tick();
+ * await tick();
  * console.log($c()); // logs 40
  * ```
  */
-export function $computed<T>(
+export function computed<T>(
   fn: () => T,
   opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
 ): Observable<T> {
@@ -200,7 +200,7 @@ export function $computed<T>(
     if (_observer) addObserver($computed, _observer);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
-      forEachChild($computed, $dispose);
+      forEachChild($computed, dispose);
       emptyDisposal($computed);
 
       const nextValue = compute($computed, fn);
@@ -215,7 +215,7 @@ export function $computed<T>(
     return currentValue;
   };
 
-  if (__DEV__) $computed.id = opts?.id ?? `$computed`;
+  if (__DEV__) $computed.id = opts?.id ?? `computed`;
 
   // Starts off dirty because it hasn't run yet.
   $computed[DIRTY] = true;
@@ -237,7 +237,7 @@ export function $computed<T>(
  *   onDispose(() => window.removeEventListener(type, callback));
  * };
  *
- * const stop = $effect(() => {
+ * const stop = effect(() => {
  *   // This will be disposed of when the effect is.
  *   // Also called when the effect is re-run.
  *   listen('click', () => {
@@ -267,19 +267,19 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  *
  * @example
  * ```js
- * const $a = $observable(10);
- * const $b = $computed(() => $a());
+ * const $a = observable(10);
+ * const $b = computed(() => $a());
  *
  * // `$b` will no longer update if `$a` is updated.
- * $dispose($a);
+ * dispose($a);
  *
  * $a.set(100);
  * console.log($b()); // still logs `10`
  * ```
  */
-export function $dispose(fn: () => void) {
+export function dispose(fn: () => void) {
   forEachChild(fn, (child) => {
-    $dispose(child);
+    dispose(child);
     child[OBSERVERS]?.delete(fn);
   });
 
@@ -300,23 +300,23 @@ export function $dispose(fn: () => void) {
  *
  * @example
  * ```js
- * const $a = $observable(10);
- * const $b = $observable(20);
- * const $c = $computed(() => $a() + $b());
+ * const $a = observable(10);
+ * const $b = observable(20);
+ * const $c = computed(() => $a() + $b());
  *
  * // This effect will run each time `$a` or `$b` is updated.
- * const stop = $effect(() => console.log($c()));
+ * const stop = effect(() => console.log($c()));
  *
  * stop();
  * ```
  */
-export function $effect(fn: Effect, opts?: { id?: string }): StopEffect {
-  const $effect = $computed(() => onDispose(fn()), {
-    id: __DEV__ ? opts?.id ?? '$effect' : opts?.id,
+export function effect(fn: Effect, opts?: { id?: string }): StopEffect {
+  const $effect = computed(() => onDispose(fn()), {
+    id: __DEV__ ? opts?.id ?? 'effect' : opts?.id,
   });
 
   $effect();
-  return () => $dispose($effect);
+  return () => dispose($effect);
 }
 
 /**
@@ -325,8 +325,8 @@ export function $effect(fn: Effect, opts?: { id?: string }): StopEffect {
  *
  * @example
  * ```js
- * const $a = $observable(10);
- * const $b = $readonly($a);
+ * const $a = observable(10);
+ * const $b = readonly($a);
  *
  * console.log($b()); // logs 10
  *
@@ -336,8 +336,8 @@ export function $effect(fn: Effect, opts?: { id?: string }): StopEffect {
  * console.log($b()); // logs 20
  * ```
  */
-export function $readonly<T>($observable: Observable<T>): Observable<T> {
-  const $readonly = () => $observable();
+export function readonly<T>(observable: Observable<T>): Observable<T> {
+  const $readonly = () => observable();
   $readonly[OBSERVABLE] = true;
   return $readonly;
 }
@@ -349,7 +349,7 @@ export function $readonly<T>($observable: Observable<T>): Observable<T> {
  *
  * @example
  * ```js
- * const $a = $observable(10);
+ * const $a = observable(10);
  *
  * $a.set(10);
  * $a.set(20);
@@ -359,13 +359,13 @@ export function $readonly<T>($observable: Observable<T>): Observable<T> {
  *
  * // All writes are applied
  * $a.set(10);
- * await $tick();
+ * await tick();
  * $a.set(20);
- * await $tick();
+ * await tick();
  * $a.set(30);
  * ```
  */
-export function $tick() {
+export function tick() {
   _scheduler.flush();
   return _scheduler.tick;
 }
@@ -376,14 +376,14 @@ export function $tick() {
  * @example
  * ```js
  * // True
- * isSubject($observable(10));
+ * isSubject(observable(10));
  * // False
  * isSubject(false);
  * isSubject(null);
  * isSubject(undefined);
  * isSubject(() => {});
- * isSubject($computed(() => 10));
- * isSubject($readonly($observable(10)));
+ * isSubject(computed(() => 10));
+ * isSubject(readonly(observable(10)));
  * ```
  */
 export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
@@ -396,9 +396,9 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
  *
  * @example
  * ```js
- * $root(() => {
- *   const $a = $observable(0);
- *   getParent($a); // returns `$root`
+ * root(() => {
+ *   const $a = observable(0);
+ *   getParent($a); // returns `root`
  * });
  * ```
  */

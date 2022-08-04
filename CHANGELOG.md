@@ -4,85 +4,73 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [3.4.1](https://github.com/maverick-js/observables/compare/v3.4.0...v3.4.1) (2022-07-12)
 
-
 ### Bug Fixes
 
-* move scheduler to separate package ([83120d7](https://github.com/maverick-js/observables/commit/83120d7662daaf5e7ac2fe0ac0cceda26f80f1c5))
+- move scheduler to separate package ([83120d7](https://github.com/maverick-js/observables/commit/83120d7662daaf5e7ac2fe0ac0cceda26f80f1c5))
 
 ## [3.4.0](https://github.com/maverick-js/observables/compare/v3.3.0...v3.4.0) (2022-07-08)
 
-
 ### Features
 
-* new `dirty` option for `$computed` ([7ae2e6c](https://github.com/maverick-js/observables/commit/7ae2e6cb353d571e66a56c8c90ddc2e35fe126d9))
+- new `dirty` option for `computed` ([7ae2e6c](https://github.com/maverick-js/observables/commit/7ae2e6cb353d571e66a56c8c90ddc2e35fe126d9))
 
 ## [3.3.0](https://github.com/maverick-js/observables/compare/v3.2.0...v3.3.0) (2022-07-08)
 
-
 ### Features
 
-* new export `getParent` ([88310aa](https://github.com/maverick-js/observables/commit/88310aadf829b984011b9fc108997701d767c8e2))
-
+- new export `getParent` ([88310aa](https://github.com/maverick-js/observables/commit/88310aadf829b984011b9fc108997701d767c8e2))
 
 ### Bug Fixes
 
-* track parent across peeks ([af4d561](https://github.com/maverick-js/observables/commit/af4d5615d78560f75ecea780a15ee46c33049719))
+- track parent across peeks ([af4d561](https://github.com/maverick-js/observables/commit/af4d5615d78560f75ecea780a15ee46c33049719))
 
 ## [3.2.0](https://github.com/maverick-js/observables/compare/v3.1.5...v3.2.0) (2022-07-06)
 
-
 ### Features
 
-* new `onFlush` method on scheduler ([0eccb59](https://github.com/maverick-js/observables/commit/0eccb59d1781795df358d99b8d1ffb99010fd1b4))
-* new export `getScheduler` ([f92183b](https://github.com/maverick-js/observables/commit/f92183bcfa8c0959c0eb68b0f3efb24087a87e08))
+- new `onFlush` method on scheduler ([0eccb59](https://github.com/maverick-js/observables/commit/0eccb59d1781795df358d99b8d1ffb99010fd1b4))
+- new export `getScheduler` ([f92183b](https://github.com/maverick-js/observables/commit/f92183bcfa8c0959c0eb68b0f3efb24087a87e08))
 
 ### [3.1.5](https://github.com/maverick-js/observables/compare/v3.1.4...v3.1.5) (2022-07-03)
 
-
 ### Bug Fixes
 
-* revert a39679d1ddb9b825a9e3fa8f33dc56f0bab18c43 ([88c5dbe](https://github.com/maverick-js/observables/commit/88c5dbe26c312c86c1663a71562ea1bfe1a0fad5))
+- revert a39679d1ddb9b825a9e3fa8f33dc56f0bab18c43 ([88c5dbe](https://github.com/maverick-js/observables/commit/88c5dbe26c312c86c1663a71562ea1bfe1a0fad5))
 
 ### [3.1.4](https://github.com/maverick-js/observables/compare/v3.1.3...v3.1.4) (2022-07-03)
 
-
 ### Bug Fixes
 
-* dont dispose of children on update ([a39679d](https://github.com/maverick-js/observables/commit/a39679d1ddb9b825a9e3fa8f33dc56f0bab18c43))
+- dont dispose of children on update ([a39679d](https://github.com/maverick-js/observables/commit/a39679d1ddb9b825a9e3fa8f33dc56f0bab18c43))
 
 ### [3.1.3](https://github.com/maverick-js/observables/compare/v3.1.2...v3.1.3) (2022-07-02)
 
-
 ### Bug Fixes
 
-* additional parent tracking variable not required ([9df21ee](https://github.com/maverick-js/observables/commit/9df21ee0d104d1da85aa28ebebd7925c1995e56a))
+- additional parent tracking variable not required ([9df21ee](https://github.com/maverick-js/observables/commit/9df21ee0d104d1da85aa28ebebd7925c1995e56a))
 
 ### [3.1.2](https://github.com/maverick-js/observables/compare/v3.1.1...v3.1.2) (2022-07-02)
 
-
 ### Bug Fixes
 
-* incorrect recursive parent tracking ([7390155](https://github.com/maverick-js/observables/commit/7390155f7a5e8be85c7d2fc8d06c4c261dc43437))
+- incorrect recursive parent tracking ([7390155](https://github.com/maverick-js/observables/commit/7390155f7a5e8be85c7d2fc8d06c4c261dc43437))
 
 ### [3.1.1](https://github.com/maverick-js/observables/compare/v3.1.0...v3.1.1) (2022-07-02)
 
-
 ### Bug Fixes
 
-* parent should be determined on creation ([117fa5b](https://github.com/maverick-js/observables/commit/117fa5bc77dc84970f262801887238d3e5ead4c7))
+- parent should be determined on creation ([117fa5b](https://github.com/maverick-js/observables/commit/117fa5bc77dc84970f262801887238d3e5ead4c7))
 
 ## [3.1.0](https://github.com/maverick-js/observables/compare/v3.0.0...v3.1.0) (2022-07-01)
 
-
 ### Features
 
-* `$observable` accepts dirty check option ([0c7a55d](https://github.com/maverick-js/observables/commit/0c7a55d9b71463200e90413a1d6987b00451e9ae))
-
+- `observable` accepts dirty check option ([0c7a55d](https://github.com/maverick-js/observables/commit/0c7a55d9b71463200e90413a1d6987b00451e9ae))
 
 ### Bug Fixes
 
-* effect should run all disposals on each new run ([3217217](https://github.com/maverick-js/observables/commit/3217217a85c232e6e0311d31ea3fd9d9b25db825))
-* second argument to observables is an options object (prev debug id) ([d0c31e7](https://github.com/maverick-js/observables/commit/d0c31e745867283e190a6c1626c8156b624aeeda))
+- effect should run all disposals on each new run ([3217217](https://github.com/maverick-js/observables/commit/3217217a85c232e6e0311d31ea3fd9d9b25db825))
+- second argument to observables is an options object (prev debug id) ([d0c31e7](https://github.com/maverick-js/observables/commit/d0c31e745867283e190a6c1626c8156b624aeeda))
 
 ## [3.0.0](https://github.com/maverick-js/observables/compare/v2.0.3...v3.0.0) (2022-06-30)
 
@@ -120,10 +108,10 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### Features
 
-- `$root` ([a70746f](https://github.com/maverick-js/observables/commit/a70746ffbdf286452b8f0379f942faa5c9a37c38))
+- `root` ([a70746f](https://github.com/maverick-js/observables/commit/a70746ffbdf286452b8f0379f942faa5c9a37c38))
 - `isObservable` ([88024da](https://github.com/maverick-js/observables/commit/88024dac825b548af6e40b78e618ec19d1e154d2))
 - `onDispose` hook ([db8c142](https://github.com/maverick-js/observables/commit/db8c142625624f404fb021cc631a6cc8f5d44926))
-- cleanup function can be returned inside `$effect` ([7a4f72f](https://github.com/maverick-js/observables/commit/7a4f72fac438010cae08d40244cd4e277995f8e6))
+- cleanup function can be returned inside `effect` ([7a4f72f](https://github.com/maverick-js/observables/commit/7a4f72fac438010cae08d40244cd4e277995f8e6))
 - improve type inference in `is` functions ([7cd7b92](https://github.com/maverick-js/observables/commit/7cd7b92eddce3cdaacb70100e6be021a89253e34))
 - initial commit ([51cd6d5](https://github.com/maverick-js/observables/commit/51cd6d5cad05e3f1bb0f9446d29186b3b65e42b5))
 
