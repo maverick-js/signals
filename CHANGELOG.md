@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.1](https://github.com/maverick-js/observables/compare/v4.0.0...v4.0.1) (2022-08-05)
+
+
+### Bug Fixes
+
+* keep child computations alive on update ([f4b1d2d](https://github.com/maverick-js/observables/commit/f4b1d2d6651da0692fdb77c8ac30c6a803710b9e)), closes [#4](https://github.com/maverick-js/observables/issues/4)
+
 ## [4.0.0](https://github.com/maverick-js/observables/compare/v3.4.1...v4.0.0) (2022-08-04)
 
 ### ⚠ BREAKING CHANGES
