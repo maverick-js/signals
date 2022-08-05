@@ -445,12 +445,8 @@ function compute<T>(parent: () => void, child: () => T): T {
 function adoptChild(child: Node) {
   if (_parent) {
     child[PARENT] = _parent;
-    addChild(_parent, child);
+    addNode(_parent, CHILDREN, child);
   }
-}
-
-function addChild(parent: Node, child: Node) {
-  addNode(parent, CHILDREN, child);
 }
 
 function addObserver(observable: Node, observer: Node) {
