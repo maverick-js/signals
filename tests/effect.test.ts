@@ -33,12 +33,14 @@ it('should run effect on change', async () => {
 
 it('should handle nested effect', async () => {
   const $a = observable(0);
+  const $b = observable(0);
   const innerEffect = vi.fn();
   const innerDispose = vi.fn();
 
-  effect(() => {
+  const stop = effect(() => {
     $a();
     effect(() => {
+      $b();
       innerEffect();
       onDispose(innerDispose);
     });
@@ -47,12 +49,24 @@ it('should handle nested effect', async () => {
   expect(innerEffect).toHaveBeenCalledTimes(1);
   expect(innerDispose).toHaveBeenCalledTimes(0);
 
-  for (let i = 1; i <= 3; i += 1) {
-    $a.set(i);
-    await tick();
-    expect(innerEffect).toHaveBeenCalledTimes(i + 1);
-    expect(innerDispose).toHaveBeenCalledTimes(i);
-  }
+  $a.set(1);
+  await tick();
+  expect(innerEffect).toHaveBeenCalledTimes(2); // new one is created
+  expect(innerDispose).toHaveBeenCalledTimes(0);
+
+  $b.set(2);
+  await tick();
+  expect(innerEffect).toHaveBeenCalledTimes(4);
+  expect(innerDispose).toHaveBeenCalledTimes(2);
+
+  stop();
+  expect(innerEffect).toHaveBeenCalledTimes(4);
+  expect(innerDispose).toHaveBeenCalledTimes(4);
+
+  $b.set(3);
+  await tick();
+  expect(innerEffect).toHaveBeenCalledTimes(4);
+  expect(innerDispose).toHaveBeenCalledTimes(4);
 });
 
 it('should stop effect', async () => {

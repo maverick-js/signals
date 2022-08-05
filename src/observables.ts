@@ -200,7 +200,6 @@ export function computed<T>(
     if (_observer) addObserver($computed, _observer);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
-      forEachChild($computed, emptyDisposal);
       emptyDisposal($computed);
 
       const nextValue = compute($computed, fn);
