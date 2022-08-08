@@ -293,10 +293,10 @@ export function getScheduler(): Scheduler {
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
- * It only runs the mapping function once per item and adds/removes items accordingly. The list
- * item is an observable. The map function itself is not tracking.
+ * It only runs the mapping function once per item and adds/removes as needed. In a non-keyed map
+ * like this the index is fixed but value can change (opposite of a keyed map).
  *
- * Prefer `computedKeyedMap` when mapping to expensive objects like DOM nodes.
+ * Prefer `computedKeyedMap` when referential checks are required.
  *
  * @see {@link https://github.com/maverick-js/observables#computedmap}
  */
@@ -357,12 +357,8 @@ export function computedMap<Item, MappedItem>(
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L16
 /**
  * Reactive map helper that caches each list item by reference to reduce unnecessary mapping on
- * updates. It only runs the mapping function once per item and then moves or removes it as needed.
- * The index argument is an observable. The map function itself is not tracking.
- *
- * Use this when you have expensive data computations per each list item or you want to avoid
- * re-creating heavy objects on each update. A good use-case is when you're working with a collection
- * of DOM nodes.
+ * updates. It only runs the mapping function once per item and then moves or removes it as needed. In
+ * a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
  *
  * Prefer `computedMap` when working with primitives to avoid unncessary re-renders.
  *

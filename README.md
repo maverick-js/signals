@@ -313,11 +313,11 @@ $a.set(30);
 
 > **Note**
 > Same implementation as [`indexArray`](https://www.solidjs.com/docs/latest/api#indexarray) in Solid JS.
-> Prefer [`computedKeyedMap`](#computedkeyedmap) when mapping to expensive objects like DOM nodes.
+> Prefer [`computedKeyedMap`](#computedkeyedmap) when referential checks are required.
 
 Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
-It only runs the mapping function once per item and adds/removes as needed. The list item is an
-observable. The map function itself is not tracking - only applied once.
+It only runs the mapping function once per item and adds/removes as needed. In a non-keyed map like
+this the index is fixed but value can change (opposite of a keyed map).
 
 ```js
 import { observable, tick, computedMap } from '@maverick-js/observables';
@@ -349,12 +349,8 @@ console.log(map()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2
 > Prefer [`computedMap`](#computedmap) when working with primitives to avoid unnecessary re-renders.
 
 Reactive map helper that caches each list item by reference to reduce unnecessary mapping on
-updates. It only runs the mapping function once per item and then moves or removes it as needed.
-The index argument is an observable. The map function itself is not tracking - only applied once.
-
-Use this when you have expensive data computations per each list item or you want to avoid
-re-creating heavy objects on each update. A good use-case is when you're working with a collection
-of DOM nodes.
+updates. It only runs the mapping function once per item and then moves or removes it as needed. In
+a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
 
 ```js
 import { observable, tick, computedKeyedMap } from '@maverick-js/observables';
