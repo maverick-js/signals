@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.2](https://github.com/maverick-js/observables/compare/v4.1.1...v4.1.2) (2022-08-08)
+
+
+### Bug Fixes
+
+* remove redundant `unrefSet` calls ([778b8ee](https://github.com/maverick-js/observables/commit/778b8ee360d9c4ce3174f5d8d779b54bd96e1478))
+
 ### [4.1.1](https://github.com/maverick-js/observables/compare/v4.1.0...v4.1.1) (2022-08-08)
 
 
