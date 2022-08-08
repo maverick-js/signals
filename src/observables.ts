@@ -214,10 +214,9 @@ export function dispose(fn: () => void) {
 
   emptyDisposal(fn);
 
-  unrefSet(fn, CHILDREN);
-  unrefSet(fn, DISPOSAL);
-  unrefSet(fn, OBSERVERS);
-
+  fn[CHILDREN] = undefined;
+  fn[DISPOSAL] = undefined;
+  fn[OBSERVERS] = undefined;
   fn[PARENT] = undefined;
   fn[DIRTY] = false;
   fn[DISPOSED] = true;
@@ -562,10 +561,6 @@ function emptyDisposal(node: Node) {
     for (const dispose of node[DISPOSAL]!) dispose();
     node[DISPOSAL]!.clear();
   }
-}
-
-function unrefSet(parent: any, key: symbol) {
-  parent[key] = undefined;
 }
 
 function notEqual(a: unknown, b: unknown) {
