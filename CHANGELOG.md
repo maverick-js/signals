@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.1.1](https://github.com/maverick-js/observables/compare/v4.1.0...v4.1.1) (2022-08-08)
+
+
+### Bug Fixes
+
+* update computed map docs ([0bbf814](https://github.com/maverick-js/observables/commit/0bbf8149ce52ae3ffe4f790675dc00b4d72e0b2c))
+
 ## [4.1.0](https://github.com/maverick-js/observables/compare/v4.0.2...v4.1.0) (2022-08-08)
 
 
