@@ -81,8 +81,8 @@ root(async (dispose) => {
 
 <img src="./export-sizes.png" alt="Library export sizes" width="250px" />
 
-**Average:** ~600B.
-**Total:** ~850B.
+**Average:** ~850B gzipped
+**Total:** ~1.5KB gzipped
 
 You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
 
