@@ -5,6 +5,8 @@ export type Observable<T> = {
   (): T;
 };
 
+export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
+
 export type ObservableSubject<T> = Observable<T> & {
   set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
@@ -50,16 +52,7 @@ if (__DEV__) {
  * Creates a computation root which is given a `dispose()` function to dispose of all inner
  * computations.
  *
- * @example
- * ```js
- * const result = root((dispose) => {
- *   // ...
- *   dispose();
- *   return 10;
- * });
- *
- * console.log(result); // logs `10`
- * ```
+ * @see {@link https://github.com/maverick-js/observables#root}
  */
 export function root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => {};
@@ -69,15 +62,7 @@ export function root<T>(fn: (dispose: Dispose) => T): T {
 /**
  * Returns the current value stored inside an observable without triggering a dependency.
  *
- * @example
- * ```js
- * const $a = observable(10);
- *
- * computed(() => {
- *  // `$a` will not be considered a dependency.
- *  const value = peek($a);
- * });
- * ```
+ * @see {@link https://github.com/maverick-js/observables#peek}
  */
 export function peek<T>(fn: () => T): T {
   const prev = _observer;
@@ -95,14 +80,7 @@ export function peek<T>(fn: () => T): T {
  * value can now be observed when used inside other computations created with `computed` and
  * `effect`.
  *
- * @example
- * ```
- * const $a = observable(10);
- *
- * $a(); // read
- * $a.set(20); // write (1)
- * $a.next(prev => prev + 10); // write (2)
- * ```
+ * @see {@link https://github.com/maverick-js/observables#observable}
  */
 export function observable<T>(
   initialValue: T,
@@ -141,18 +119,7 @@ export function observable<T>(
 /**
  * Whether the given value is an observable (readonly).
  *
- * @example
- * ```js
- * // True
- * isObservable(observable(10));
- * isObservable(computed(() => 10));
- * isObservable(readonly(observable(10)));
- * // False
- * isObservable(false);
- * isObservable(null);
- * isObservable(undefined);
- * isObservable(() => {});
- * ```
+ * @see {@link https://github.com/maverick-js/observables#isobservable}
  */
 export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
   return !!fn?.[OBSERVABLE];
@@ -163,28 +130,14 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  * compute function is _only_ re-run when one of it's dependencies are updated. Dependencies are
  * are all observables that are read during execution.
  *
- * @example
- * ```js
- * const $a = observable(10);
- * const $b = observable(10);
- * const $c = computed(() => $a() + $b());
- *
- * console.log($c()); // logs 20
- *
- * $a.set(20);
- * await tick();
- * console.log($c()); // logs 30
- *
- * $b.set(20);
- * await tick();
- * console.log($c()); // logs 40
- * ```
+ * @see {@link https://github.com/maverick-js/observables#computed}
  */
 export function computed<T>(
   fn: () => T,
   opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
 ): Observable<T> {
-  let currentValue;
+  let currentValue,
+    init = false;
 
   const isDirty = opts?.dirty ?? notEqual;
 
@@ -205,7 +158,10 @@ export function computed<T>(
       const nextValue = compute($computed, fn);
       $computed[DIRTY] = false;
 
-      if (isDirty(currentValue, nextValue)) {
+      if (!init) {
+        currentValue = nextValue;
+        init = true;
+      } else if (isDirty(currentValue, nextValue)) {
         currentValue = nextValue;
         dirtyNode($computed);
       }
@@ -229,23 +185,7 @@ export function computed<T>(
 /**
  * Runs the given function when the parent computation is being disposed.
  *
- * @example
- * ```js
- * const listen = (type, callback) => {
- *   window.addEventListener(type, callback);
- *   onDispose(() => window.removeEventListener(type, callback));
- * };
- *
- * const stop = effect(() => {
- *   // This will be disposed of when the effect is.
- *   // Also called when the effect is re-run.
- *   listen('click', () => {
- *     // ...
- *   });
- * });
- *
- * stop(); // `onDispose` is called
- * ```
+ * @see {@link https://github.com/maverick-js/observables#ondispose}
  */
 export function onDispose(fn?: MaybeDispose): Dispose {
   const valid = fn && _parent;
@@ -264,17 +204,7 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  * Unsubscribes the given observable and all inner computations. Disposed functions will retain
  * their current value but are no longer reactive.
  *
- * @example
- * ```js
- * const $a = observable(10);
- * const $b = computed(() => $a());
- *
- * // `$b` will no longer update if `$a` is updated.
- * dispose($a);
- *
- * $a.set(100);
- * console.log($b()); // still logs `10`
- * ```
+ * @see {@link https://github.com/maverick-js/observables#dispose}
  */
 export function dispose(fn: () => void) {
   forEachChild(fn, (child) => {
@@ -297,17 +227,7 @@ export function dispose(fn: () => void) {
  * Invokes the given function each time any of the observables that are read inside are updated
  * (i.e., their value changes). The effect is immediately invoked on initialization.
  *
- * @example
- * ```js
- * const $a = observable(10);
- * const $b = observable(20);
- * const $c = computed(() => $a() + $b());
- *
- * // This effect will run each time `$a` or `$b` is updated.
- * const stop = effect(() => console.log($c()));
- *
- * stop();
- * ```
+ * @see {@link https://github.com/maverick-js/observables#effect}
  */
 export function effect(fn: Effect, opts?: { id?: string }): StopEffect {
   const $effect = computed(() => onDispose(fn()), {
@@ -322,18 +242,7 @@ export function effect(fn: Effect, opts?: { id?: string }): StopEffect {
  * Takes in the given observable and makes it read only by removing access to write
  * operations (i.e., `set()` and `next()`).
  *
- * @example
- * ```js
- * const $a = observable(10);
- * const $b = readonly($a);
- *
- * console.log($b()); // logs 10
- *
- * // We can still update value through `$a`.
- * $a.set(20);
- *
- * console.log($b()); // logs 20
- * ```
+ * @see {@link https://github.com/maverick-js/observables#readonly}
  */
 export function readonly<T>(observable: Observable<T>): Observable<T> {
   const $readonly = () => observable();
@@ -346,23 +255,7 @@ export function readonly<T>(observable: Observable<T>): Observable<T> {
  * actions performed in the same execution window is applied. You can wait for the microtask
  * queue to be flushed before writing a new value so it takes effect.
  *
- * @example
- * ```js
- * const $a = observable(10);
- *
- * $a.set(10);
- * $a.set(20);
- * $a.set(30); // only this write is applied
- *
- * // ----
- *
- * // All writes are applied
- * $a.set(10);
- * await tick();
- * $a.set(20);
- * await tick();
- * $a.set(30);
- * ```
+ * @see {@link https://github.com/maverick-js/observables#tick}
  */
 export function tick() {
   _scheduler.flush();
@@ -372,18 +265,7 @@ export function tick() {
 /**
  * Whether the given value is an observable subject (i.e., can produce new values via write API).
  *
- * @example
- * ```js
- * // True
- * isSubject(observable(10));
- * // False
- * isSubject(false);
- * isSubject(null);
- * isSubject(undefined);
- * isSubject(() => {});
- * isSubject(computed(() => 10));
- * isSubject(readonly(observable(10)));
- * ```
+ * @see {@link https://github.com/maverick-js/observables#issubject}
  */
 export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
   return isObservable(fn) && !!(fn as ObservableSubject<T>).set;
@@ -393,13 +275,7 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
  * Returns the parent/owner of the given function (if defined). You can use this to walk up
  * the computation tree.
  *
- * @example
- * ```js
- * root(() => {
- *   const $a = observable(0);
- *   getParent($a); // returns `root`
- * });
- * ```
+ * @see {@link https://github.com/maverick-js/observables#getparent}
  */
 export function getParent(fn: Observable<unknown>): Observable<unknown> | undefined {
   return fn[PARENT];
@@ -407,9 +283,222 @@ export function getParent(fn: Observable<unknown>): Observable<unknown> | undefi
 
 /**
  * Returns the global scheduler.
+ *
+ * @see {@link https://github.com/maverick-js/observables#getscheduler}
  */
 export function getScheduler(): Scheduler {
   return _scheduler;
+}
+
+// Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
+/**
+ * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
+ * It only runs the mapping function once per item and adds/removes items accordingly. The list
+ * item is an observable. The map function itself is not tracking.
+ *
+ * Prefer `computedKeyedMap` when mapping to expensive objects like DOM nodes.
+ *
+ * @see {@link https://github.com/maverick-js/observables#computedmap}
+ */
+export function computedMap<Item, MappedItem>(
+  list: Observable<Maybe<readonly Item[]>>,
+  map: (value: Observable<Item>, index: number) => MappedItem,
+  options?: { id?: string },
+): Observable<MappedItem[]> {
+  let items: Item[] = [],
+    mapped: MappedItem[] = [],
+    disposal: Dispose[] = [],
+    observables: ((v: any) => void)[] = [],
+    i: number,
+    len = 0;
+
+  onDispose(() => runAll(disposal));
+
+  return computed(() => {
+    const newItems = list() || [];
+    return peek(() => {
+      if (newItems.length === 0) {
+        if (len !== 0) {
+          runAll(disposal);
+          disposal = [];
+          items = [];
+          mapped = [];
+          len = 0;
+          observables = [];
+        }
+
+        return mapped;
+      }
+
+      for (i = 0; i < newItems.length; i++) {
+        if (i < items.length && items[i] !== newItems[i]) {
+          observables[i](newItems[i]);
+        } else if (i >= items.length) {
+          mapped[i] = root(mapper);
+        }
+      }
+
+      for (; i < items.length; i++) disposal[i]();
+
+      len = observables.length = disposal.length = newItems.length;
+      items = newItems.slice(0);
+      return (mapped = mapped.slice(0, len));
+    });
+
+    function mapper(dispose: () => void) {
+      disposal[i] = dispose;
+      const $o = observable(newItems[i]);
+      observables[i] = $o.set;
+      return map($o, i);
+    }
+  }, options);
+}
+
+// Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L16
+/**
+ * Reactive map helper that caches each list item by reference to reduce unnecessary mapping on
+ * updates. It only runs the mapping function once per item and then moves or removes it as needed.
+ * The index argument is an observable. The map function itself is not tracking.
+ *
+ * Use this when you have expensive data computations per each list item or you want to avoid
+ * re-creating heavy objects on each update. A good use-case is when you're working with a collection
+ * of DOM nodes.
+ *
+ * Prefer `computedMap` when working with primitives to avoid unncessary re-renders.
+ *
+ * @see {@link https://github.com/maverick-js/observables#computedkeyedmap}
+ */
+export function computedKeyedMap<Item, MappedItem>(
+  list: Observable<Maybe<readonly Item[]>>,
+  map: (value: Item, index: Observable<number>) => MappedItem,
+  options?: { id?: string },
+): Observable<MappedItem[]> {
+  let items: Item[] = [],
+    mapping: MappedItem[] = [],
+    disposal: Dispose[] = [],
+    len = 0,
+    indicies: ((v: number) => number)[] | null = map.length > 1 ? [] : null;
+
+  onDispose(() => runAll(disposal));
+
+  return computed(() => {
+    let newItems = list() || [],
+      i: number,
+      j: number;
+
+    return peek(() => {
+      let newLen = newItems.length;
+
+      // fast path for empty arrays
+      if (newLen === 0) {
+        if (len !== 0) {
+          runAll(disposal);
+          disposal = [];
+          items = [];
+          mapping = [];
+          len = 0;
+          indicies && (indicies = []);
+        }
+      }
+      // fast path for new create
+      else if (len === 0) {
+        mapping = new Array(newLen);
+
+        for (j = 0; j < newLen; j++) {
+          items[j] = newItems[j];
+          mapping[j] = root(mapper);
+        }
+
+        len = newLen;
+      } else {
+        let start: number,
+          end: number,
+          newEnd: number,
+          item: Item,
+          newIndices: Map<Item, number>,
+          newIndicesNext: number[],
+          temp: MappedItem[] = new Array(newLen),
+          tempDisposal: (() => void)[] = new Array(newLen),
+          tempIndicies: ((v: number) => number)[] = new Array(newLen);
+
+        // skip common prefix
+        for (
+          start = 0, end = Math.min(len, newLen);
+          start < end && items[start] === newItems[start];
+          start++
+        );
+
+        // common suffix
+        for (
+          end = len - 1, newEnd = newLen - 1;
+          end >= start && newEnd >= start && items[end] === newItems[newEnd];
+          end--, newEnd--
+        ) {
+          temp[newEnd] = mapping[end];
+          tempDisposal[newEnd] = disposal[end];
+          indicies && (tempIndicies![newEnd] = indicies[end]);
+        }
+
+        // 0) prepare a map of all indices in newItems, scanning backwards so we encounter them in natural order
+        newIndices = new Map<Item, number>();
+        newIndicesNext = new Array(newEnd + 1);
+        for (j = newEnd; j >= start; j--) {
+          item = newItems[j];
+          i = newIndices.get(item)!;
+          newIndicesNext[j] = i === undefined ? -1 : i;
+          newIndices.set(item, j);
+        }
+
+        // 1) step through all old items and see if they can be found in the new set; if so, save them in a temp array and mark them moved; if not, exit them
+        for (i = start; i <= end; i++) {
+          item = items[i];
+          j = newIndices.get(item)!;
+          if (j !== undefined && j !== -1) {
+            temp[j] = mapping[i];
+            tempDisposal[j] = disposal[i];
+            indicies && (tempIndicies![j] = indicies[i]);
+            j = newIndicesNext[j];
+            newIndices.set(item, j);
+          } else disposal[i]();
+        }
+
+        // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
+        for (j = start; j < newLen; j++) {
+          if (j in temp) {
+            mapping[j] = temp[j];
+            disposal[j] = tempDisposal[j];
+            if (indicies) {
+              indicies[j] = tempIndicies![j];
+              indicies[j](j);
+            }
+          } else mapping[j] = root(mapper);
+        }
+
+        // 3) in case the new set is shorter than the old, set the length of the mapped array
+        mapping = mapping.slice(0, (len = newLen));
+
+        // 4) save a copy of the mapped items for the next update
+        items = newItems.slice(0);
+      }
+
+      return mapping;
+    });
+
+    function mapper(dispose: () => void) {
+      disposal[j] = dispose;
+
+      if (indicies) {
+        const $i = observable(j);
+        indicies[j] = (v) => {
+          $i.set(v);
+          return v;
+        };
+        return map(newItems[j], readonly($i));
+      }
+
+      return map(newItems[j], () => -1);
+    }
+  }, options);
 }
 
 type Node = {
@@ -485,4 +574,8 @@ function unrefSet(parent: any, key: symbol) {
 
 function notEqual(a: unknown, b: unknown) {
   return a !== b;
+}
+
+function runAll(fns: (() => void)[]) {
+  for (let i = 0; i < fns.length; i++) fns[i]();
 }

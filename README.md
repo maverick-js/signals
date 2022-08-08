@@ -105,6 +105,8 @@ $: yarn add @maverick-js/observables
 - [`peek`](#peek)
 - [`readonly`](#readonly)
 - [`tick`](#tick)
+- [`computedMap`](#computedmap)
+- [`computedKeyedMap`](#computedkeyedmap)
 - [`dispose`](#dispose)
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
@@ -305,6 +307,87 @@ await tick();
 $a.set(20);
 await tick();
 $a.set(30);
+```
+
+### `computedMap`
+
+> **Note**
+> Same implementation as [`indexArray`](https://www.solidjs.com/docs/latest/api#indexarray) in Solid JS.
+> Prefer [`computedKeyedMap`](#computedkeyedmap) when mapping to expensive objects like DOM nodes.
+
+Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
+It only runs the mapping function once per item and adds/removes as needed. The list item is an
+observable. The map function itself is not tracking - only applied once.
+
+```js
+import { observable, tick, computedMap } from '@maverick-js/observables';
+
+const source = observable([1, 2, 3]);
+
+const map = computedMap(source, (value, index) => {
+  return {
+    i: index,
+    get id() {
+      return value() * 2;
+    },
+  };
+});
+
+console.log(map()); // logs `[{ i: 0, id: $2 }, { i: 1, id: $4 }, { i: 2, id: $6 }]`
+
+source.set([3, 2, 1]);
+await tick();
+
+// Notice the index `i` remains fixed but `id` has updated.
+console.log(map()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2 }]`
+```
+
+### `computedKeyedMap`
+
+> **Note**
+> Same implementation as [`mapArray`](https://www.solidjs.com/docs/latest/api#maparray) in Solid JS.
+> Prefer [`computedMap`](#computedmap) when working with primitives to avoid unnecessary re-renders.
+
+Reactive map helper that caches each list item by reference to reduce unnecessary mapping on
+updates. It only runs the mapping function once per item and then moves or removes it as needed.
+The index argument is an observable. The map function itself is not tracking - only applied once.
+
+Use this when you have expensive data computations per each list item or you want to avoid
+re-creating heavy objects on each update. A good use-case is when you're working with a collection
+of DOM nodes.
+
+```js
+import { observable, tick, computedKeyedMap } from '@maverick-js/observables';
+
+const source = observable([{ id: 0 }, { id: 1 }, { id: 2 }]);
+
+const nodes = computedKeyedMap(source, (value, index) => {
+  const div = document.createElement('div');
+
+  div.setAttribute('id', String(value.id));
+  Object.defineProperty(div, 'i', {
+    get() {
+      return index();
+    },
+  });
+
+  return div;
+});
+
+console.log(nodes()); // [{ id: 0, i: $0 }, { id: 1, i: $1 }, { id: 2, i: $2 }];
+
+source.next((prev) => {
+  // Swap index 0 and 1
+  const tmp = prev[1];
+  prev[1] = prev[0];
+  prev[0] = tmp;
+  return [...prev]; // new array
+});
+
+await tick();
+
+// No nodes were created/destroyed, simply nodes at index 0 and 1 switched.
+console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];
 ```
 
 ### `dispose`
@@ -508,12 +591,12 @@ Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their wo
 [package-badge]: https://img.shields.io/npm/v/@maverick-js/observables/latest
 [license]: https://github.com/maverick-js/observables/blob/main/LICENSE
 [license-badge]: https://img.shields.io/github/license/maverick-js/observables
-[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^3.0.0
+[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^4.0.0
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
 [svelte-scheduler]: https://github.com/sveltejs/svelte/blob/master/src/runtime/internal/scheduler.ts
 [mdn-microtasks]: https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide
 [stackblitz-demo]: https://stackblitz.com/edit/maverick-observables?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
-[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^3.0.0
+[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^4.0.0
 [maverick-scheduler]: https://github.com/maverick-js/scheduler
