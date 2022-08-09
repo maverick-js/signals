@@ -12,6 +12,15 @@ it('should return parent', () => {
   });
 });
 
+it('should return current parent', () => {
+  root(() => {
+    expect(getParent()).toBeInstanceOf(Function);
+    effect(() => {
+      expect(getParent(getParent())).toBeInstanceOf(Function);
+    });
+  });
+});
+
 it('should return parent from inside peek', () => {
   root(() => {
     peek(() => {

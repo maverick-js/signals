@@ -474,13 +474,18 @@ isSubject(readonly(observable(10)));
 
 ### `getParent`
 
-Returns the parent/owner of the given function (if defined). You can use this function to
-recursively walk up the computation tree (useful for implementing a context API).
+Returns the parent/owner of the given function. If no function is given it'll return the
+currently executing parent. You can use this to walk up the computation tree.
 
 ```js
 root(() => {
-  const $a = observable(0);
-  getParent($a); // returns `root`
+  effect(() => {
+    const $a = observable(0);
+    getParent($a); // returns `effect`
+    getParent(getParent()); // returns `root`
+  });
+
+  getParent(); // returns `root`.
 });
 ```
 

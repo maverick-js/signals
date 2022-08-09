@@ -271,13 +271,13 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
 }
 
 /**
- * Returns the parent/owner of the given function (if defined). You can use this to walk up
- * the computation tree.
+ * Returns the parent/owner of the given function. If no function is given it'll return the
+ * currently executing parent. You can use this to walk up the computation tree.
  *
  * @see {@link https://github.com/maverick-js/observables#getparent}
  */
-export function getParent(fn: Observable<unknown>): Observable<unknown> | undefined {
-  return fn[PARENT];
+export function getParent(fn?: Observable<unknown>): Observable<unknown> | undefined {
+  return !fn ? _parent : fn[PARENT];
 }
 
 /**
