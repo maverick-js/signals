@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.2.3](https://github.com/maverick-js/observables/compare/v4.2.2...v4.2.3) (2022-08-09)
+
+
+### Bug Fixes
+
+* `root` should keep a reference to parent ([d8162ae](https://github.com/maverick-js/observables/commit/d8162ae8f5a20a14d00f0fb826219f2e5f911cd5))
+
 ### [4.2.2](https://github.com/maverick-js/observables/compare/v4.2.1...v4.2.2) (2022-08-09)
 
 
