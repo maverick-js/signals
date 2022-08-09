@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.2.2](https://github.com/maverick-js/observables/compare/v4.2.1...v4.2.2) (2022-08-09)
+
+
+### Bug Fixes
+
+* prevent infinite `getParent` recursion (attempt 2) ([b600c7a](https://github.com/maverick-js/observables/commit/b600c7ac6bb0d68c9ad9a08c1f161c0a8dfdf270))
+
 ### [4.2.1](https://github.com/maverick-js/observables/compare/v4.2.0...v4.2.1) (2022-08-09)
 
 
