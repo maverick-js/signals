@@ -33,6 +33,7 @@ const PARENT = Symbol(),
   CHILDREN = Symbol(),
   DISPOSAL = Symbol(),
   CONTEXT = Symbol(),
+  ERROR = Symbol(),
   NOOP = () => {};
 
 const _scheduler = createScheduler();
@@ -156,17 +157,20 @@ export function computed<T>(
     if (_observer) addObserver($computed, _observer);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
-      emptyDisposal($computed);
+      try {
+        emptyDisposal($computed);
+        const nextValue = compute($computed, fn);
+        $computed[DIRTY] = false;
 
-      const nextValue = compute($computed, fn);
-      $computed[DIRTY] = false;
-
-      if (!init) {
-        currentValue = nextValue;
-        init = true;
-      } else if (isDirty(currentValue, nextValue)) {
-        currentValue = nextValue;
-        dirtyNode($computed);
+        if (!init) {
+          currentValue = nextValue;
+          init = true;
+        } else if (isDirty(currentValue, nextValue)) {
+          currentValue = nextValue;
+          dirtyNode($computed);
+        }
+      } catch (error) {
+        handleError($computed, error);
       }
     }
 
@@ -296,32 +300,34 @@ export function getScheduler(): Scheduler {
 /**
  * Attempts to get a context value for the given key. It will start from the parent scope and
  * walk up the computation tree trying to find a context record and matching key. If no value can
- * be found `undefined` will be returned. This is intentionally low-level so you can design a
- * context API in your library as desired.
- *
- * In your implementation make sure to check if a parent exists via `getParent()`. If one does
- * not exist log a warning that this function should not be called outside a computation or render
- * function.
+ * be found `undefined` will be returned.
  *
  * @see {@link https://github.com/maverick-js/observables#getcontext}
  */
-export function getContext(key: string | symbol): unknown {
+export function getContext<T>(key: string | symbol): T | undefined {
   return lookup(_parent, key);
 }
 
 /**
  * Attempts to set a context value on the parent scope with the given key. This will be a no-op if
- * no parent is defined. This is intentionally low-level so you can design a context API in your
- * library as desired.
- *
- * In your implementation make sure to check if a parent exists via `getParent()`. If one does
- * not exist log a warning that this function should not be called outside a computation or render
- * function.
+ * no parent is defined.
  *
  * @see {@link https://github.com/maverick-js/observables#setcontext}
  */
-export function setContext(key: string | symbol, value: unknown) {
+export function setContext<T>(key: string | symbol, value: T) {
   if (_parent) (_parent[CONTEXT] ??= {})[key] = value;
+}
+
+/**
+ * Runs the given function when an error is thrown in a child scope. If the error is thrown again
+ * inside the error handler, it will trigger the next available parent handler.
+ *
+ * @see {@link https://github.com/maverick-js/observables#onerror}
+ */
+export function onError<T = Error>(handler: (error: T) => void): void {
+  if (_parent) {
+    (((_parent[CONTEXT] ??= {})[ERROR] as unknown[]) ??= []).push(handler);
+  }
 }
 
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
@@ -593,7 +599,13 @@ function dirtyNode(node: Node) {
     for (const observer of node[OBSERVERS]!) {
       if (observer[COMPUTED] && observer !== _observer) {
         observer[DIRTY] = true;
-        _scheduler.enqueue(observer);
+        _scheduler.enqueue(() => {
+          try {
+            observer();
+          } catch (error) {
+            handleError(observer, error);
+          }
+        });
       }
     }
   }
@@ -614,6 +626,12 @@ function notEqual(a: unknown, b: unknown) {
   return a !== b;
 }
 
-function runAll(fns: (() => void)[]) {
-  for (let i = 0; i < fns.length; i++) fns[i]();
+function runAll(fns: ((arg?: any) => void)[], arg?: any) {
+  for (let i = 0; i < fns.length; i++) fns[i](arg);
+}
+
+function handleError(fn: () => void, error: unknown) {
+  const handlers = lookup(fn, ERROR);
+  if (!handlers) throw error;
+  runAll(handlers, error);
 }

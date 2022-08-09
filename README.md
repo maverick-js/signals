@@ -108,6 +108,7 @@ $: yarn add @maverick-js/observables
 - [`computedMap`](#computedmap)
 - [`computedKeyedMap`](#computedkeyedmap)
 - [`dispose`](#dispose)
+- [`onError`](#onerror)
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
@@ -116,7 +117,7 @@ $: yarn add @maverick-js/observables
 - [`setContext`](#setcontext)
 - [`getScheduler`](#getscheduler)
 
-## `root`
+### `root`
 
 Computations are generally child computations. When their respective parent is destroyed so are
 they. You _can_ create orphan computations (i.e., no parent). Orphans will live in memory until
@@ -406,7 +407,22 @@ $a.set(100);
 console.log($b()); // still logs `10`
 ```
 
-## `onDispose`
+### `onError`
+
+Runs the given function when an error is thrown in a child scope. If the error is thrown again
+inside the error handler, it will trigger the next available parent handler.
+
+```js
+import { effect, onError } from '@maverick-js/observables';
+
+effect(() => {
+  onError((error) => {
+    // ...
+  });
+});
+```
+
+### `onDispose`
 
 Runs the given function when the parent computation is disposed of:
 
