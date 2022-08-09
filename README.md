@@ -2,7 +2,6 @@
 
 [![package-badge]][package]
 [![license-badge]][license]
-[![size-badge]][bundlephobia]
 
 > 🏆 The goal of this library is to provide a lightweight reactivity API for other UI libraries to
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
@@ -81,10 +80,14 @@ root(async (dispose) => {
 
 <img src="./export-sizes.png" alt="Library export sizes" width="250px" />
 
-**Average:** ~850B gzipped
-**Total:** ~1.5KB gzipped
+- **Average:** ~850B (brotli)
+- **Without Computed Maps:** ~1KB (brotli)
+- **Total:** ~1.5KB (brotli)
 
 You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
+
+> **Note**
+> Maverick Observables is treeshakable and side-effect free so you'll only end up with what you use.
 
 ## Installation
 
