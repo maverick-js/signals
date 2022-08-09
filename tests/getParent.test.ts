@@ -47,3 +47,9 @@ it('should remove parent on dispose', () => {
     expect(getParent($a)).toBeUndefined();
   });
 });
+
+it('should return undefined for parent when given arg', () => {
+  root(() => {
+    expect(getParent(undefined)).toBeInstanceOf(Function);
+  });
+});
