@@ -1,4 +1,4 @@
-import { root, effect, onError } from '../src';
+import { root, effect, onError, observable, tick } from '../src';
 
 it('should handle error ', () => {
   const error = new Error();
@@ -14,15 +14,19 @@ it('should handle error ', () => {
   expect(handler).toHaveBeenCalledWith(error);
 });
 
-it('should forward error to another handler', () => {
+it('should forward error to another handler', async () => {
   const error = new Error();
   const handler = vi.fn();
+
+  const $a = observable(0);
 
   root(() => {
     effect(() => {
       onError(handler);
 
       effect(() => {
+        $a();
+
         onError((error) => {
           throw error;
         });
@@ -33,4 +37,8 @@ it('should forward error to another handler', () => {
   });
 
   expect(handler).toHaveBeenCalledWith(error);
+
+  $a.set(1);
+  await tick();
+  expect(handler).toHaveBeenCalledTimes(2);
 });

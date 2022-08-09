@@ -633,5 +633,9 @@ function runAll(fns: ((arg?: any) => void)[], arg?: any) {
 function handleError(fn: () => void, error: unknown) {
   const handlers = lookup(fn, ERROR);
   if (!handlers) throw error;
-  runAll(handlers, error);
+  try {
+    runAll(handlers, error);
+  } catch (error) {
+    handleError(fn[PARENT], error);
+  }
 }
