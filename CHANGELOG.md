@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.3.0](https://github.com/maverick-js/observables/compare/v4.2.3...v4.3.0) (2022-08-09)
+
+
+### Features
+
+* `getContext` and `setContext` ([9578cd0](https://github.com/maverick-js/observables/commit/9578cd0b7a62b0838f03a0987094cb90bd254300))
+* `onError` ([f36c1c0](https://github.com/maverick-js/observables/commit/f36c1c017061d4c20d61415bd1c74cc70da0018b))
+
+
+### Bug Fixes
+
+* exclude `@maverick-js/scheduler` from bundle (external) ([2f37a04](https://github.com/maverick-js/observables/commit/2f37a0448a2f62fe52f23bfc936c11fbb60ef338))
+
 ### [4.2.3](https://github.com/maverick-js/observables/compare/v4.2.2...v4.2.3) (2022-08-09)
 
 
