@@ -17,6 +17,7 @@ async function main() {
       define: {
         __DEV__: dev ? 'true' : 'false',
       },
+      external: ['@maverick-js/scheduler'],
     };
   }
 
