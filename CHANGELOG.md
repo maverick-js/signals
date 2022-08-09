@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.3.1](https://github.com/maverick-js/observables/compare/v4.3.0...v4.3.1) (2022-08-09)
+
+
+### Bug Fixes
+
+* forward error re-throw to parent handler ([5034795](https://github.com/maverick-js/observables/commit/50347954e37314f72f84661aebebcbe649c4e899))
+
 ## [4.3.0](https://github.com/maverick-js/observables/compare/v4.2.3...v4.3.0) (2022-08-09)
 
 
