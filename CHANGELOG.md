@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.2.0](https://github.com/maverick-js/observables/compare/v4.1.2...v4.2.0) (2022-08-09)
+
+
+### Features
+
+* argumentless `getParent()` returns current parent ([c717439](https://github.com/maverick-js/observables/commit/c717439932a64e1c8ec6363c16b6a6aca2ce6021))
+
 ### [4.1.2](https://github.com/maverick-js/observables/compare/v4.1.1...v4.1.2) (2022-08-08)
 
 
