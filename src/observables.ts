@@ -276,10 +276,8 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
  *
  * @see {@link https://github.com/maverick-js/observables#getparent}
  */
-export function getParent(
-  fn: Observable<unknown> | undefined | null = null,
-): Observable<unknown> | undefined {
-  return fn === null ? _parent : fn?.[PARENT];
+export function getParent(fn?: Observable<unknown>): Observable<unknown> | undefined {
+  return !arguments.length ? _parent : fn?.[PARENT];
 }
 
 /**
