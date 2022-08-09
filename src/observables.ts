@@ -56,6 +56,7 @@ if (__DEV__) {
  */
 export function root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => {};
+  $root[PARENT] = _parent;
   return compute($root, () => fn(() => dispose($root)));
 }
 

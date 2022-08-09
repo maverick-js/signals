@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   tick,
+  getParent,
   type Observable,
   type ObservableSubject,
 } from '../src';
@@ -89,4 +90,13 @@ it('should not be reactive', async () => {
   $a!.set(1);
   await tick();
   expect(rootCall).toHaveBeenCalledTimes(1);
+});
+
+it('should hold parent tracking', async () => {
+  root(() => {
+    const parent = getParent();
+    root(() => {
+      expect(getParent(getParent())).toBe(parent);
+    });
+  });
 });
