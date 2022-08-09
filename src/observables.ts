@@ -22,16 +22,18 @@ export type MaybeDispose = Maybe<Dispose>;
 export type MaybeStopEffect = Maybe<StopEffect>;
 export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 
-const NOOP = () => {};
+export type ContextRecord = Record<string | symbol, unknown>;
 
-const PARENT = Symbol();
-const OBSERVABLE = Symbol();
-const COMPUTED = Symbol();
-const DIRTY = Symbol();
-const DISPOSED = Symbol();
-const OBSERVERS = Symbol();
-const CHILDREN = Symbol();
-const DISPOSAL = Symbol();
+const PARENT = Symbol(),
+  OBSERVABLE = Symbol(),
+  COMPUTED = Symbol(),
+  DIRTY = Symbol(),
+  DISPOSED = Symbol(),
+  OBSERVERS = Symbol(),
+  CHILDREN = Symbol(),
+  DISPOSAL = Symbol(),
+  CONTEXT = Symbol(),
+  NOOP = () => {};
 
 const _scheduler = createScheduler();
 
@@ -215,10 +217,11 @@ export function dispose(fn: () => void) {
 
   emptyDisposal(fn);
 
+  fn[PARENT] = undefined;
   fn[CHILDREN] = undefined;
   fn[DISPOSAL] = undefined;
   fn[OBSERVERS] = undefined;
-  fn[PARENT] = undefined;
+  fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
   fn[DISPOSED] = true;
 }
@@ -288,6 +291,37 @@ export function getParent(fn?: Observable<unknown>): Observable<unknown> | undef
  */
 export function getScheduler(): Scheduler {
   return _scheduler;
+}
+
+/**
+ * Attempts to get a context value for the given key. It will start from the parent scope and
+ * walk up the computation tree trying to find a context record and matching key. If no value can
+ * be found `undefined` will be returned. This is intentionally low-level so you can design a
+ * context API in your library as desired.
+ *
+ * In your implementation make sure to check if a parent exists via `getParent()`. If one does
+ * not exist log a warning that this function should not be called outside a computation or render
+ * function.
+ *
+ * @see {@link https://github.com/maverick-js/observables#getcontext}
+ */
+export function getContext(key: string | symbol): unknown {
+  return lookup(_parent, key);
+}
+
+/**
+ * Attempts to set a context value on the parent scope with the given key. This will be a no-op if
+ * no parent is defined. This is intentionally low-level so you can design a context API in your
+ * library as desired.
+ *
+ * In your implementation make sure to check if a parent exists via `getParent()`. If one does
+ * not exist log a warning that this function should not be called outside a computation or render
+ * function.
+ *
+ * @see {@link https://github.com/maverick-js/observables#setcontext}
+ */
+export function setContext(key: string | symbol, value: unknown) {
+  if (_parent) (_parent[CONTEXT] ??= {})[key] = value;
 }
 
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
@@ -507,6 +541,7 @@ type Node = {
   [DISPOSED]?: boolean;
   [OBSERVERS]?: Set<Node>;
   [CHILDREN]?: Set<Node>;
+  [CONTEXT]?: ContextRecord;
   [DISPOSAL]?: Set<Dispose>;
 };
 
@@ -525,6 +560,17 @@ function compute<T>(parent: () => void, child: () => T): T {
   if (__DEV__) _computeStack.pop();
 
   return nextValue;
+}
+
+function lookup(fn: Node | undefined, key: string | symbol): any {
+  let current = fn,
+    value;
+
+  while (current) {
+    value = current[CONTEXT]?.[key];
+    if (value !== undefined) return value;
+    current = current[PARENT];
+  }
 }
 
 function adoptChild(child: Node) {

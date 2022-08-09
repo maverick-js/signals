@@ -112,6 +112,8 @@ $: yarn add @maverick-js/observables
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
 - [`getParent`](#getparent)
+- [`getContext`](#getcontext)
+- [`setContext`](#setcontext)
 - [`getScheduler`](#getscheduler)
 
 ## `root`
@@ -486,6 +488,44 @@ root(() => {
   });
 
   getParent(); // returns `root`.
+});
+```
+
+### `getContext`
+
+Attempts to get a context value for the given key. It will start from the parent scope and
+walk up the computation tree trying to find a context record and matching key. If no value can be
+found `undefined` will be returned. This is intentionally low-level so you can design a context API
+in your library as desired.
+
+In your implementation make sure to check if a parent exists via `getParent()`. If one does
+not exist log a warning that this function should not be called outside a computation or render
+function.
+
+> **Note**
+> See the `setContext` code example below for a demo of this function.
+
+### `setContext`
+
+Attempts to set a context value on the parent scope with the given key. This will be a no-op if
+no parent is defined. This is intentionally low-level so you can design a context API in your
+library as desired.
+
+In your implementation make sure to check if a parent exists via `getParent()`. If one does
+not exist log a warning that this function should not be called outside a computation or render
+function.
+
+```js
+import { root, getContext, setContext } from '@maverick-js/observables';
+
+const key = Symbol();
+
+root(() => {
+  setContext(key, 100);
+  // ...
+  root(() => {
+    const value = getContext(key); // 100
+  });
 });
 ```
 
