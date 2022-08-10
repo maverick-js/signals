@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.3.2](https://github.com/maverick-js/observables/compare/v4.3.1...v4.3.2) (2022-08-10)
+
+
+### Bug Fixes
+
+* use set so error handlers are only added once ([68c75ab](https://github.com/maverick-js/observables/commit/68c75ab0f7a1a8661592183d4c947600c3231b37))
+
 ### [4.3.1](https://github.com/maverick-js/observables/compare/v4.3.0...v4.3.1) (2022-08-09)
 
 
