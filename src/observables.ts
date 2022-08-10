@@ -326,7 +326,7 @@ export function setContext<T>(key: string | symbol, value: T) {
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
   if (_parent) {
-    (((_parent[CONTEXT] ??= {})[ERROR] as unknown[]) ??= []).push(handler);
+    (((_parent[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
   }
 }
 
@@ -626,15 +626,15 @@ function notEqual(a: unknown, b: unknown) {
   return a !== b;
 }
 
-function runAll(fns: ((arg?: any) => void)[], arg?: any) {
-  for (let i = 0; i < fns.length; i++) fns[i](arg);
+function runAll(fns: (() => void)[]) {
+  for (let i = 0; i < fns.length; i++) fns[i]();
 }
 
 function handleError(fn: () => void, error: unknown) {
   const handlers = lookup(fn, ERROR);
   if (!handlers) throw error;
   try {
-    runAll(handlers, error);
+    for (const handler of handlers) handler(error);
   } catch (error) {
     handleError(fn[PARENT], error);
   }
