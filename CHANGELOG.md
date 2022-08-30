@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.5.0](https://github.com/maverick-js/observables/compare/v4.4.0...v4.5.0) (2022-08-30)
+
+
+### Features
+
+* bump scheduler to `2.0.0` ([58cf305](https://github.com/maverick-js/observables/commit/58cf305a030d7b61ce38c8d1038e7c2bbb21bb95))
+
 ## [4.4.0](https://github.com/maverick-js/observables/compare/v4.3.2...v4.4.0) (2022-08-30)
 
 
