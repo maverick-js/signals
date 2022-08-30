@@ -1,7 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@maverick-js/scheduler': ^1.0.1
+  '@maverick-js/scheduler': ^1.0.2
   '@microsoft/api-extractor': ^7.25.3
   '@types/node': ^18.0.0
   cellx: ^1.10.26
@@ -20,7 +20,7 @@ specifiers:
   vitest: ^0.15.2
 
 dependencies:
-  '@maverick-js/scheduler': 1.0.1
+  '@maverick-js/scheduler': 1.0.2
 
 devDependencies:
   '@microsoft/api-extractor': 7.29.0
@@ -206,8 +206,8 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
 
-  /@maverick-js/scheduler/1.0.1:
-    resolution: {integrity: sha512-4THb+ZPMrY97WvROAxh4yFXVdnQxOLqms/lxYzgQFjoGWDp7AOiGAkIb++kUZA4npQ5I2lJ1DsL+o6kofNW8oA==}
+  /@maverick-js/scheduler/1.0.2:
+    resolution: {integrity: sha512-xx86C6bEbMDSJf0eKpitPTH1PjMH4BBB/zhveQqnArEjiuvhLOe4nqxDsy8IXcoah4zAgTjIqcPTdre+esQXzA==}
     dev: false
 
   /@microsoft/api-extractor-model/7.23.0:

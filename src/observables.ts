@@ -595,7 +595,7 @@ function addNode(node: Node, key: symbol, item: () => void) {
 }
 
 function dirtyNode(node: Node) {
-  if (node[OBSERVERS] && !_scheduler.served(node)) {
+  if (node[OBSERVERS]) {
     for (const observer of node[OBSERVERS]!) {
       if (observer[COMPUTED] && observer !== _observer) {
         observer[DIRTY] = true;
