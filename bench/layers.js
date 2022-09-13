@@ -3,12 +3,13 @@
  */
 
 import kleur from 'kleur';
-import * as cellx from 'cellx';
 
+import * as cellx from 'cellx';
 import * as Sjs from 's-js';
 // @ts-expect-error
 import * as sinuous from 'sinuous/dist/observable.js';
 import * as solid from './solid-js-baseline.js';
+import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
 import Table from 'cli-table';
 
@@ -38,6 +39,7 @@ async function main() {
     maverick: { fn: runMaverick, runs: [], avg: [] },
     cellx: { fn: runCellx, runs: [] },
     solid: { fn: runSolid, runs: [] },
+    'preact/signals': { fn: runPreact, runs: [] },
     S: { fn: runS, runs: [] },
     // Can't get it to work for some reason.
     // sinuous: { fn: runSinuous, runs: [] },
@@ -312,6 +314,43 @@ function runSolid(layers, done) {
     dispose();
     done(isSolution(layers, solution) ? endTime : -1);
   });
+}
+
+/**
+ * @see {@link https://github.com/preactjs/signals}
+ */
+function runPreact(layers, done) {
+  const a = preact.signal(1),
+    b = preact.signal(2),
+    c = preact.signal(3),
+    d = preact.signal(4);
+
+  const start = { a, b, c, d };
+
+  let layer = start;
+
+  for (let i = layers; i--; ) {
+    layer = ((m) => {
+      const props = {
+        a: preact.computed(() => m.b.value),
+        b: preact.computed(() => m.a.value - m.c.value),
+        c: preact.computed(() => m.b.value + m.d.value),
+        d: preact.computed(() => m.c.value),
+      };
+
+      return props;
+    })(layer);
+  }
+
+  const startTime = performance.now();
+  const end = layer;
+
+  (a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1);
+
+  const solution = [end.a.value, end.b.value, end.c.value, end.d.value];
+  const endTime = performance.now() - startTime;
+
+  done(isSolution(layers, solution) ? endTime : -1);
 }
 
 main();
