@@ -632,9 +632,12 @@ found [here](./bench/layers.js).
 Each column represents how deep computations were layered. The average time taken to update the
 computation out of a 100 runs is used for each library.
 
-> **Don't take this benchmark too seriously because it hasn't been reviewed properly at all.**
-
 <img src="./bench/layers.png" alt="Layers benchmark" width="350px" />
+
+**Disclaimer:** Maverick is kind of cheating in this benchmark because it batches by default and
+other libraries are sync. However, testing out of the box performance is important and we haven't
+batched the other libraries because it's unreasonable to expect a user to manually batch every
+computation.
 
 ## Inspiration
 
