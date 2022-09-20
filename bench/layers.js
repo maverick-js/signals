@@ -7,7 +7,7 @@ import kleur from 'kleur';
 import * as cellx from 'cellx';
 import * as Sjs from 's-js';
 // @ts-expect-error
-import * as sinuous from 'sinuous/dist/observable.js';
+import { default as sinuous } from 'sinuous/dist/observable.js';
 import * as solid from './solid-js-baseline.js';
 import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
@@ -41,8 +41,7 @@ async function main() {
     solid: { fn: runSolid, runs: [] },
     'preact/signals': { fn: runPreact, runs: [] },
     S: { fn: runS, runs: [] },
-    // Can't get it to work for some reason.
-    // sinuous: { fn: runSinuous, runs: [] },
+    sinuous: { fn: runSinuous, runs: [] },
   };
 
   for (const lib of Object.keys(report)) {
