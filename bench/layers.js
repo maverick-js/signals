@@ -55,6 +55,8 @@ async function main() {
       for (let j = 0; j < RUNS_PER_TIER; j += 1) {
         runs.push(await start(current.fn, layers));
       }
+      // Give cellx time to release its global pendingCells array
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       current.runs[i] = avg(runs) * 1000;
     }
