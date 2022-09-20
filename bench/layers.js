@@ -147,6 +147,11 @@ function runCellx(layers, done) {
   const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
   const endTime = performance.now() - startTime;
 
+  start.a.dispose();
+  start.b.dispose();
+  start.c.dispose();
+  start.d.dispose();
+
   done(isSolution(layers, solution) ? endTime : -1);
 }
 
