@@ -33,7 +33,7 @@ const SOLUTIONS = {
  * @param {number} layers
  * @param {number[]} answer
  */
-const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][i]);
+const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][i] === _);
 
 async function main() {
   const report = {
