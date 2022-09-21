@@ -15,6 +15,7 @@ import Table from 'cli-table';
 
 const RUNS_PER_TIER = 150;
 const LAYER_TIERS = [10, 100, 500, 1000, 2000, 2500];
+const BATCHED = process.argv.includes('--batched');
 
 const sum = (array) => array.reduce((a, b) => a + b, 0);
 const avg = (array) => sum(array) / array.length || 0;
@@ -36,11 +37,12 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 
 async function main() {
   const report = {
-    maverick: { fn: runMaverick, runs: [], avg: [] },
+    S: { fn: runS, runs: [] },
     solid: { fn: runSolid, runs: [] },
     'preact/signals': { fn: runPreact, runs: [] },
-    S: { fn: runS, runs: [] },
-    sinuous: { fn: runSinuous, runs: [] },
+    maverick: { fn: runMaverick, runs: [], avg: [] },
+    // TODO: running too slow so I need to leave it out for now - maybe something is wrong.
+    // sinuous: { fn: runSinuous, runs: [] },
     cellx: { fn: runCellx, runs: [] },
   };
 
@@ -106,60 +108,10 @@ async function start(runner, layers) {
 }
 
 /**
- * @see {@link https://github.com/Riim/cellx}
- */
-function runCellx(layers, done) {
-  const start = {
-    a: new cellx.Cell(1),
-    b: new cellx.Cell(2),
-    c: new cellx.Cell(3),
-    d: new cellx.Cell(4),
-  };
-
-  let layer = start;
-
-  for (let i = layers; i--; ) {
-    layer = ((m) => {
-      const props = {
-        a: new cellx.Cell(() => m.b.get()),
-        b: new cellx.Cell(() => m.a.get() - m.c.get()),
-        c: new cellx.Cell(() => m.b.get() + m.d.get()),
-        d: new cellx.Cell(() => m.c.get()),
-      };
-
-      props.a.on('change', function () {});
-      props.b.on('change', function () {});
-      props.c.on('change', function () {});
-      props.d.on('change', function () {});
-
-      return props;
-    })(layer);
-  }
-
-  const startTime = performance.now();
-  const end = layer;
-
-  start.a.set(4);
-  start.b.set(3);
-  start.c.set(2);
-  start.d.set(1);
-
-  const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
-  const endTime = performance.now() - startTime;
-
-  start.a.dispose();
-  start.b.dispose();
-  start.c.dispose();
-  start.d.dispose();
-
-  done(isSolution(layers, solution) ? endTime : -1);
-}
-
-/**
  * @see {@link https://github.com/maverick-js/observables}
  */
 function runMaverick(layers, done) {
-  maverick.root((dispose) => {
+  maverick.root(async (dispose) => {
     const start = {
       a: maverick.observable(1),
       b: maverick.observable(2),
@@ -181,10 +133,10 @@ function runMaverick(layers, done) {
     }
 
     const startTime = performance.now();
-    const end = layer;
 
     start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1);
 
+    const end = layer;
     const solution = [end.a(), end.b(), end.c(), end.d()];
     const endTime = performance.now() - startTime;
 
@@ -223,12 +175,98 @@ function runS(layers, done) {
       })(layer);
     }
 
+    const run = BATCHED ? (fn) => fn() : (fn) => fn();
+    run(() => {
+      const startTime = performance.now();
+
+      start.a(4), start.b(3), start.c(2), start.d(1);
+
+      const end = layer;
+      const solution = [end.a(), end.b(), end.c(), end.d()];
+      const endTime = performance.now() - startTime;
+
+      done(isSolution(layers, solution) ? endTime : -1);
+    });
+  });
+}
+
+/**
+ * @see {@link https://github.com/solidjs/solid}
+ */
+function runSolid(layers, done) {
+  solid.createRoot(async (dispose) => {
+    const [a, setA] = solid.createSignal(1),
+      [b, setB] = solid.createSignal(2),
+      [c, setC] = solid.createSignal(3),
+      [d, setD] = solid.createSignal(4);
+
+    const start = { a, b, c, d };
+
+    let layer = start;
+
+    for (let i = layers; i--; ) {
+      layer = ((m) => {
+        const props = {
+          a: solid.createMemo(() => m.b()),
+          b: solid.createMemo(() => m.a() - m.c()),
+          c: solid.createMemo(() => m.b() + m.d()),
+          d: solid.createMemo(() => m.c()),
+        };
+
+        return props;
+      })(layer);
+    }
+
+    const run = BATCHED ? solid.batch : (fn) => fn();
+    run(() => {
+      const startTime = performance.now();
+
+      setA(4), setB(3), setC(2), setD(1);
+
+      const end = layer;
+      const solution = [end.a(), end.b(), end.c(), end.d()];
+      const endTime = performance.now() - startTime;
+
+      dispose();
+      done(isSolution(layers, solution) ? endTime : -1);
+    });
+  });
+}
+
+/**
+ * @see {@link https://github.com/preactjs/signals}
+ */
+function runPreact(layers, done) {
+  const a = preact.signal(1),
+    b = preact.signal(2),
+    c = preact.signal(3),
+    d = preact.signal(4);
+
+  const start = { a, b, c, d };
+
+  let layer = start;
+
+  for (let i = layers; i--; ) {
+    layer = ((m) => {
+      const props = {
+        a: preact.computed(() => m.b.value),
+        b: preact.computed(() => m.a.value - m.c.value),
+        c: preact.computed(() => m.b.value + m.d.value),
+        d: preact.computed(() => m.c.value),
+      };
+
+      return props;
+    })(layer);
+  }
+
+  const run = BATCHED ? preact.batch : (fn) => fn();
+  run(() => {
     const startTime = performance.now();
+
+    (a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1);
+
     const end = layer;
-
-    start.a(4), start.b(3), start.c(2), start.d(1);
-
-    const solution = [end.a(), end.b(), end.c(), end.d()];
+    const solution = [end.a.value, end.b.value, end.c.value, end.d.value];
     const endTime = performance.now() - startTime;
 
     done(isSolution(layers, solution) ? endTime : -1);
@@ -269,92 +307,69 @@ function runSinuous(layers, done) {
       })(layer);
     }
 
-    const startTime = performance.now();
-    const end = layer;
+    // TODO: not sure how to batch Sinuous
+    const run = BATCHED ? (fn) => fn() : (fn) => fn();
+    run(() => {
+      const startTime = performance.now();
 
-    start.a(4), start.b(3), start.c(2), start.d(1);
+      start.a(4), start.b(3), start.c(2), start.d(1);
 
-    const solution = [end.a(), end.b(), end.c(), end.d()];
-    const endTime = performance.now() - startTime;
+      const end = layer;
+      const solution = [end.a(), end.b(), end.c(), end.d()];
+      const endTime = performance.now() - startTime;
 
-    dispose();
-    done(isSolution(layers, solution) ? endTime : -1);
+      dispose();
+      done(isSolution(layers, solution) ? endTime : -1);
+    });
   });
 }
 
 /**
- * @see {@link https://github.com/solidjs/solid}
+ * @see {@link https://github.com/Riim/cellx}
  */
-function runSolid(layers, done) {
-  solid.createRoot(async (dispose) => {
-    const [a, setA] = solid.createSignal(1),
-      [b, setB] = solid.createSignal(2),
-      [c, setC] = solid.createSignal(3),
-      [d, setD] = solid.createSignal(4);
-
-    const start = { a, b, c, d };
-
-    let layer = start;
-
-    for (let i = layers; i--; ) {
-      layer = ((m) => {
-        const props = {
-          a: solid.createMemo(() => m.b()),
-          b: solid.createMemo(() => m.a() - m.c()),
-          c: solid.createMemo(() => m.b() + m.d()),
-          d: solid.createMemo(() => m.c()),
-        };
-
-        return props;
-      })(layer);
-    }
-
-    const startTime = performance.now();
-    const end = layer;
-
-    setA(4), setB(3), setC(2), setD(1);
-
-    const solution = [end.a(), end.b(), end.c(), end.d()];
-    const endTime = performance.now() - startTime;
-
-    dispose();
-    done(isSolution(layers, solution) ? endTime : -1);
-  });
-}
-
-/**
- * @see {@link https://github.com/preactjs/signals}
- */
-function runPreact(layers, done) {
-  const a = preact.signal(1),
-    b = preact.signal(2),
-    c = preact.signal(3),
-    d = preact.signal(4);
-
-  const start = { a, b, c, d };
+function runCellx(layers, done) {
+  const start = {
+    a: new cellx.Cell(1),
+    b: new cellx.Cell(2),
+    c: new cellx.Cell(3),
+    d: new cellx.Cell(4),
+  };
 
   let layer = start;
 
   for (let i = layers; i--; ) {
     layer = ((m) => {
       const props = {
-        a: preact.computed(() => m.b.value),
-        b: preact.computed(() => m.a.value - m.c.value),
-        c: preact.computed(() => m.b.value + m.d.value),
-        d: preact.computed(() => m.c.value),
+        a: new cellx.Cell(() => m.b.get()),
+        b: new cellx.Cell(() => m.a.get() - m.c.get()),
+        c: new cellx.Cell(() => m.b.get() + m.d.get()),
+        d: new cellx.Cell(() => m.c.get()),
       };
+
+      props.a.on('change', function () {});
+      props.b.on('change', function () {});
+      props.c.on('change', function () {});
+      props.d.on('change', function () {});
 
       return props;
     })(layer);
   }
 
   const startTime = performance.now();
+
+  start.a.set(4);
+  start.b.set(3);
+  start.c.set(2);
+  start.d.set(1);
+
   const end = layer;
-
-  (a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1);
-
-  const solution = [end.a.value, end.b.value, end.c.value, end.d.value];
+  const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
   const endTime = performance.now() - startTime;
+
+  start.a.dispose();
+  start.b.dispose();
+  start.c.dispose();
+  start.d.dispose();
 
   done(isSolution(layers, solution) ? endTime : -1);
 }
