@@ -175,18 +175,18 @@ function runS(layers, done) {
       })(layer);
     }
 
+    const startTime = performance.now();
+
     const run = BATCHED ? (fn) => fn() : (fn) => fn();
     run(() => {
-      const startTime = performance.now();
-
       start.a(4), start.b(3), start.c(2), start.d(1);
-
-      const end = layer;
-      const solution = [end.a(), end.b(), end.c(), end.d()];
-      const endTime = performance.now() - startTime;
-
-      done(isSolution(layers, solution) ? endTime : -1);
     });
+
+    const end = layer;
+    const solution = [end.a(), end.b(), end.c(), end.d()];
+    const endTime = performance.now() - startTime;
+
+    done(isSolution(layers, solution) ? endTime : -1);
   });
 }
 
@@ -217,19 +217,19 @@ function runSolid(layers, done) {
       })(layer);
     }
 
+    const startTime = performance.now();
+
     const run = BATCHED ? solid.batch : (fn) => fn();
     run(() => {
-      const startTime = performance.now();
-
       setA(4), setB(3), setC(2), setD(1);
-
-      const end = layer;
-      const solution = [end.a(), end.b(), end.c(), end.d()];
-      const endTime = performance.now() - startTime;
-
-      dispose();
-      done(isSolution(layers, solution) ? endTime : -1);
     });
+
+    const end = layer;
+    const solution = [end.a(), end.b(), end.c(), end.d()];
+    const endTime = performance.now() - startTime;
+
+    dispose();
+    done(isSolution(layers, solution) ? endTime : -1);
   });
 }
 
@@ -259,10 +259,10 @@ function runPreact(layers, done) {
     })(layer);
   }
 
+  const startTime = performance.now();
+
   const run = BATCHED ? preact.batch : (fn) => fn();
   run(() => {
-    const startTime = performance.now();
-
     (a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1);
 
     const end = layer;
@@ -307,20 +307,20 @@ function runSinuous(layers, done) {
       })(layer);
     }
 
+    const startTime = performance.now();
+
     // TODO: not sure how to batch Sinuous
     const run = BATCHED ? (fn) => fn() : (fn) => fn();
     run(() => {
-      const startTime = performance.now();
-
       start.a(4), start.b(3), start.c(2), start.d(1);
-
-      const end = layer;
-      const solution = [end.a(), end.b(), end.c(), end.d()];
-      const endTime = performance.now() - startTime;
-
-      dispose();
-      done(isSolution(layers, solution) ? endTime : -1);
     });
+
+    const end = layer;
+    const solution = [end.a(), end.b(), end.c(), end.d()];
+    const endTime = performance.now() - startTime;
+
+    dispose();
+    done(isSolution(layers, solution) ? endTime : -1);
   });
 }
 
