@@ -37,11 +37,11 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 async function main() {
   const report = {
     maverick: { fn: runMaverick, runs: [], avg: [] },
-    cellx: { fn: runCellx, runs: [] },
     solid: { fn: runSolid, runs: [] },
     'preact/signals': { fn: runPreact, runs: [] },
     S: { fn: runS, runs: [] },
     sinuous: { fn: runSinuous, runs: [] },
+    cellx: { fn: runCellx, runs: [] },
   };
 
   for (const lib of Object.keys(report)) {
