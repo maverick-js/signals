@@ -7,7 +7,7 @@ import kleur from 'kleur';
 import * as cellx from 'cellx';
 import * as Sjs from 's-js';
 // @ts-expect-error
-import * as sinuous from 'sinuous/dist/observable.js';
+import { default as sinuous } from 'sinuous/dist/observable.js';
 import * as solid from './solid-js-baseline.js';
 import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
@@ -41,8 +41,7 @@ async function main() {
     solid: { fn: runSolid, runs: [] },
     'preact/signals': { fn: runPreact, runs: [] },
     S: { fn: runS, runs: [] },
-    // Can't get it to work for some reason.
-    // sinuous: { fn: runSinuous, runs: [] },
+    sinuous: { fn: runSinuous, runs: [] },
   };
 
   for (const lib of Object.keys(report)) {
@@ -55,6 +54,8 @@ async function main() {
       for (let j = 0; j < RUNS_PER_TIER; j += 1) {
         runs.push(await start(current.fn, layers));
       }
+      // Give cellx time to release its global pendingCells array
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       current.runs[i] = avg(runs) * 1000;
     }
@@ -145,6 +146,11 @@ function runCellx(layers, done) {
 
   const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
   const endTime = performance.now() - startTime;
+
+  start.a.dispose();
+  start.b.dispose();
+  start.c.dispose();
+  start.d.dispose();
 
   done(isSolution(layers, solution) ? endTime : -1);
 }
