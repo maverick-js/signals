@@ -17,7 +17,8 @@ const RUNS_PER_TIER = 150;
 const LAYER_TIERS = [10, 100, 500, 1000, 2000, 2500];
 const BATCHED = process.argv.includes('--batched');
 
-const med = (array) => array.sort((a, b) => (a - b < 0 ? 1 : -1))[Math.floor(array.length / 2)] || 0
+const med = (array) =>
+  array.sort((a, b) => (a - b < 0 ? 1 : -1))[Math.floor(array.length / 2)] || 0;
 
 const SOLUTIONS = {
   10: [2, 4, -2, -3],
@@ -162,15 +163,12 @@ function runS(layers, done) {
 
     for (let i = layers; i--; ) {
       layer = ((m) => {
-        const props = {
+        return {
           a: S(() => m.b()),
           b: S(() => m.a() - m.c()),
           c: S(() => m.b() + m.d()),
           d: S(() => m.c()),
         };
-
-        S(props.a), S(props.b), S(props.c), S(props.d);
-        return props;
       })(layer);
     }
 
