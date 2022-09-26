@@ -17,8 +17,7 @@ const RUNS_PER_TIER = 150;
 const LAYER_TIERS = [10, 100, 500, 1000, 2000, 2500];
 const BATCHED = process.argv.includes('--batched');
 
-const sum = (array) => array.reduce((a, b) => a + b, 0);
-const avg = (array) => sum(array) / array.length || 0;
+const med = (array) => array.sort((a, b) => (a - b < 0 ? 1 : -1))[Math.floor(array.length / 2)] || 0
 
 const SOLUTIONS = {
   10: [2, 4, -2, -3],
@@ -59,7 +58,7 @@ async function main() {
       // Give cellx time to release its global pendingCells array
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      current.runs[i] = avg(runs) * 1000;
+      current.runs[i] = med(runs) * 1000;
     }
   }
 
