@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.6.0](https://github.com/maverick-js/observables/compare/v4.5.0...v4.6.0) (2022-10-28)
+
+
+### Features
+
+* new `isObserved` export ([1bf4cd1](https://github.com/maverick-js/observables/commit/1bf4cd1057e768de9a2f7646ed5232aa7905699b))
+
+
+### Bug Fixes
+
+* dispose cells at the end of each cellx benchmark run ([9c63d4b](https://github.com/maverick-js/observables/commit/9c63d4b83b2fe82868281a120d65cf63e6fbf15a))
+* fix sinuous benchmarks ([f55e188](https://github.com/maverick-js/observables/commit/f55e1881eb01f93aa8762f6118774c98be426da1))
+* let cellx release its global pendingCells array between benchmarks ([0a02af1](https://github.com/maverick-js/observables/commit/0a02af19b6e966404ed0f134dde578e52fa27b14))
+
 ## [4.5.0](https://github.com/maverick-js/observables/compare/v4.4.0...v4.5.0) (2022-08-30)
 
 
