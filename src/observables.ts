@@ -26,6 +26,7 @@ export type ContextRecord = Record<string | symbol, unknown>;
 
 const PARENT = Symbol(),
   OBSERVABLE = Symbol(),
+  OBSERVED = Symbol(),
   COMPUTED = Symbol(),
   DIRTY = Symbol(),
   DISPOSED = Symbol(),
@@ -187,6 +188,13 @@ export function computed<T>(
   adoptChild($computed);
 
   return $computed;
+}
+
+/**
+ * Whether the current scope has any active observers.
+ */
+export function isObserved() {
+  return !!_observer?.[OBSERVED];
 }
 
 /**
@@ -588,6 +596,7 @@ function adoptChild(child: Node) {
 
 function addObserver(observable: Node, observer: Node) {
   addNode(observable, OBSERVERS, observer);
+  observer[OBSERVED] = true;
 }
 
 function addNode(node: Node, key: symbol, item: () => void) {
