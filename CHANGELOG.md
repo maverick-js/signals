@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.7.1](https://github.com/maverick-js/observables/compare/v4.7.0...v4.7.1) (2022-11-04)
+
+
+### Bug Fixes
+
+* scoped function can return value ([c1d13c8](https://github.com/maverick-js/observables/commit/c1d13c85590fb7e52e2d1acbca25af72d89840c8))
+
 ## [4.7.0](https://github.com/maverick-js/observables/compare/v4.6.0...v4.7.0) (2022-11-04)
 
 
