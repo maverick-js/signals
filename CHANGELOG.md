@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.7.0](https://github.com/maverick-js/observables/compare/v4.6.0...v4.7.0) (2022-11-04)
+
+
+### Features
+
+* new `scope` export ([806e82a](https://github.com/maverick-js/observables/commit/806e82ac932cca7fdf822333318b8954d415a693))
+
 ## [4.6.0](https://github.com/maverick-js/observables/compare/v4.5.0...v4.6.0) (2022-10-28)
 
 
