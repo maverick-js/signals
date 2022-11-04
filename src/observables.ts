@@ -306,6 +306,24 @@ export function getScheduler(): Scheduler {
 }
 
 /**
+ * Scopes the given function to the current parent scope so context and error handling continue to
+ * work as expected. Generally this should be called on non-observable functions.
+ *
+ * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
+ * because it doesn't require creating and tracking a `computed` observable.
+ */
+export function scope(child: () => unknown) {
+  adoptChild(child, getParent());
+  return () => {
+    try {
+      compute(child, child);
+    } catch (error) {
+      handleError(child, error);
+    }
+  };
+}
+
+/**
  * Attempts to get a context value for the given key. It will start from the parent scope and
  * walk up the computation tree trying to find a context record and matching key. If no value can
  * be found `undefined` will be returned.
@@ -587,10 +605,10 @@ function lookup(fn: Node | undefined, key: string | symbol): any {
   }
 }
 
-function adoptChild(child: Node) {
-  if (_parent) {
-    child[PARENT] = _parent;
-    addNode(_parent, CHILDREN, child);
+function adoptChild(child: Node, parent = _parent) {
+  if (parent) {
+    child[PARENT] = parent;
+    addNode(parent, CHILDREN, child);
   }
 }
 
