@@ -306,18 +306,18 @@ export function getScheduler(): Scheduler {
 }
 
 /**
- * Scopes the given function to the current parent scope so context and error handling continue to
+ * Scopes the given function to the given parent scope so context and error handling continue to
  * work as expected. Generally this should be called on non-observable functions. A scoped
- * function can return `undefined` if an error is thrown.
+ * function will return `undefined` if an error is thrown.
  *
  * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
  * because it doesn't require creating and tracking a `computed` observable.
  */
-export function scope<T>(child: () => T): () => T | undefined {
-  adoptChild(child, getParent());
+export function scope<T>(child: () => T, parent = getParent()!): () => T | undefined {
+  adoptChild(child, parent);
   return () => {
     try {
-      return compute(child, child);
+      return compute(parent, child);
     } catch (error) {
       handleError(child, error);
       return; // make TS happy
