@@ -33,8 +33,8 @@ const PARENT = Symbol(__DEV__ ? 'PARENT' : undefined),
   OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : undefined),
   CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : undefined),
   DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : undefined),
-  CONTEXT = Symbol(),
-  ERROR = Symbol(),
+  CONTEXT = Symbol(__DEV__ ? 'CONTEXT' : undefined),
+  ERROR = Symbol(__DEV__ ? 'ERROR' : undefined),
   NOOP = () => {};
 
 const _scheduler = createScheduler();
