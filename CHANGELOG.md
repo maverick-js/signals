@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.8.1](https://github.com/maverick-js/observables/compare/v4.8.0...v4.8.1) (2022-11-08)
+
+
+### Bug Fixes
+
+* add symbol descriptions in dev ([298410a](https://github.com/maverick-js/observables/commit/298410a1651e57c68ac63854d19e85476bbdc7d0))
+
 ## [4.8.0](https://github.com/maverick-js/observables/compare/v4.7.1...v4.8.0) (2022-11-08)
 
 
