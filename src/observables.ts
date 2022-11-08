@@ -24,15 +24,15 @@ export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 
 export type ContextRecord = Record<string | symbol, unknown>;
 
-const PARENT = Symbol(),
-  OBSERVABLE = Symbol(),
-  OBSERVED = Symbol(),
-  COMPUTED = Symbol(),
-  DIRTY = Symbol(),
-  DISPOSED = Symbol(),
-  OBSERVERS = Symbol(),
-  CHILDREN = Symbol(),
-  DISPOSAL = Symbol(),
+const PARENT = Symbol(__DEV__ ? 'PARENT' : undefined),
+  OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : undefined),
+  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : undefined),
+  COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : undefined),
+  DIRTY = Symbol(__DEV__ ? 'DIRTY' : undefined),
+  DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : undefined),
+  OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : undefined),
+  CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : undefined),
+  DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : undefined),
   CONTEXT = Symbol(),
   ERROR = Symbol(),
   NOOP = () => {};
