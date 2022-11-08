@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.8.0](https://github.com/maverick-js/observables/compare/v4.7.1...v4.8.0) (2022-11-08)
+
+
+### Features
+
+* `scope` accepts parent arg ([4eb2760](https://github.com/maverick-js/observables/commit/4eb276005c8d21c2d1d7fedc6cac2b04f26a2bf6))
+
 ### [4.7.1](https://github.com/maverick-js/observables/compare/v4.7.0...v4.7.1) (2022-11-04)
 
 
