@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.8.3](https://github.com/maverick-js/observables/compare/v4.8.2...v4.8.3) (2022-11-08)
+
+
+### Bug Fixes
+
+* scoped function should still be observable ([0c1d2ea](https://github.com/maverick-js/observables/commit/0c1d2ea334db68cb22e91a8571b35867ab0cbeb3))
+
 ### [4.8.2](https://github.com/maverick-js/observables/compare/v4.8.1...v4.8.2) (2022-11-08)
 
 
