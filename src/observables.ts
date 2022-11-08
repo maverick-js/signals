@@ -317,7 +317,7 @@ export function scope<T>(child: () => T, parent = getParent()!): () => T | undef
   adoptChild(child, parent);
   return () => {
     try {
-      return compute(parent, child);
+      return compute(parent, child, _observer);
     } catch (error) {
       handleError(child, error);
       return; // make TS happy
@@ -579,12 +579,12 @@ type Node = {
   [DISPOSAL]?: Set<Dispose>;
 };
 
-function compute<T>(parent: () => void, child: () => T): T {
+function compute<T>(parent: () => void, child: () => T, observer: () => void = parent): T {
   const prevParent = _parent;
   const prevObserver = _observer;
 
   _parent = parent;
-  _observer = parent;
+  _observer = observer;
   if (__DEV__) _computeStack.push(parent);
 
   const nextValue = child();

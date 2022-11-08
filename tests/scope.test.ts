@@ -1,4 +1,14 @@
-import { getContext, root, setContext, scope, onError, getParent } from '../src';
+import {
+  getContext,
+  root,
+  setContext,
+  scope,
+  onError,
+  getParent,
+  observable,
+  effect,
+  tick,
+} from '../src';
 
 it('should scope function to current scope', () => {
   let callback!: () => void;
@@ -53,4 +63,29 @@ it('should handle errors', () => {
 
   callback();
   expect(handler).toHaveBeenCalledWith(error);
+});
+
+it('should still run effect', async () => {
+  let callback!: () => void,
+    innerEffect = vi.fn();
+
+  const $a = observable(0);
+
+  root(() => {
+    callback = scope(() => {
+      $a();
+    });
+  });
+
+  effect(() => {
+    callback();
+    innerEffect();
+  });
+
+  expect(innerEffect).toBeCalledTimes(1);
+
+  $a.set(1);
+  await tick();
+
+  expect(innerEffect).toBeCalledTimes(2);
 });
