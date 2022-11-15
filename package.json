@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.25.3",
-    "@preact/signals-core": "^1.1.0",
+    "@preact/signals-core": "^1.2.0",
     "@types/node": "^18.0.0",
     "cellx": "^1.10.26",
     "cli-table": "^0.3.11",

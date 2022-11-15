@@ -4,7 +4,7 @@ import {
   computed,
   effect,
   tick,
-  getParent,
+  getScope,
   type Observable,
   type ObservableSubject,
 } from '../src';
@@ -94,9 +94,9 @@ it('should not be reactive', async () => {
 
 it('should hold parent tracking', async () => {
   root(() => {
-    const parent = getParent();
+    const parent = getScope();
     root(() => {
-      expect(getParent(getParent())).toBe(parent);
+      expect(getScope(getScope())).toBe(parent);
     });
   });
 });

@@ -3,7 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@maverick-js/scheduler': ^2.0.0
   '@microsoft/api-extractor': ^7.25.3
-  '@preact/signals-core': ^1.1.0
+  '@preact/signals-core': ^1.2.0
   '@types/node': ^18.0.0
   cellx: ^1.10.26
   cli-table: ^0.3.11
@@ -25,7 +25,7 @@ dependencies:
 
 devDependencies:
   '@microsoft/api-extractor': 7.29.0
-  '@preact/signals-core': 1.1.0
+  '@preact/signals-core': 1.2.2
   '@types/node': 18.6.4
   cellx: 1.10.29
   cli-table: 0.3.11
@@ -251,8 +251,8 @@ packages:
     resolution: {integrity: sha512-6Wci+Tp3CgPt/B9B0a3J4s3yMgLNSku6w5TV6mN+61C71UqsRBv2FUibBf3tPGlNxebgPHMEUzKpb1ggE8KCKw==}
     dev: true
 
-  /@preact/signals-core/1.1.0:
-    resolution: {integrity: sha512-HrEPNtgbiJutQFVpNu4La2qD1XRmpG3hRY5Zgyhz/Uo/4Pv1s40saQQ83cmnpNk1SabgWKo+IreYC0mHg+mFDg==}
+  /@preact/signals-core/1.2.2:
+    resolution: {integrity: sha512-z3/bCj7rRA21RJb4FeJ4guCrD1CQbaURHkCTunUWQpxUMAFOPXCD8tSFqERyGrrcSb4T3Hrmdc1OAl0LXBHwiw==}
     dev: true
 
   /@riim/next-tick/1.2.6:

@@ -115,15 +115,15 @@ $: yarn add @maverick-js/observables
 - [`onDispose`](#ondispose)
 - [`isObservable`](#isobservable)
 - [`isSubject`](#issubject)
-- [`getParent`](#getparent)
+- [`getScope`](#getscope)
 - [`getContext`](#getcontext)
 - [`setContext`](#setcontext)
 - [`getScheduler`](#getscheduler)
 
 ### `root`
 
-Computations are generally child computations. When their respective parent is destroyed so are
-they. You _can_ create orphan computations (i.e., no parent). Orphans will live in memory until
+Computations are generally child computations. When their respective parent scope is destroyed so
+are they. You _can_ create orphan computations (i.e., no parent). Orphans will live in memory until
 their internal object references are garbage collected (GC) (i.e., dropped from memory):
 
 ```js
@@ -413,7 +413,7 @@ console.log($b()); // still logs `10`
 ### `onError`
 
 Runs the given function when an error is thrown in a child scope. If the error is thrown again
-inside the error handler, it will trigger the next available parent handler.
+inside the error handler, it will trigger the next available parent scope handler.
 
 ```js
 import { effect, onError } from '@maverick-js/observables';
@@ -427,7 +427,7 @@ effect(() => {
 
 ### `onDispose`
 
-Runs the given function when the parent computation is disposed of:
+Runs the given function when the parent scope computation is being disposed of.
 
 ```js
 import { effect, onDispose } from '@maverick-js/observables';
@@ -493,20 +493,20 @@ isSubject(computed(() => 10));
 isSubject(readonly(observable(10)));
 ```
 
-### `getParent`
+### `getScope`
 
-Returns the parent/owner of the given function. If no function is given it'll return the
-currently executing parent. You can use this to walk up the computation tree.
+Returns the owning scope of the given function. If no function is given it'll return the
+currently executing parent scope. You can use this to walk up the computation tree.
 
 ```js
 root(() => {
   effect(() => {
     const $a = observable(0);
-    getParent($a); // returns `effect`
-    getParent(getParent()); // returns `root`
+    getScope($a); // returns `effect`
+    getScope(getScope()); // returns `root`
   });
 
-  getParent(); // returns `root`.
+  getScope(); // returns `root`.
 });
 ```
 
@@ -517,7 +517,7 @@ walk up the computation tree trying to find a context record and matching key. I
 found `undefined` will be returned. This is intentionally low-level so you can design a context API
 in your library as desired.
 
-In your implementation make sure to check if a parent exists via `getParent()`. If one does
+In your implementation make sure to check if a parent scpoe exists via `getScope()`. If one does
 not exist log a warning that this function should not be called outside a computation or render
 function.
 
@@ -527,10 +527,10 @@ function.
 ### `setContext`
 
 Attempts to set a context value on the parent scope with the given key. This will be a no-op if
-no parent is defined. This is intentionally low-level so you can design a context API in your
+no parent scope is defined. This is intentionally low-level so you can design a context API in your
 library as desired.
 
-In your implementation make sure to check if a parent exists via `getParent()`. If one does
+In your implementation make sure to check if a parent scope exists via `getScope()`. If one does
 not exist log a warning that this function should not be called outside a computation or render
 function.
 

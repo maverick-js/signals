@@ -4,7 +4,7 @@ import {
   setContext,
   scope,
   onError,
-  getParent,
+  getScope,
   observable,
   effect,
   tick,
@@ -28,7 +28,7 @@ it('should scope function to given scope', () => {
   let $root;
   root(() => {
     setContext('id', 10);
-    $root = getParent();
+    $root = getScope();
   });
 
   const fn = () => expect(getContext('id')).toBe(10);

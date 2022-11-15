@@ -24,31 +24,30 @@ export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 
 export type ContextRecord = Record<string | symbol, unknown>;
 
-const PARENT = Symbol(__DEV__ ? 'PARENT' : undefined),
-  OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : undefined),
-  COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : undefined),
-  DIRTY = Symbol(__DEV__ ? 'DIRTY' : undefined),
-  DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : undefined),
-  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : undefined),
-  OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : undefined),
-  CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : undefined),
-  DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : undefined),
-  CONTEXT = Symbol(__DEV__ ? 'CONTEXT' : undefined),
-  ERROR = Symbol(__DEV__ ? 'ERROR' : undefined),
+const _scheduler = createScheduler(),
+  SCOPE = Symbol(__DEV__ ? 'SCOPE' : 0),
+  OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : 0),
+  COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : 0),
+  DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0),
+  DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0),
+  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : 0),
+  OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : 0),
+  CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0),
+  DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : 0),
+  CONTEXT = Symbol(__DEV__ ? 'CONTEXT' : 0),
+  ERROR = Symbol(__DEV__ ? 'ERROR' : 0),
   NOOP = () => {};
 
-const _scheduler = createScheduler();
-
-let _parent: Node | undefined;
-let _observer: Node | undefined;
+let currentScope: Node | undefined;
+let currentObserver: Node | undefined;
 
 // These are used only for debugging to determine how a cycle occurred.
-let _callStack: Node[] = [];
-let _computeStack: Node[] = [];
+let callStack: Node[] = [];
+let computeStack: Node[] = [];
 
 if (__DEV__) {
   _scheduler.onFlush(() => {
-    _callStack = [];
+    callStack = [];
   });
 }
 
@@ -60,7 +59,7 @@ if (__DEV__) {
  */
 export function root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => {};
-  $root[PARENT] = _parent;
+  $root[SCOPE] = currentScope;
   return compute($root, () => fn(() => dispose($root)));
 }
 
@@ -70,11 +69,11 @@ export function root<T>(fn: (dispose: Dispose) => T): T {
  * @see {@link https://github.com/maverick-js/observables#peek}
  */
 export function peek<T>(fn: () => T): T {
-  const prev = _observer;
+  const prev = currentObserver;
 
-  _observer = undefined;
+  currentObserver = undefined;
   const result = fn();
-  _observer = prev;
+  currentObserver = prev;
 
   return result;
 }
@@ -96,8 +95,8 @@ export function observable<T>(
   const isDirty = opts?.dirty ?? notEqual;
 
   const $observable: ObservableSubject<T> = () => {
-    if (__DEV__) _callStack.push($observable);
-    if (_observer) addObserver($observable, _observer);
+    if (__DEV__) callStack.push($observable);
+    if (currentObserver) addObserver($observable, currentObserver);
     return currentValue;
   };
 
@@ -115,7 +114,7 @@ export function observable<T>(
   if (__DEV__) $observable.id = opts?.id ?? 'observable';
 
   $observable[OBSERVABLE] = true;
-  adoptChild($observable);
+  adopt($observable);
   return $observable;
 }
 
@@ -145,15 +144,15 @@ export function computed<T>(
   const isDirty = opts?.dirty ?? notEqual;
 
   const $computed: Observable<T> = () => {
-    if (__DEV__ && _computeStack.includes($computed)) {
-      const calls = _callStack.map((c) => c.id ?? '?').join(' --> ');
+    if (__DEV__ && computeStack.includes($computed)) {
+      const calls = callStack.map((c) => c.id ?? '?').join(' --> ');
       throw Error(`cyclic dependency detected\n\n${calls}\n`);
     }
 
-    if (__DEV__) _callStack.push($computed);
+    if (__DEV__) callStack.push($computed);
 
     // Computed is observing another computed.
-    if (_observer) addObserver($computed, _observer);
+    if (currentObserver) addObserver($computed, currentObserver);
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       try {
@@ -200,7 +199,7 @@ export function computed<T>(
   $computed[OBSERVABLE] = true;
   $computed[COMPUTED] = true;
 
-  adoptChild($computed);
+  adopt($computed);
   return $computed;
 }
 
@@ -208,23 +207,23 @@ export function computed<T>(
  * Whether the current scope has any active observers.
  */
 export function isObserved(): boolean {
-  return !!_observer?.[OBSERVED]?.size;
+  return !!currentObserver?.[OBSERVED]?.size;
 }
 
 /**
- * Runs the given function when the parent computation is being disposed.
+ * Runs the given function when the parent scope computation is being disposed.
  *
  * @see {@link https://github.com/maverick-js/observables#ondispose}
  */
 export function onDispose(fn?: MaybeDispose): Dispose {
-  const valid = fn && _parent;
+  const valid = fn && currentScope;
 
-  if (valid) addNode(_parent!, DISPOSAL, fn as Dispose);
+  if (valid) addNode(currentScope!, DISPOSAL, fn as Dispose);
 
   return valid
     ? () => {
         (fn as Dispose)();
-        _parent![DISPOSAL]?.delete(fn as Dispose);
+        currentScope![DISPOSAL]?.delete(fn as Dispose);
       }
     : NOOP;
 }
@@ -247,7 +246,7 @@ export function dispose(fn: () => void) {
 
   emptyDisposal(fn);
 
-  fn[PARENT] = undefined;
+  fn[SCOPE] = undefined;
   fn[CHILDREN] = undefined;
   fn[DISPOSAL] = undefined;
   fn[OBSERVED] = undefined;
@@ -306,14 +305,17 @@ export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T>
 }
 
 /**
- * Returns the parent/owner of the given function. If no function is given it'll return the
- * currently executing parent. You can use this to walk up the computation tree.
+ * Returns the owning scope of the given function. If no function is given it'll return the
+ * currently executing parent scope. You can use this to walk up the computation tree.
  *
- * @see {@link https://github.com/maverick-js/observables#getparent}
+ * @see {@link https://github.com/maverick-js/observables#getscope}
  */
-export function getParent(fn?: Observable<unknown>): Observable<unknown> | undefined {
-  return !arguments.length ? _parent : fn?.[PARENT];
+export function getScope(fn?: Observable<unknown>): Observable<unknown> | undefined {
+  return !arguments.length ? currentScope : fn?.[SCOPE];
 }
+
+/** @deprecated */
+export const getParent = getScope;
 
 /**
  * Returns the global scheduler.
@@ -332,13 +334,13 @@ export function getScheduler(): Scheduler {
  * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
  * because it doesn't require creating and tracking a `computed` observable.
  */
-export function scope<T>(child: () => T, parent = getParent()!): () => T | undefined {
-  adoptChild(child, parent);
+export function scope<T>(fn: () => T, scope = getScope()!): () => T | undefined {
+  adopt(fn, scope);
   return () => {
     try {
-      return compute(parent, child, _observer);
+      return compute(scope, fn, currentObserver);
     } catch (error) {
-      handleError(child, error);
+      handleError(fn, error);
       return; // make TS happy
     }
   };
@@ -352,7 +354,7 @@ export function scope<T>(child: () => T, parent = getParent()!): () => T | undef
  * @see {@link https://github.com/maverick-js/observables#getcontext}
  */
 export function getContext<T>(key: string | symbol): T | undefined {
-  return lookup(_parent, key);
+  return lookup(currentScope, key);
 }
 
 /**
@@ -362,18 +364,18 @@ export function getContext<T>(key: string | symbol): T | undefined {
  * @see {@link https://github.com/maverick-js/observables#setcontext}
  */
 export function setContext<T>(key: string | symbol, value: T) {
-  if (_parent) (_parent[CONTEXT] ??= {})[key] = value;
+  if (currentScope) (currentScope[CONTEXT] ??= {})[key] = value;
 }
 
 /**
  * Runs the given function when an error is thrown in a child scope. If the error is thrown again
- * inside the error handler, it will trigger the next available parent handler.
+ * inside the error handler, it will trigger the next available parent scope handler.
  *
  * @see {@link https://github.com/maverick-js/observables#onerror}
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
-  if (!_parent) return;
-  (((_parent[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
+  if (!currentScope) return;
+  (((currentScope[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
 }
 
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
@@ -586,7 +588,7 @@ export function computedKeyedMap<Item, MappedItem>(
 type Node = {
   id?: string;
   (): any;
-  [PARENT]?: Node;
+  [SCOPE]?: Node;
   [OBSERVABLE]?: boolean;
   [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
@@ -597,19 +599,19 @@ type Node = {
   [DISPOSAL]?: Set<Dispose>;
 };
 
-function compute<T>(parent: () => void, child: () => T, observer: () => void = parent): T {
-  const prevParent = _parent;
-  const prevObserver = _observer;
+function compute<T>(scope: () => void, fn: () => T, observer: () => void = scope): T {
+  const prevScope = currentScope;
+  const prevObserver = currentObserver;
 
-  _parent = parent;
-  _observer = observer;
-  if (__DEV__) _computeStack.push(parent);
+  currentScope = scope;
+  currentObserver = observer;
+  if (__DEV__) computeStack.push(scope);
 
-  const nextValue = child();
+  const nextValue = fn();
 
-  _parent = prevParent;
-  _observer = prevObserver;
-  if (__DEV__) _computeStack.pop();
+  currentScope = prevScope;
+  currentObserver = prevObserver;
+  if (__DEV__) computeStack.pop();
 
   return nextValue;
 }
@@ -621,14 +623,14 @@ function lookup(fn: Node | undefined, key: string | symbol): any {
   while (current) {
     value = current[CONTEXT]?.[key];
     if (value !== undefined) return value;
-    current = current[PARENT];
+    current = current[SCOPE];
   }
 }
 
-function adoptChild(child: Node, parent = _parent) {
-  if (parent) {
-    child[PARENT] = parent;
-    addNode(parent, CHILDREN, child);
+function adopt(fn: Node, scope = currentScope) {
+  if (scope) {
+    fn[SCOPE] = scope;
+    addNode(scope, CHILDREN, fn);
   }
 }
 
@@ -644,7 +646,7 @@ function addNode(node: Node, key: symbol, item: () => void) {
 function dirtyNode(node: Node) {
   if (!node[OBSERVERS]) return;
   for (const observer of node[OBSERVERS]) {
-    if (observer[COMPUTED] && observer !== _observer) {
+    if (observer[COMPUTED] && observer !== currentObserver) {
       observer[DIRTY] = true;
       _scheduler.enqueue(() => {
         try {
@@ -677,6 +679,6 @@ function handleError(fn: () => void, error: unknown) {
   try {
     for (const handler of handlers) handler(error);
   } catch (error) {
-    handleError(fn[PARENT], error);
+    handleError(fn[SCOPE], error);
   }
 }
