@@ -30,7 +30,7 @@ const _scheduler = createScheduler(),
   COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : 0),
   DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0),
   DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0),
-  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : 0),
+  OBSERVING = Symbol(__DEV__ ? 'OBSERVING' : 0),
   OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : 0),
   CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0),
   DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : 0),
@@ -158,10 +158,10 @@ export function computed<T>(
       try {
         emptyDisposal($computed);
 
-        const observed = $computed[OBSERVED];
-        if (observed?.size) {
-          for (const observer of observed) observer[OBSERVERS]?.delete($computed);
-          observed.clear();
+        const observing = $computed[OBSERVING];
+        if (observing?.size) {
+          for (const observer of observing) observer[OBSERVERS]?.delete($computed);
+          observing.clear();
         }
 
         const nextValue = compute($computed, fn);
@@ -176,9 +176,9 @@ export function computed<T>(
         }
 
         const children = $computed[CHILDREN];
-        if (observed?.size && children?.size) {
+        if (observing?.size && children?.size) {
           for (const child of children) {
-            if (!observed.has(child)) {
+            if (!observing.has(child)) {
               dispose(child);
               children.delete(child);
             }
@@ -207,7 +207,7 @@ export function computed<T>(
  * Whether the current scope has any active observers.
  */
 export function isObserved(): boolean {
-  return !!currentObserver?.[OBSERVED]?.size;
+  return !!currentObserver?.[OBSERVING]?.size;
 }
 
 /**
@@ -218,7 +218,7 @@ export function isObserved(): boolean {
 export function onDispose(fn?: MaybeDispose): Dispose {
   const valid = fn && currentScope;
 
-  if (valid) addNode(currentScope!, DISPOSAL, fn as Dispose);
+  if (valid && !currentScope![DISPOSED]) (currentScope![DISPOSAL] ??= new Set()).add(fn);
 
   return valid
     ? () => {
@@ -249,7 +249,7 @@ export function dispose(fn: () => void) {
   fn[SCOPE] = undefined;
   fn[CHILDREN] = undefined;
   fn[DISPOSAL] = undefined;
-  fn[OBSERVED] = undefined;
+  fn[OBSERVING] = undefined;
   fn[OBSERVERS] = undefined;
   fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
@@ -314,7 +314,7 @@ export function getScope(fn?: Observable<unknown>): Observable<unknown> | undefi
   return !arguments.length ? currentScope : fn?.[SCOPE];
 }
 
-/** @deprecated */
+/** @deprecated use `getScope` */
 export const getParent = getScope;
 
 /**
@@ -630,17 +630,13 @@ function lookup(fn: Node | undefined, key: string | symbol): any {
 function adopt(fn: Node, scope = currentScope) {
   if (scope) {
     fn[SCOPE] = scope;
-    addNode(scope, CHILDREN, fn);
+    if (!scope[DISPOSED]) (scope[CHILDREN] ??= new Set()).add(fn);
   }
 }
 
 function addObserver(observable: Node, observer: Node) {
-  addNode(observable, OBSERVERS, observer);
-  addNode(observer, OBSERVED, observable);
-}
-
-function addNode(node: Node, key: symbol, item: () => void) {
-  if (!node[DISPOSED]) (node[key] ??= new Set<() => void>()).add(item);
+  if (!observable[DISPOSED]) (observable[OBSERVERS] ??= new Set()).add(observer);
+  if (!observer[DISPOSED]) (observer[OBSERVING] ??= new Set()).add(observable);
 }
 
 function dirtyNode(node: Node) {

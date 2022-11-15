@@ -14,7 +14,7 @@ import * as maverick from '../dist/prod/index.js';
 import Table from 'cli-table';
 
 const RUNS_PER_TIER = 150;
-const LAYER_TIERS = [10, 100, 500, 1000, 2000, 2500];
+const LAYER_TIERS = [10, 100, 500, 1000, 2000];
 const BATCHED = process.argv.includes('--batched');
 
 const med = (array) =>
@@ -26,7 +26,7 @@ const SOLUTIONS = {
   500: [-2, 1, -4, -4],
   1000: [-2, -4, 2, 3],
   2000: [-2, 1, -4, -4],
-  2500: [-2, -4, 2, 3],
+  // 2500: [-2, -4, 2, 3],
 };
 
 /**

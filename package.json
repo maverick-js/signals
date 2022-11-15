@@ -39,7 +39,7 @@
     "url": "https://github.com/maverick-js/observables/issues"
   },
   "dependencies": {
-    "@maverick-js/scheduler": "^2.0.0"
+    "@maverick-js/scheduler": "^2.1.0"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.25.3",
