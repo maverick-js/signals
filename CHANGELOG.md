@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.8.4](https://github.com/maverick-js/observables/compare/v4.8.3...v4.8.4) (2022-11-15)
+
+
+### Bug Fixes
+
+* `getParent` -> `getScope` ([adabf61](https://github.com/maverick-js/observables/commit/adabf61885853dc6489ced8df52c00b793f71b7b))
+* dispose conditional nested effects ([f06756c](https://github.com/maverick-js/observables/commit/f06756c7500c8e1306a1c094011a5f3cd6a912ef))
+
 ### [4.8.3](https://github.com/maverick-js/observables/compare/v4.8.2...v4.8.3) (2022-11-08)
 
 
