@@ -26,10 +26,10 @@ export type ContextRecord = Record<string | symbol, unknown>;
 
 const PARENT = Symbol(__DEV__ ? 'PARENT' : undefined),
   OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : undefined),
-  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : undefined),
   COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : undefined),
   DIRTY = Symbol(__DEV__ ? 'DIRTY' : undefined),
   DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : undefined),
+  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : undefined),
   OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : undefined),
   CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : undefined),
   DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : undefined),
@@ -115,9 +115,7 @@ export function observable<T>(
   if (__DEV__) $observable.id = opts?.id ?? 'observable';
 
   $observable[OBSERVABLE] = true;
-
   adoptChild($observable);
-
   return $observable;
 }
 
@@ -160,6 +158,13 @@ export function computed<T>(
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       try {
         emptyDisposal($computed);
+
+        const observed = $computed[OBSERVED];
+        if (observed?.size) {
+          for (const observer of observed) observer[OBSERVERS]?.delete($computed);
+          observed.clear();
+        }
+
         const nextValue = compute($computed, fn);
         $computed[DIRTY] = false;
 
@@ -169,6 +174,16 @@ export function computed<T>(
         } else if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;
           dirtyNode($computed);
+        }
+
+        const children = $computed[CHILDREN];
+        if (observed?.size && children?.size) {
+          for (const child of children) {
+            if (!observed.has(child)) {
+              dispose(child);
+              children.delete(child);
+            }
+          }
         }
       } catch (error) {
         handleError($computed, error);
@@ -186,15 +201,14 @@ export function computed<T>(
   $computed[COMPUTED] = true;
 
   adoptChild($computed);
-
   return $computed;
 }
 
 /**
  * Whether the current scope has any active observers.
  */
-export function isObserved() {
-  return !!_observer?.[OBSERVED];
+export function isObserved(): boolean {
+  return !!_observer?.[OBSERVED]?.size;
 }
 
 /**
@@ -222,16 +236,21 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  * @see {@link https://github.com/maverick-js/observables#dispose}
  */
 export function dispose(fn: () => void) {
-  forEachChild(fn, (child) => {
-    dispose(child);
-    child[OBSERVERS]?.delete(fn);
-  });
+  if (fn[DISPOSED]) return;
+
+  if (fn[CHILDREN]) {
+    for (const child of fn[CHILDREN]) {
+      dispose(child);
+      child[OBSERVERS]?.delete(fn);
+    }
+  }
 
   emptyDisposal(fn);
 
   fn[PARENT] = undefined;
   fn[CHILDREN] = undefined;
   fn[DISPOSAL] = undefined;
+  fn[OBSERVED] = undefined;
   fn[OBSERVERS] = undefined;
   fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
@@ -353,9 +372,8 @@ export function setContext<T>(key: string | symbol, value: T) {
  * @see {@link https://github.com/maverick-js/observables#onerror}
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
-  if (_parent) {
-    (((_parent[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
-  }
+  if (!_parent) return;
+  (((_parent[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
 }
 
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
@@ -616,7 +634,7 @@ function adoptChild(child: Node, parent = _parent) {
 
 function addObserver(observable: Node, observer: Node) {
   addNode(observable, OBSERVERS, observer);
-  observer[OBSERVED] = true;
+  addNode(observer, OBSERVED, observable);
 }
 
 function addNode(node: Node, key: symbol, item: () => void) {
@@ -624,31 +642,25 @@ function addNode(node: Node, key: symbol, item: () => void) {
 }
 
 function dirtyNode(node: Node) {
-  if (node[OBSERVERS]) {
-    for (const observer of node[OBSERVERS]!) {
-      if (observer[COMPUTED] && observer !== _observer) {
-        observer[DIRTY] = true;
-        _scheduler.enqueue(() => {
-          try {
-            observer();
-          } catch (error) {
-            handleError(observer, error);
-          }
-        });
-      }
+  if (!node[OBSERVERS]) return;
+  for (const observer of node[OBSERVERS]) {
+    if (observer[COMPUTED] && observer !== _observer) {
+      observer[DIRTY] = true;
+      _scheduler.enqueue(() => {
+        try {
+          observer();
+        } catch (error) {
+          handleError(observer, error);
+        }
+      });
     }
   }
 }
 
-function forEachChild(node: Node, callback: (node: Node) => void) {
-  if (node[CHILDREN]) for (const child of node[CHILDREN]!) callback(child);
-}
-
 function emptyDisposal(node: Node) {
-  if (node[DISPOSAL]) {
-    for (const dispose of node[DISPOSAL]!) dispose();
-    node[DISPOSAL]!.clear();
-  }
+  if (!node[DISPOSAL]) return;
+  for (const dispose of node[DISPOSAL]) dispose();
+  node[DISPOSAL].clear();
 }
 
 function notEqual(a: unknown, b: unknown) {
