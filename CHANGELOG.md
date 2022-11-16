@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.8.5](https://github.com/maverick-js/observables/compare/v4.8.4...v4.8.5) (2022-11-16)
+
+
+### Bug Fixes
+
+* consistent empty disposals order ([3459a1a](https://github.com/maverick-js/observables/commit/3459a1a49bb9addaed4898fa4ad63d9b0c4ad622))
+* simplify effect child disposal ([0feced4](https://github.com/maverick-js/observables/commit/0feced47e9ee68df7709f17d3ada3245d9205bc1))
+
 ### [4.8.4](https://github.com/maverick-js/observables/compare/v4.8.3...v4.8.4) (2022-11-15)
 
 
