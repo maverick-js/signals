@@ -611,32 +611,29 @@ function lookup(fn: Node | undefined, key: string | symbol): any {
 }
 
 function adopt(fn: Node, scope = currentScope) {
-  if (scope) {
-    fn[SCOPE] = scope;
-    if (!scope[DISPOSED]) (scope[CHILDREN] ??= new Set()).add(fn);
-  }
+  if (!scope || scope[DISPOSED]) return;
+  fn[SCOPE] = scope;
+  (scope[CHILDREN] ??= new Set()).add(fn);
 }
 
 function addObserver(observable: Node, observer: Node) {
-  if (!observable[DISPOSED]) {
-    (observable[OBSERVERS] ??= new Set()).add(observer);
-    observer[OBSERVED] = true;
-  }
+  if (observable[DISPOSED]) return;
+  (observable[OBSERVERS] ??= new Set()).add(observer);
+  observer[OBSERVED] = true;
 }
 
 function dirtyNode(node: Node) {
   if (!node[OBSERVERS]) return;
   for (const observer of node[OBSERVERS]) {
-    if (observer[COMPUTED] && observer !== currentObserver) {
-      observer[DIRTY] = true;
-      _scheduler.enqueue(() => {
-        try {
-          observer();
-        } catch (error) {
-          handleError(observer, error);
-        }
-      });
-    }
+    if (!observer[COMPUTED] || observer === currentObserver) continue;
+    observer[DIRTY] = true;
+    _scheduler.enqueue(() => {
+      try {
+        observer();
+      } catch (error) {
+        handleError(observer, error);
+      }
+    });
   }
 }
 
