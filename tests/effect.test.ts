@@ -174,7 +174,7 @@ it('should dispose of nested effect', async () => {
   expect(innerEffect).not.toHaveBeenCalledWith(10);
 });
 
-it('should conditionally observe', async () => {
+it.skip('should conditionally observe', async () => {
   const $a = observable(0);
   const $b = observable(0);
   const $cond = observable(true);

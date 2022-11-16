@@ -30,7 +30,7 @@ const _scheduler = createScheduler(),
   COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : 0),
   DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0),
   DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0),
-  OBSERVING = Symbol(__DEV__ ? 'OBSERVING' : 0),
+  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : 0),
   OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : 0),
   CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0),
   DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : 0),
@@ -158,10 +158,9 @@ export function computed<T>(
       try {
         emptyDisposal($computed);
 
-        const observing = $computed[OBSERVING];
-        if (observing?.size) {
-          for (const observer of observing) observer[OBSERVERS]?.delete($computed);
-          observing.clear();
+        if ($computed[CHILDREN]) {
+          for (const child of $computed[CHILDREN]) dispose(child);
+          $computed[CHILDREN].clear();
         }
 
         const nextValue = compute($computed, fn);
@@ -173,16 +172,6 @@ export function computed<T>(
         } else if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;
           dirtyNode($computed);
-        }
-
-        const children = $computed[CHILDREN];
-        if (observing?.size && children?.size) {
-          for (const child of children) {
-            if (!observing.has(child)) {
-              dispose(child);
-              children.delete(child);
-            }
-          }
         }
       } catch (error) {
         handleError($computed, error);
@@ -207,7 +196,7 @@ export function computed<T>(
  * Whether the current scope has any active observers.
  */
 export function isObserved(): boolean {
-  return !!currentObserver?.[OBSERVING]?.size;
+  return !!currentObserver?.[OBSERVED];
 }
 
 /**
@@ -249,7 +238,6 @@ export function dispose(fn: () => void) {
   fn[SCOPE] = undefined;
   fn[CHILDREN] = undefined;
   fn[DISPOSAL] = undefined;
-  fn[OBSERVING] = undefined;
   fn[OBSERVERS] = undefined;
   fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
@@ -635,8 +623,10 @@ function adopt(fn: Node, scope = currentScope) {
 }
 
 function addObserver(observable: Node, observer: Node) {
-  if (!observable[DISPOSED]) (observable[OBSERVERS] ??= new Set()).add(observer);
-  if (!observer[DISPOSED]) (observer[OBSERVING] ??= new Set()).add(observable);
+  if (!observable[DISPOSED]) {
+    (observable[OBSERVERS] ??= new Set()).add(observer);
+    observer[OBSERVED] = true;
+  }
 }
 
 function dirtyNode(node: Node) {
