@@ -38,6 +38,20 @@ const _scheduler = createScheduler(),
   ERROR = Symbol(__DEV__ ? 'ERROR' : 0),
   NOOP = () => {};
 
+type Node = {
+  id?: string;
+  (): any;
+  [SCOPE]?: Node;
+  [OBSERVABLE]?: boolean;
+  [COMPUTED]?: boolean;
+  [DIRTY]?: boolean;
+  [DISPOSED]?: boolean;
+  [OBSERVERS]?: Set<Node>;
+  [CHILDREN]?: Set<Node>;
+  [CONTEXT]?: ContextRecord;
+  [DISPOSAL]?: Set<Dispose>;
+};
+
 let currentScope: Node | undefined;
 let currentObserver: Node | undefined;
 
@@ -572,20 +586,6 @@ export function computedKeyedMap<Item, MappedItem>(
     }
   }, options);
 }
-
-type Node = {
-  id?: string;
-  (): any;
-  [SCOPE]?: Node;
-  [OBSERVABLE]?: boolean;
-  [COMPUTED]?: boolean;
-  [DIRTY]?: boolean;
-  [DISPOSED]?: boolean;
-  [OBSERVERS]?: Set<Node>;
-  [CHILDREN]?: Set<Node>;
-  [CONTEXT]?: ContextRecord;
-  [DISPOSAL]?: Set<Dispose>;
-};
 
 function compute<T>(scope: () => void, fn: () => T, observer: () => void = scope): T {
   const prevScope = currentScope;
