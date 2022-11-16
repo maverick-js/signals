@@ -170,12 +170,12 @@ export function computed<T>(
 
     if (!$computed[DISPOSED] && $computed[DIRTY]) {
       try {
-        emptyDisposal($computed);
-
         if ($computed[CHILDREN]) {
           for (const child of $computed[CHILDREN]) dispose(child);
           $computed[CHILDREN].clear();
         }
+
+        emptyDisposal($computed);
 
         const nextValue = compute($computed, fn);
         $computed[DIRTY] = false;
@@ -239,19 +239,14 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  */
 export function dispose(fn: () => void) {
   if (fn[DISPOSED]) return;
-
-  if (fn[CHILDREN]) {
-    for (const child of fn[CHILDREN]) {
-      dispose(child);
-      child[OBSERVERS]?.delete(fn);
-    }
-  }
-
+  if (fn[CHILDREN]) for (const child of fn[CHILDREN]) dispose(child);
   emptyDisposal(fn);
-
   fn[SCOPE] = undefined;
+  fn[CHILDREN]?.clear();
   fn[CHILDREN] = undefined;
+  fn[DISPOSAL]?.clear();
   fn[DISPOSAL] = undefined;
+  fn[OBSERVERS]?.clear();
   fn[OBSERVERS] = undefined;
   fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
