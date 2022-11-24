@@ -10,10 +10,9 @@ async function main() {
       format: 'esm',
       bundle: true,
       platform: 'browser',
-      target: 'es2019',
+      target: 'esnext',
       write: true,
       watch: hasArg('-w'),
-      minify: !dev,
       define: {
         __DEV__: dev ? 'true' : 'false',
       },

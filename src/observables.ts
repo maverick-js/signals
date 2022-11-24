@@ -1,4 +1,17 @@
 import { createScheduler, type Scheduler } from '@maverick-js/scheduler';
+import {
+  CHILDREN,
+  COMPUTED,
+  CONTEXT,
+  DIRTY,
+  DISPOSAL,
+  DISPOSED,
+  ERROR,
+  OBSERVABLE,
+  OBSERVED_BY,
+  OBSERVING,
+  SCOPE,
+} from './symbols';
 
 export type Observable<T> = {
   id?: string;
@@ -25,17 +38,6 @@ export type MaybeObservable<T> = MaybeFunction | Observable<T>;
 export type ContextRecord = Record<string | symbol, unknown>;
 
 const _scheduler = createScheduler(),
-  SCOPE = Symbol(__DEV__ ? 'SCOPE' : 0),
-  OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : 0),
-  COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : 0),
-  DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0),
-  DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0),
-  OBSERVED = Symbol(__DEV__ ? 'OBSERVED' : 0),
-  OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : 0),
-  CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0),
-  DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : 0),
-  CONTEXT = Symbol(__DEV__ ? 'CONTEXT' : 0),
-  ERROR = Symbol(__DEV__ ? 'ERROR' : 0),
   NOOP = () => {};
 
 type Node = {
@@ -46,7 +48,8 @@ type Node = {
   [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
   [DISPOSED]?: boolean;
-  [OBSERVERS]?: Set<Node>;
+  [OBSERVING]?: Set<Node>;
+  [OBSERVED_BY]?: Set<Node>;
   [CHILDREN]?: Set<Node>;
   [CONTEXT]?: ContextRecord;
   [DISPOSAL]?: Set<Dispose>;
@@ -110,7 +113,7 @@ export function observable<T>(
 
   const $observable: ObservableSubject<T> = () => {
     if (__DEV__) callStack.push($observable);
-    if (currentObserver) addObserver($observable, currentObserver);
+    if (currentObserver) observe($observable, currentObserver);
     return currentValue;
   };
 
@@ -166,9 +169,9 @@ export function computed<T>(
     if (__DEV__) callStack.push($computed);
 
     // Computed is observing another computed.
-    if (currentObserver) addObserver($computed, currentObserver);
+    if (currentObserver) observe($computed, currentObserver);
 
-    if (!$computed[DISPOSED] && $computed[DIRTY]) {
+    if ($computed[DIRTY] && !$computed[DISPOSED]) {
       try {
         if ($computed[CHILDREN]) {
           for (const child of $computed[CHILDREN]) dispose(child);
@@ -210,7 +213,7 @@ export function computed<T>(
  * Whether the current scope has any active observers.
  */
 export function isObserved(): boolean {
-  return !!currentObserver?.[OBSERVED];
+  return !!currentObserver?.[OBSERVING]?.size;
 }
 
 /**
@@ -218,17 +221,13 @@ export function isObserved(): boolean {
  *
  * @see {@link https://github.com/maverick-js/observables#ondispose}
  */
-export function onDispose(fn?: MaybeDispose): Dispose {
-  const valid = fn && currentScope;
-
-  if (valid && !currentScope![DISPOSED]) (currentScope![DISPOSAL] ??= new Set()).add(fn);
-
-  return valid
-    ? () => {
-        (fn as Dispose)();
-        currentScope![DISPOSAL]?.delete(fn as Dispose);
-      }
-    : NOOP;
+export function onDispose(dispose: MaybeDispose): Dispose {
+  if (!dispose || !currentScope || currentScope[DISPOSED]) return NOOP;
+  (currentScope[DISPOSAL] ??= new Set()).add(dispose);
+  return () => {
+    (dispose as Dispose)();
+    currentScope![DISPOSAL]?.delete(dispose as Dispose);
+  };
 }
 
 /**
@@ -239,15 +238,22 @@ export function onDispose(fn?: MaybeDispose): Dispose {
  */
 export function dispose(fn: () => void) {
   if (fn[DISPOSED]) return;
-  if (fn[CHILDREN]) for (const child of fn[CHILDREN]) dispose(child);
+
+  const children = fn[CHILDREN];
+  if (children) for (const child of children) dispose(child);
+
+  const observing = fn[OBSERVING];
+  if (observing) for (const node of observing) node[OBSERVED_BY]?.delete(fn);
+
   emptyDisposal(fn);
   fn[SCOPE] = undefined;
+  fn[OBSERVING] = undefined;
   fn[CHILDREN]?.clear();
   fn[CHILDREN] = undefined;
   fn[DISPOSAL]?.clear();
   fn[DISPOSAL] = undefined;
-  fn[OBSERVERS]?.clear();
-  fn[OBSERVERS] = undefined;
+  fn[OBSERVED_BY]?.clear();
+  fn[OBSERVED_BY] = undefined;
   fn[CONTEXT] = undefined;
   fn[DIRTY] = false;
   fn[DISPOSED] = true;
@@ -375,214 +381,7 @@ export function onError<T = Error>(handler: (error: T) => void): void {
   (((currentScope[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
 }
 
-// Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
-/**
- * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
- * It only runs the mapping function once per item and adds/removes as needed. In a non-keyed map
- * like this the index is fixed but value can change (opposite of a keyed map).
- *
- * Prefer `computedKeyedMap` when referential checks are required.
- *
- * @see {@link https://github.com/maverick-js/observables#computedmap}
- */
-export function computedMap<Item, MappedItem>(
-  list: Observable<Maybe<readonly Item[]>>,
-  map: (value: Observable<Item>, index: number) => MappedItem,
-  options?: { id?: string },
-): Observable<MappedItem[]> {
-  let items: Item[] = [],
-    mapped: MappedItem[] = [],
-    disposal: Dispose[] = [],
-    observables: ((v: any) => void)[] = [],
-    i: number,
-    len = 0;
-
-  onDispose(() => runAll(disposal));
-
-  return computed(() => {
-    const newItems = list() || [];
-    return peek(() => {
-      if (newItems.length === 0) {
-        if (len !== 0) {
-          runAll(disposal);
-          disposal = [];
-          items = [];
-          mapped = [];
-          len = 0;
-          observables = [];
-        }
-
-        return mapped;
-      }
-
-      for (i = 0; i < newItems.length; i++) {
-        if (i < items.length && items[i] !== newItems[i]) {
-          observables[i](newItems[i]);
-        } else if (i >= items.length) {
-          mapped[i] = root(mapper);
-        }
-      }
-
-      for (; i < items.length; i++) disposal[i]();
-
-      len = observables.length = disposal.length = newItems.length;
-      items = newItems.slice(0);
-      return (mapped = mapped.slice(0, len));
-    });
-
-    function mapper(dispose: () => void) {
-      disposal[i] = dispose;
-      const $o = observable(newItems[i]);
-      observables[i] = $o.set;
-      return map($o, i);
-    }
-  }, options);
-}
-
-// Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L16
-/**
- * Reactive map helper that caches each list item by reference to reduce unnecessary mapping on
- * updates. It only runs the mapping function once per item and then moves or removes it as needed. In
- * a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
- *
- * Prefer `computedMap` when working with primitives to avoid unncessary re-renders.
- *
- * @see {@link https://github.com/maverick-js/observables#computedkeyedmap}
- */
-export function computedKeyedMap<Item, MappedItem>(
-  list: Observable<Maybe<readonly Item[]>>,
-  map: (value: Item, index: Observable<number>) => MappedItem,
-  options?: { id?: string },
-): Observable<MappedItem[]> {
-  let items: Item[] = [],
-    mapping: MappedItem[] = [],
-    disposal: Dispose[] = [],
-    len = 0,
-    indicies: ((v: number) => number)[] | null = map.length > 1 ? [] : null;
-
-  onDispose(() => runAll(disposal));
-
-  return computed(() => {
-    let newItems = list() || [],
-      i: number,
-      j: number;
-
-    return peek(() => {
-      let newLen = newItems.length;
-
-      // fast path for empty arrays
-      if (newLen === 0) {
-        if (len !== 0) {
-          runAll(disposal);
-          disposal = [];
-          items = [];
-          mapping = [];
-          len = 0;
-          indicies && (indicies = []);
-        }
-      }
-      // fast path for new create
-      else if (len === 0) {
-        mapping = new Array(newLen);
-
-        for (j = 0; j < newLen; j++) {
-          items[j] = newItems[j];
-          mapping[j] = root(mapper);
-        }
-
-        len = newLen;
-      } else {
-        let start: number,
-          end: number,
-          newEnd: number,
-          item: Item,
-          newIndices: Map<Item, number>,
-          newIndicesNext: number[],
-          temp: MappedItem[] = new Array(newLen),
-          tempDisposal: (() => void)[] = new Array(newLen),
-          tempIndicies: ((v: number) => number)[] = new Array(newLen);
-
-        // skip common prefix
-        for (
-          start = 0, end = Math.min(len, newLen);
-          start < end && items[start] === newItems[start];
-          start++
-        );
-
-        // common suffix
-        for (
-          end = len - 1, newEnd = newLen - 1;
-          end >= start && newEnd >= start && items[end] === newItems[newEnd];
-          end--, newEnd--
-        ) {
-          temp[newEnd] = mapping[end];
-          tempDisposal[newEnd] = disposal[end];
-          indicies && (tempIndicies![newEnd] = indicies[end]);
-        }
-
-        // 0) prepare a map of all indices in newItems, scanning backwards so we encounter them in natural order
-        newIndices = new Map<Item, number>();
-        newIndicesNext = new Array(newEnd + 1);
-        for (j = newEnd; j >= start; j--) {
-          item = newItems[j];
-          i = newIndices.get(item)!;
-          newIndicesNext[j] = i === undefined ? -1 : i;
-          newIndices.set(item, j);
-        }
-
-        // 1) step through all old items and see if they can be found in the new set; if so, save them in a temp array and mark them moved; if not, exit them
-        for (i = start; i <= end; i++) {
-          item = items[i];
-          j = newIndices.get(item)!;
-          if (j !== undefined && j !== -1) {
-            temp[j] = mapping[i];
-            tempDisposal[j] = disposal[i];
-            indicies && (tempIndicies![j] = indicies[i]);
-            j = newIndicesNext[j];
-            newIndices.set(item, j);
-          } else disposal[i]();
-        }
-
-        // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
-        for (j = start; j < newLen; j++) {
-          if (j in temp) {
-            mapping[j] = temp[j];
-            disposal[j] = tempDisposal[j];
-            if (indicies) {
-              indicies[j] = tempIndicies![j];
-              indicies[j](j);
-            }
-          } else mapping[j] = root(mapper);
-        }
-
-        // 3) in case the new set is shorter than the old, set the length of the mapped array
-        mapping = mapping.slice(0, (len = newLen));
-
-        // 4) save a copy of the mapped items for the next update
-        items = newItems.slice(0);
-      }
-
-      return mapping;
-    });
-
-    function mapper(dispose: () => void) {
-      disposal[j] = dispose;
-
-      if (indicies) {
-        const $i = observable(j);
-        indicies[j] = (v) => {
-          $i.set(v);
-          return v;
-        };
-        return map(newItems[j], readonly($i));
-      }
-
-      return map(newItems[j], () => -1);
-    }
-  }, options);
-}
-
-function compute<T>(scope: () => void, fn: () => T, observer: () => void = scope): T {
+function compute<T>(scope: () => void, node: () => T, observer: () => void = scope): T {
   const prevScope = currentScope;
   const prevObserver = currentObserver;
 
@@ -590,7 +389,7 @@ function compute<T>(scope: () => void, fn: () => T, observer: () => void = scope
   currentObserver = observer;
   if (__DEV__) computeStack.push(scope);
 
-  const nextValue = fn();
+  const nextValue = node();
 
   currentScope = prevScope;
   currentObserver = prevObserver;
@@ -599,8 +398,8 @@ function compute<T>(scope: () => void, fn: () => T, observer: () => void = scope
   return nextValue;
 }
 
-function lookup(fn: Node | undefined, key: string | symbol): any {
-  let current = fn,
+function lookup(node: Node | undefined, key: string | symbol): any {
+  let current = node,
     value;
 
   while (current) {
@@ -610,21 +409,21 @@ function lookup(fn: Node | undefined, key: string | symbol): any {
   }
 }
 
-function adopt(fn: Node, scope = currentScope) {
+function adopt(node: Node, scope = currentScope) {
   if (!scope || scope[DISPOSED]) return;
-  fn[SCOPE] = scope;
-  (scope[CHILDREN] ??= new Set()).add(fn);
+  node[SCOPE] = scope;
+  (scope[CHILDREN] ??= new Set()).add(node);
 }
 
-function addObserver(observable: Node, observer: Node) {
+function observe(observable: Node, observer: Node) {
   if (observable[DISPOSED]) return;
-  (observable[OBSERVERS] ??= new Set()).add(observer);
-  observer[OBSERVED] = true;
+  (observable[OBSERVED_BY] ??= new Set()).add(observer);
+  (observer[OBSERVING] ??= new Set()).add(observable);
 }
 
 function dirtyNode(node: Node) {
-  if (!node[OBSERVERS]) return;
-  for (const observer of node[OBSERVERS]) {
+  if (!node[OBSERVED_BY]) return;
+  for (const observer of node[OBSERVED_BY]) {
     if (!observer[COMPUTED] || observer === currentObserver) continue;
     observer[DIRTY] = true;
     _scheduler.enqueue(() => {
@@ -647,16 +446,12 @@ function notEqual(a: unknown, b: unknown) {
   return a !== b;
 }
 
-function runAll(fns: (() => void)[]) {
-  for (let i = 0; i < fns.length; i++) fns[i]();
-}
-
-function handleError(fn: () => void, error: unknown) {
-  const handlers = lookup(fn, ERROR);
+function handleError(node: () => void, error: unknown) {
+  const handlers = lookup(node, ERROR);
   if (!handlers) throw error;
   try {
     for (const handler of handlers) handler(error);
   } catch (error) {
-    handleError(fn[SCOPE], error);
+    handleError(node[SCOPE], error);
   }
 }
