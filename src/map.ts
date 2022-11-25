@@ -39,44 +39,47 @@ export function computedMap<Item, MappedItem>(
 
   onDispose(() => runAll(disposal));
 
-  return computed(() => {
-    const newItems = list() || [];
-    return peek(() => {
-      if (newItems.length === 0) {
-        if (len !== 0) {
-          runAll(disposal);
-          disposal = [];
-          items = [];
-          mapped = [];
-          len = 0;
-          observables = [];
+  return computed(
+    () => {
+      const newItems = list() || [];
+      return peek(() => {
+        if (newItems.length === 0) {
+          if (len !== 0) {
+            runAll(disposal);
+            disposal = [];
+            items = [];
+            mapped = [];
+            len = 0;
+            observables = [];
+          }
+
+          return mapped;
         }
 
-        return mapped;
-      }
-
-      for (i = 0; i < newItems.length; i++) {
-        if (i < items.length && items[i] !== newItems[i]) {
-          observables[i](newItems[i]);
-        } else if (i >= items.length) {
-          mapped[i] = root(mapper);
+        for (i = 0; i < newItems.length; i++) {
+          if (i < items.length && items[i] !== newItems[i]) {
+            observables[i](newItems[i]);
+          } else if (i >= items.length) {
+            mapped[i] = root(mapper);
+          }
         }
+
+        for (; i < items.length; i++) disposal[i]();
+
+        len = observables.length = disposal.length = newItems.length;
+        items = newItems.slice(0);
+        return (mapped = mapped.slice(0, len));
+      });
+
+      function mapper(dispose: () => void) {
+        disposal[i] = dispose;
+        const $o = observable(newItems[i]);
+        observables[i] = $o.set;
+        return map($o, i);
       }
-
-      for (; i < items.length; i++) disposal[i]();
-
-      len = observables.length = disposal.length = newItems.length;
-      items = newItems.slice(0);
-      return (mapped = mapped.slice(0, len));
-    });
-
-    function mapper(dispose: () => void) {
-      disposal[i] = dispose;
-      const $o = observable(newItems[i]);
-      observables[i] = $o.set;
-      return map($o, i);
-    }
-  }, options);
+    },
+    __DEV__ ? { id: options?.id, errors: true } : undefined,
+  );
 }
 
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L16
@@ -102,122 +105,125 @@ export function computedKeyedMap<Item, MappedItem>(
 
   onDispose(() => runAll(disposal));
 
-  return computed(() => {
-    let newItems = list() || [],
-      i: number,
-      j: number;
+  return computed(
+    () => {
+      let newItems = list() || [],
+        i: number,
+        j: number;
 
-    return peek(() => {
-      let newLen = newItems.length;
+      return peek(() => {
+        let newLen = newItems.length;
 
-      // fast path for empty arrays
-      if (newLen === 0) {
-        if (len !== 0) {
-          runAll(disposal);
-          disposal = [];
-          items = [];
-          mapping = [];
-          len = 0;
-          indicies && (indicies = []);
+        // fast path for empty arrays
+        if (newLen === 0) {
+          if (len !== 0) {
+            runAll(disposal);
+            disposal = [];
+            items = [];
+            mapping = [];
+            len = 0;
+            indicies && (indicies = []);
+          }
         }
-      }
-      // fast path for new create
-      else if (len === 0) {
-        mapping = new Array(newLen);
+        // fast path for new create
+        else if (len === 0) {
+          mapping = new Array(newLen);
 
-        for (j = 0; j < newLen; j++) {
-          items[j] = newItems[j];
-          mapping[j] = root(mapper);
-        }
+          for (j = 0; j < newLen; j++) {
+            items[j] = newItems[j];
+            mapping[j] = root(mapper);
+          }
 
-        len = newLen;
-      } else {
-        let start: number,
-          end: number,
-          newEnd: number,
-          item: Item,
-          newIndices: Map<Item, number>,
-          newIndicesNext: number[],
-          temp: MappedItem[] = new Array(newLen),
-          tempDisposal: (() => void)[] = new Array(newLen),
-          tempIndicies: ((v: number) => number)[] = new Array(newLen);
+          len = newLen;
+        } else {
+          let start: number,
+            end: number,
+            newEnd: number,
+            item: Item,
+            newIndices: Map<Item, number>,
+            newIndicesNext: number[],
+            temp: MappedItem[] = new Array(newLen),
+            tempDisposal: (() => void)[] = new Array(newLen),
+            tempIndicies: ((v: number) => number)[] = new Array(newLen);
 
-        // skip common prefix
-        for (
-          start = 0, end = Math.min(len, newLen);
-          start < end && items[start] === newItems[start];
-          start++
-        );
+          // skip common prefix
+          for (
+            start = 0, end = Math.min(len, newLen);
+            start < end && items[start] === newItems[start];
+            start++
+          );
 
-        // common suffix
-        for (
-          end = len - 1, newEnd = newLen - 1;
-          end >= start && newEnd >= start && items[end] === newItems[newEnd];
-          end--, newEnd--
-        ) {
-          temp[newEnd] = mapping[end];
-          tempDisposal[newEnd] = disposal[end];
-          indicies && (tempIndicies![newEnd] = indicies[end]);
-        }
+          // common suffix
+          for (
+            end = len - 1, newEnd = newLen - 1;
+            end >= start && newEnd >= start && items[end] === newItems[newEnd];
+            end--, newEnd--
+          ) {
+            temp[newEnd] = mapping[end];
+            tempDisposal[newEnd] = disposal[end];
+            indicies && (tempIndicies![newEnd] = indicies[end]);
+          }
 
-        // 0) prepare a map of all indices in newItems, scanning backwards so we encounter them in natural order
-        newIndices = new Map<Item, number>();
-        newIndicesNext = new Array(newEnd + 1);
-        for (j = newEnd; j >= start; j--) {
-          item = newItems[j];
-          i = newIndices.get(item)!;
-          newIndicesNext[j] = i === undefined ? -1 : i;
-          newIndices.set(item, j);
-        }
-
-        // 1) step through all old items and see if they can be found in the new set; if so, save them in a temp array and mark them moved; if not, exit them
-        for (i = start; i <= end; i++) {
-          item = items[i];
-          j = newIndices.get(item)!;
-          if (j !== undefined && j !== -1) {
-            temp[j] = mapping[i];
-            tempDisposal[j] = disposal[i];
-            indicies && (tempIndicies![j] = indicies[i]);
-            j = newIndicesNext[j];
+          // 0) prepare a map of all indices in newItems, scanning backwards so we encounter them in natural order
+          newIndices = new Map<Item, number>();
+          newIndicesNext = new Array(newEnd + 1);
+          for (j = newEnd; j >= start; j--) {
+            item = newItems[j];
+            i = newIndices.get(item)!;
+            newIndicesNext[j] = i === undefined ? -1 : i;
             newIndices.set(item, j);
-          } else disposal[i]();
+          }
+
+          // 1) step through all old items and see if they can be found in the new set; if so, save them in a temp array and mark them moved; if not, exit them
+          for (i = start; i <= end; i++) {
+            item = items[i];
+            j = newIndices.get(item)!;
+            if (j !== undefined && j !== -1) {
+              temp[j] = mapping[i];
+              tempDisposal[j] = disposal[i];
+              indicies && (tempIndicies![j] = indicies[i]);
+              j = newIndicesNext[j];
+              newIndices.set(item, j);
+            } else disposal[i]();
+          }
+
+          // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
+          for (j = start; j < newLen; j++) {
+            if (j in temp) {
+              mapping[j] = temp[j];
+              disposal[j] = tempDisposal[j];
+              if (indicies) {
+                indicies[j] = tempIndicies![j];
+                indicies[j](j);
+              }
+            } else mapping[j] = root(mapper);
+          }
+
+          // 3) in case the new set is shorter than the old, set the length of the mapped array
+          mapping = mapping.slice(0, (len = newLen));
+
+          // 4) save a copy of the mapped items for the next update
+          items = newItems.slice(0);
         }
 
-        // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
-        for (j = start; j < newLen; j++) {
-          if (j in temp) {
-            mapping[j] = temp[j];
-            disposal[j] = tempDisposal[j];
-            if (indicies) {
-              indicies[j] = tempIndicies![j];
-              indicies[j](j);
-            }
-          } else mapping[j] = root(mapper);
+        return mapping;
+      });
+
+      function mapper(dispose: () => void) {
+        disposal[j] = dispose;
+
+        if (indicies) {
+          const $i = observable(j);
+          indicies[j] = (v) => {
+            $i.set(v);
+            return v;
+          };
+          return map(newItems[j], readonly($i));
         }
 
-        // 3) in case the new set is shorter than the old, set the length of the mapped array
-        mapping = mapping.slice(0, (len = newLen));
-
-        // 4) save a copy of the mapped items for the next update
-        items = newItems.slice(0);
+        return map(newItems[j], () => -1);
       }
-
-      return mapping;
-    });
-
-    function mapper(dispose: () => void) {
-      disposal[j] = dispose;
-
-      if (indicies) {
-        const $i = observable(j);
-        indicies[j] = (v) => {
-          $i.set(v);
-          return v;
-        };
-        return map(newItems[j], readonly($i));
-      }
-
-      return map(newItems[j], () => -1);
-    }
-  }, options);
+    },
+    __DEV__ ? { id: options?.id, errors: true } : undefined,
+  );
 }

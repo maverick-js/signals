@@ -22,7 +22,10 @@ export type ObservableOptions<T> = {
   id?: string;
   dirty?: (prev: T, next: T) => boolean;
 };
-export type ComputedOptions<T> = ObservableOptions<T>;
+
+export type ComputedOptions<T> = ObservableOptions<T> & {
+  errors?: boolean;
+};
 
 export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
 
@@ -192,11 +195,13 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
           dirtyNode($computed);
         }
       } catch (error) {
-        if (__DEV__ && !__TEST__ && !init && !(options as any)?.effect) {
+        if (__DEV__ && !__TEST__ && !init && !options?.errors) {
           console.error(
-            `computed \`${$computed.id}\` threw error during first run, in prod this` +
-              ` will be fatal. Prefer an \`effect\` if the return value is not being used.`,
-            '\n',
+            `computed \`${$computed.id}\` threw error during first run, this can be fatal.` +
+              '\n\nSolutions:\n\n' +
+              '1. Set the `errors: true` option to silence this error if an `undefined` result is not fatal.' +
+              '\n2. Or, use an `effect` if the return value is not being used.',
+            '\n\n',
             error,
           );
         }
@@ -243,9 +248,7 @@ export function effect(fn: Effect, options?: { id?: string }): StopEffect {
       const result = fn();
       result && onDispose(result);
     },
-    __DEV__
-      ? ({ id: options?.id ?? 'effect', effect: true } as ComputedOptions<unknown>)
-      : undefined,
+    __DEV__ ? { id: options?.id ?? 'effect', errors: true } : undefined,
   );
   $effect();
   return () => dispose($effect);
