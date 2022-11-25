@@ -189,6 +189,8 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
           $computed[DISPOSAL].clear();
         }
 
+        $computed[CONTEXT]?.[ERROR]?.clear();
+
         const nextValue = compute($computed, fn);
         if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;

@@ -64,7 +64,7 @@ it('should not duplicate error handler', async () => {
   root(() => {
     effect(() => {
       $a();
-      onError(handler);
+      onError(() => handler());
       if (shouldThrow) throw error;
     });
   });
