@@ -8,6 +8,7 @@ import {
   type Observable,
   type ObservableSubject,
 } from '../src';
+import { OBSERVED_BY, OBSERVING } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -98,5 +99,14 @@ it('should hold parent tracking', async () => {
     root(() => {
       expect(getScope(getScope())).toBe(parent);
     });
+  });
+});
+
+it('should not observe', () => {
+  const $a = observable(0);
+  root(() => {
+    $a();
+    expect(getScope()![OBSERVING]).toBeUndefined();
+    expect(getScope()![OBSERVED_BY]).toBeUndefined();
   });
 });

@@ -86,7 +86,7 @@ if (__DEV__) {
 export function root<T>(fn: (dispose: Dispose) => T): T {
   const $root = () => {};
   $root[SCOPE] = currentScope;
-  return compute($root, () => fn(() => dispose($root)));
+  return compute($root, () => fn(() => dispose($root)), undefined);
 }
 
 /**
@@ -191,7 +191,7 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
 
         $computed[CONTEXT]?.[ERROR]?.clear();
 
-        const nextValue = compute($computed, fn);
+        const nextValue = compute($computed, fn, $computed);
         if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;
           dirtyNode($computed);
@@ -425,7 +425,7 @@ export function dispose(fn: () => void) {
 function compute<T>(
   scope: (() => void) | undefined,
   node: () => T,
-  observer: (() => void) | undefined = scope,
+  observer: (() => void) | undefined,
 ): T {
   const prevScope = currentScope;
   const prevObserver = currentObserver;
