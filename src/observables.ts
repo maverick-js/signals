@@ -239,11 +239,16 @@ export function computed<T, R = never>(
 }
 
 /**
- * Whether the current scope has any active observers.
+ * Whether the current scope is actively observing for any updates.
  */
-export function isObserved(): boolean {
-  return !!currentObserver?.[OBSERVING]?.size;
+export function isObserving(): boolean {
+  return [currentObserver, ...(currentObserver?.[CHILDREN] ?? [])].some(
+    (node) => node?.[OBSERVING]?.size,
+  );
 }
+
+/** @deprecated use `isObserving` */
+export const isObserved = isObserving;
 
 /**
  * Invokes the given function each time any of the observables that are read inside are updated
