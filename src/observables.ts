@@ -466,13 +466,7 @@ function dirtyNode(node: Node) {
   for (const observer of node[OBSERVED_BY]) {
     if (!observer[COMPUTED] || observer === currentObserver) continue;
     observer[DIRTY] = true;
-    _scheduler.enqueue(() => {
-      try {
-        observer();
-      } catch (error) {
-        handleError(observer, error);
-      }
-    });
+    _scheduler.enqueue(observer);
   }
 }
 
