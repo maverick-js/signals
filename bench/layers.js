@@ -37,13 +37,13 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 
 async function main() {
   const report = {
-    S: { fn: runS, runs: [] },
-    solid: { fn: runSolid, runs: [] },
     'preact/signals': { fn: runPreact, runs: [] },
     maverick: { fn: runMaverick, runs: [], avg: [] },
+    S: { fn: runS, runs: [] },
+    cellx: { fn: runCellx, runs: [] },
+    solid: { fn: runSolid, runs: [] },
     // TODO: running too slow so I need to leave it out for now - maybe something is wrong.
     // sinuous: { fn: runSinuous, runs: [] },
-    cellx: { fn: runCellx, runs: [] },
   };
 
   for (const lib of Object.keys(report)) {

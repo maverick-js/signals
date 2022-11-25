@@ -178,7 +178,10 @@ export function computed<T>(
           $computed[CHILDREN].clear();
         }
 
-        emptyDisposal($computed);
+        if ($computed[DISPOSAL]) {
+          for (const dispose of $computed[DISPOSAL]) dispose();
+          $computed[DISPOSAL].clear();
+        }
 
         const nextValue = compute($computed, fn);
         $computed[DIRTY] = false;
@@ -363,21 +366,39 @@ export function onDispose(dispose: MaybeDispose): Dispose {
 export function dispose(fn: () => void) {
   if (fn[DISPOSED]) return;
 
-  if (fn[CHILDREN]) for (const node of fn[CHILDREN]) dispose(node);
-  if (fn[OBSERVING]) for (const node of fn[OBSERVING]) node[OBSERVED_BY]?.delete(fn);
-  if (fn[OBSERVED_BY]) for (const node of fn[OBSERVED_BY]) node[OBSERVING]?.delete(fn);
+  if (fn[CHILDREN]) {
+    for (const node of fn[CHILDREN]) dispose(node);
+    fn[CHILDREN].clear();
+    fn[CHILDREN] = undefined;
+  }
 
-  emptyDisposal(fn);
-  fn[SCOPE]?.[CHILDREN]?.delete(fn);
-  fn[SCOPE] = undefined;
-  fn[CHILDREN]?.clear();
-  fn[CHILDREN] = undefined;
-  fn[OBSERVING]?.clear();
-  fn[OBSERVING] = undefined;
-  fn[OBSERVED_BY]?.clear();
-  fn[OBSERVED_BY] = undefined;
-  fn[DISPOSAL] = undefined;
-  fn[CONTEXT] = undefined;
+  if (fn[OBSERVING]) {
+    for (const node of fn[OBSERVING]) node[OBSERVED_BY]?.delete(fn);
+    fn[OBSERVING].clear();
+    fn[OBSERVING] = undefined;
+  }
+
+  if (fn[OBSERVED_BY]) {
+    for (const node of fn[OBSERVED_BY]) node[OBSERVING]?.delete(fn);
+    fn[OBSERVED_BY].clear();
+    fn[OBSERVED_BY] = undefined;
+  }
+
+  if (fn[SCOPE]) {
+    fn[SCOPE][CHILDREN]?.delete(fn);
+    fn[SCOPE] = undefined;
+  }
+
+  if (fn[DISPOSAL]) {
+    for (const dispose of fn[DISPOSAL]) dispose();
+    fn[DISPOSAL].clear();
+    fn[DISPOSAL] = undefined;
+  }
+
+  if (fn[CONTEXT]) {
+    fn[CONTEXT] = undefined;
+  }
+
   fn[DISPOSED] = true;
 }
 
@@ -434,12 +455,6 @@ function dirtyNode(node: Node) {
       }
     });
   }
-}
-
-function emptyDisposal(node: Node) {
-  if (!node[DISPOSAL]) return;
-  for (const dispose of node[DISPOSAL]) dispose();
-  node[DISPOSAL].clear();
 }
 
 function notEqual(a: unknown, b: unknown) {
