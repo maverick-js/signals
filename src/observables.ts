@@ -18,6 +18,11 @@ export type Observable<T> = {
   (): T;
 };
 
+export type ObservableOptions<T> = {
+  id?: string;
+  dirty?: (prev: T, next: T) => boolean;
+};
+
 export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
 
 export type ObservableSubject<T> = Observable<T> & {
@@ -105,11 +110,11 @@ export function peek<T>(fn: () => T): T {
  */
 export function observable<T>(
   initialValue: T,
-  opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
+  options?: ObservableOptions<T>,
 ): ObservableSubject<T> {
   let currentValue = initialValue;
 
-  const isDirty = opts?.dirty ?? notEqual;
+  const isDirty = options?.dirty ?? notEqual;
 
   const $observable: ObservableSubject<T> = () => {
     if (__DEV__) callStack.push($observable);
@@ -128,7 +133,7 @@ export function observable<T>(
     $observable.set(next(currentValue));
   };
 
-  if (__DEV__) $observable.id = opts?.id ?? 'observable';
+  if (__DEV__) $observable.id = options?.id ?? 'observable';
 
   $observable[OBSERVABLE] = true;
   adopt($observable);
@@ -151,14 +156,11 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  *
  * @see {@link https://github.com/maverick-js/observables#computed}
  */
-export function computed<T>(
-  fn: () => T,
-  opts?: { id?: string; dirty?: (prev: T, next: T) => boolean },
-): Observable<T> {
+export function computed<T>(fn: () => T, options?: ObservableOptions<T>): Observable<T> {
   let currentValue,
     init = false;
 
-  const isDirty = opts?.dirty ?? notEqual;
+  const isDirty = options?.dirty ?? notEqual;
 
   const $computed: Observable<T> = () => {
     if (__DEV__ && computeStack.includes($computed)) {
@@ -203,7 +205,7 @@ export function computed<T>(
     return currentValue;
   };
 
-  if (__DEV__) $computed.id = opts?.id ?? `computed`;
+  if (__DEV__) $computed.id = options?.id ?? `computed`;
 
   // Starts off dirty because it hasn't run yet.
   $computed[DIRTY] = true;
@@ -227,10 +229,11 @@ export function isObserved(): boolean {
  *
  * @see {@link https://github.com/maverick-js/observables#effect}
  */
-export function effect(fn: Effect, opts?: { id?: string }): StopEffect {
-  const $effect = computed(() => onDispose(fn()), {
-    id: __DEV__ ? opts?.id ?? 'effect' : opts?.id,
-  });
+export function effect(fn: Effect, options?: { id?: string }): StopEffect {
+  const $effect = computed(
+    () => onDispose(fn()),
+    __DEV__ ? { id: options?.id ?? 'effect' } : undefined,
+  );
 
   $effect();
   return () => dispose($effect);
