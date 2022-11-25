@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.9.6](https://github.com/maverick-js/observables/compare/v4.9.5...v4.9.6) (2022-11-25)
+
+
+### Bug Fixes
+
+* `isObserving` now requires arg ([8fd3ade](https://github.com/maverick-js/observables/commit/8fd3ade77183136fa91fef81e978d2f1e5942279))
+* drop deprecated `getParent` ([6a1b64d](https://github.com/maverick-js/observables/commit/6a1b64d4a085d6a8c7bd428a0c82c7418989d755))
+* drop deprecated `isObserved` ([a7d169a](https://github.com/maverick-js/observables/commit/a7d169a32b1d947b1d8f80d8d85399258a738069))
+
 ### [4.9.5](https://github.com/maverick-js/observables/compare/v4.9.4...v4.9.5) (2022-11-25)
 
 
