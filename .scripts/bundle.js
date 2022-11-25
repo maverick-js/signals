@@ -15,6 +15,7 @@ async function main() {
       watch: hasArg('-w'),
       define: {
         __DEV__: dev ? 'true' : 'false',
+        __TEST__: 'false',
       },
       external: ['@maverick-js/scheduler'],
     };

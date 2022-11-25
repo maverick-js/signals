@@ -159,8 +159,7 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  */
 export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observable<T> {
   let currentValue,
-    init = false,
-    effect = (options as any)?._e;
+    init = false;
 
   const isDirty = options?.dirty ?? notEqual;
 
@@ -193,12 +192,20 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
           dirtyNode($computed);
         }
       } catch (error) {
-        if (!init && !effect) throw error;
+        if (__DEV__ && !__TEST__ && !init && !(options as any)?.effect) {
+          console.error(
+            `computed \`${$computed.id}\` threw error during first run, in prod this` +
+              ` will be fatal. Prefer an \`effect\` if the return value is not being used.`,
+            '\n',
+            error,
+          );
+        }
+
         handleError($computed, error);
         return currentValue;
       }
 
-      init = true;
+      if (__DEV__) init = true;
       $computed[DIRTY] = false;
       if (!$computed[OBSERVING]?.size) dispose($computed);
     }
@@ -236,10 +243,9 @@ export function effect(fn: Effect, options?: { id?: string }): StopEffect {
       const result = fn();
       result && onDispose(result);
     },
-    {
-      id: __DEV__ ? options?.id ?? 'effect' : undefined,
-      _e: true,
-    } as ComputedOptions<unknown>,
+    __DEV__
+      ? ({ id: options?.id ?? 'effect', effect: true } as ComputedOptions<unknown>)
+      : undefined,
   );
   $effect();
   return () => dispose($effect);
