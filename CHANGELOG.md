@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.9.5](https://github.com/maverick-js/observables/compare/v4.9.4...v4.9.5) (2022-11-25)
+
+
+### Bug Fixes
+
+* `isObserved` -> `isObserving` ([7a96166](https://github.com/maverick-js/observables/commit/7a961669976cc861df8ce2ab17f40d4dfe7cfea7))
+* allow fallback to be set if computed init error ([2cd85b2](https://github.com/maverick-js/observables/commit/2cd85b27bbd58df00ef5dbda43e08d4faf900101))
+* remove auto-dispose perf overhead ([bbbbbe6](https://github.com/maverick-js/observables/commit/bbbbbe634a04e42fa91d3d4eb16ede33343ca58e))
+* root should not add any observers ([36baad2](https://github.com/maverick-js/observables/commit/36baad202538bf0f0effebd6bd5118bcdcf076d0))
+
 ### [4.9.4](https://github.com/maverick-js/observables/compare/v4.9.3...v4.9.4) (2022-11-25)
 
 
