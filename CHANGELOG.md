@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.9.3](https://github.com/maverick-js/observables/compare/v4.9.2...v4.9.3) (2022-11-25)
+
+
+### Bug Fixes
+
+* option to silence computed init error ([7b98328](https://github.com/maverick-js/observables/commit/7b98328db844d79a4cf4a70e44bbfd6a005e2136))
+
 ### [4.9.2](https://github.com/maverick-js/observables/compare/v4.9.1...v4.9.2) (2022-11-25)
 
 
