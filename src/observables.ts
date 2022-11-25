@@ -306,9 +306,6 @@ export function getScope(fn?: Observable<unknown>): Observable<unknown> | undefi
   return !arguments.length ? currentScope : fn?.[SCOPE];
 }
 
-/** @deprecated use `getScope` */
-export const getParent = getScope;
-
 /**
  * Returns the global scheduler.
  *
