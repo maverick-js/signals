@@ -22,6 +22,7 @@ export type ObservableOptions<T> = {
   id?: string;
   dirty?: (prev: T, next: T) => boolean;
 };
+export type ComputedOptions<T> = ObservableOptions<T>;
 
 export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
 
@@ -156,9 +157,10 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  *
  * @see {@link https://github.com/maverick-js/observables#computed}
  */
-export function computed<T>(fn: () => T, options?: ObservableOptions<T>): Observable<T> {
+export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observable<T> {
   let currentValue,
-    init = false;
+    init = false,
+    effect = (options as any)?._e;
 
   const isDirty = options?.dirty ?? notEqual;
 
@@ -186,20 +188,19 @@ export function computed<T>(fn: () => T, options?: ObservableOptions<T>): Observ
         }
 
         const nextValue = compute($computed, fn);
-        $computed[DIRTY] = false;
-
-        if (!init) {
-          currentValue = nextValue;
-          init = true;
-        } else if (isDirty(currentValue, nextValue)) {
+        if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;
           dirtyNode($computed);
         }
-
-        if (!$computed[OBSERVING]?.size) dispose($computed);
       } catch (error) {
+        if (!init && !effect) throw error;
         handleError($computed, error);
+        return currentValue;
       }
+
+      init = true;
+      $computed[DIRTY] = false;
+      if (!$computed[OBSERVING]?.size) dispose($computed);
     }
 
     return currentValue;
@@ -231,10 +232,15 @@ export function isObserved(): boolean {
  */
 export function effect(fn: Effect, options?: { id?: string }): StopEffect {
   const $effect = computed(
-    () => onDispose(fn()),
-    __DEV__ ? { id: options?.id ?? 'effect' } : undefined,
+    () => {
+      const result = fn();
+      result && onDispose(result);
+    },
+    {
+      id: __DEV__ ? options?.id ?? 'effect' : undefined,
+      _e: true,
+    } as ComputedOptions<unknown>,
   );
-
   $effect();
   return () => dispose($effect);
 }
@@ -295,22 +301,22 @@ export function getScheduler(): Scheduler {
 }
 
 /**
- * Scopes the given function to the given parent scope so context and error handling continue to
+ * Scopes the given function to the current parent scope so context and error handling continue to
  * work as expected. Generally this should be called on non-observable functions. A scoped
  * function will return `undefined` if an error is thrown.
  *
  * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
  * because it doesn't require creating and tracking a `computed` observable.
  */
-export function scope<T>(fn: () => T, scope = getScope()!): () => T | undefined {
-  adopt(fn, scope);
+export function scope<T>(fn: () => T): () => T | undefined {
+  adopt(fn);
   return () => {
     try {
-      return compute(scope, fn, currentObserver);
+      return compute(fn[SCOPE], fn, currentObserver);
     } catch (error) {
       handleError(fn, error);
-      return; // make TS happy
     }
+    return; // make TS happy -_-
   };
 }
 
@@ -405,21 +411,25 @@ export function dispose(fn: () => void) {
   fn[DISPOSED] = true;
 }
 
-function compute<T>(scope: () => void, node: () => T, observer: () => void = scope): T {
+function compute<T>(
+  scope: (() => void) | undefined,
+  node: () => T,
+  observer: (() => void) | undefined = scope,
+): T {
   const prevScope = currentScope;
   const prevObserver = currentObserver;
 
   currentScope = scope;
   currentObserver = observer;
-  if (__DEV__) computeStack.push(scope);
+  if (__DEV__ && scope) computeStack.push(scope);
 
-  const nextValue = node();
-
-  currentScope = prevScope;
-  currentObserver = prevObserver;
-  if (__DEV__) computeStack.pop();
-
-  return nextValue;
+  try {
+    return node();
+  } finally {
+    currentScope = prevScope;
+    currentObserver = prevObserver;
+    if (__DEV__ && scope) computeStack.pop();
+  }
 }
 
 function lookup(node: Node | undefined, key: string | symbol): any {
@@ -433,10 +443,10 @@ function lookup(node: Node | undefined, key: string | symbol): any {
   }
 }
 
-function adopt(node: Node, scope = currentScope) {
-  if (!scope) return;
-  node[SCOPE] = scope;
-  (scope[CHILDREN] ??= new Set()).add(node);
+function adopt(node: Node) {
+  if (!currentScope) return;
+  node[SCOPE] = currentScope;
+  (currentScope[CHILDREN] ??= new Set()).add(node);
 }
 
 function observe(observable: Node, observer: Node) {
@@ -468,7 +478,8 @@ function handleError(node: () => void, error: unknown) {
   const handlers = lookup(node, ERROR);
   if (!handlers) throw error;
   try {
-    for (const handler of handlers) handler(error);
+    const coercedError = error instanceof Error ? error : Error(JSON.stringify(error));
+    for (const handler of handlers) handler(coercedError);
   } catch (error) {
     handleError(node[SCOPE], error);
   }

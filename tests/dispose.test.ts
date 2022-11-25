@@ -1,4 +1,4 @@
-import { computed, observable, tick, dispose, effect, root, getScope } from '../src';
+import { computed, observable, tick, dispose, effect, root, getScope, onError } from '../src';
 import { CHILDREN, DISPOSED, OBSERVED_BY } from '../src/symbols';
 
 afterEach(() => tick());
@@ -35,14 +35,30 @@ it('shoud remove observable from parent children set', () => {
 });
 
 it('should auto-dispose computed if not observing anything', () => {
-  const $a = computed(() => null, { id: '$a' });
+  const $a = computed(() => null);
   $a();
 
-  const $b = computed(() => $a(), { id: '$b' });
+  const $b = computed(() => $a());
   $b();
 
   expect($a[DISPOSED]).toBeTruthy();
   expect($b[DISPOSED]).toBeTruthy();
+});
+
+it('should _not_ auto-dispose effect if error is thrown', async () => {
+  const $a = observable(0);
+
+  let shouldThrow = true,
+    effectScope;
+
+  effect(() => {
+    onError(() => {});
+    effectScope = getScope();
+    if (shouldThrow) throw Error();
+    $a();
+  });
+
+  expect(effectScope[DISPOSED]).toBeFalsy();
 });
 
 it('should stop observing effect', async () => {

@@ -632,6 +632,13 @@ found [here](./bench/layers.js).
 Each column represents how deep computations were layered. The average time taken to update the
 computation out of a 100 runs is used for each library.
 
+> ❗ Do note that only Maverick and Solid JS are feature complete below which includes nested
+> effects, arbritrary node disposal, context, and error handling.
+
+> ❗ Nearly all computations in a real world app are going to be less than 10 layers deep, so
+> only the first column really matters. What this benchmark is really showing is how notification
+> propagation scales with computation depth.
+
 #### Sync
 
 <img src="./bench/layers.png" alt="Layers sync benchmark table" width="350px" />
