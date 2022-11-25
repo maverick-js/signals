@@ -245,9 +245,6 @@ export function isObserving(fn: () => void): boolean {
   return [fn, ...(fn?.[CHILDREN] ?? [])].some((node) => node[OBSERVING]?.size);
 }
 
-/** @deprecated use `isObserving` */
-export const isObserved = isObserving;
-
 /**
  * Invokes the given function each time any of the observables that are read inside are updated
  * (i.e., their value changes). The effect is immediately invoked on initialization.
