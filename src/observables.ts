@@ -368,6 +368,7 @@ export function dispose(fn: () => void) {
   if (fn[OBSERVED_BY]) for (const node of fn[OBSERVED_BY]) node[OBSERVING]?.delete(fn);
 
   emptyDisposal(fn);
+  fn[SCOPE]?.[CHILDREN]?.delete(fn);
   fn[SCOPE] = undefined;
   fn[CHILDREN]?.clear();
   fn[CHILDREN] = undefined;

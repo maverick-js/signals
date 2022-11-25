@@ -1,5 +1,4 @@
-import { computed, observable, effect, tick, onDispose, getScope } from '../src';
-import { OBSERVED_BY } from '../src/symbols';
+import { computed, observable, effect, tick, onDispose } from '../src';
 
 afterEach(() => tick());
 
@@ -268,15 +267,4 @@ it('should handle looped effects', async () => {
 
   expect(values).toHaveLength(2);
   expect(values.join(',')).toBe('2,2');
-});
-
-it('should stop observing effect', async () => {
-  const $a = observable(0);
-
-  const stop = effect(() => {
-    $a();
-  });
-
-  stop();
-  expect($a[OBSERVED_BY].size).toBe(0);
 });
