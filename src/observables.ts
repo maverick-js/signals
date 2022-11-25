@@ -239,12 +239,10 @@ export function computed<T, R = never>(
 }
 
 /**
- * Whether the current scope is actively observing for any updates.
+ * Whether the given function is actively observing any computations.
  */
-export function isObserving(): boolean {
-  return [currentObserver, ...(currentObserver?.[CHILDREN] ?? [])].some(
-    (node) => node?.[OBSERVING]?.size,
-  );
+export function isObserving(fn: () => void): boolean {
+  return [fn, ...(fn?.[CHILDREN] ?? [])].some((node) => node[OBSERVING]?.size);
 }
 
 /** @deprecated use `isObserving` */
