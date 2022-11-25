@@ -214,7 +214,6 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
 
       if (__DEV__) init = true;
       $computed[DIRTY] = false;
-      if (!$computed[OBSERVING]?.size) dispose($computed);
     }
 
     return currentValue;
@@ -369,7 +368,7 @@ export function onError<T = Error>(handler: (error: T) => void): void {
  * @see {@link https://github.com/maverick-js/observables#ondispose}
  */
 export function onDispose(dispose: MaybeDispose): Dispose {
-  if (!dispose || !currentScope || currentScope[DISPOSED]) return NOOP;
+  if (!dispose || !currentScope) return NOOP;
   (currentScope[DISPOSAL] ??= new Set()).add(dispose);
   return () => {
     (dispose as Dispose)();
@@ -461,7 +460,6 @@ function adopt(node: Node) {
 }
 
 function observe(observable: Node, observer: Node) {
-  if (observable[DISPOSED] || observer[DISPOSED]) return;
   (observable[OBSERVED_BY] ??= new Set()).add(observer);
   (observer[OBSERVING] ??= new Set()).add(observable);
 }
