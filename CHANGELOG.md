@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.9.2](https://github.com/maverick-js/observables/compare/v4.9.1...v4.9.2) (2022-11-25)
+
+
+### Bug Fixes
+
+* log error if computed throws on first run ([8582879](https://github.com/maverick-js/observables/commit/8582879caa2c930d5990607074748695c6bb9bbc))
+* remove redundant try/catch in queued task ([c95e02e](https://github.com/maverick-js/observables/commit/c95e02ea461c088c0898eb45968fb888aa806454))
+
 ### [4.9.1](https://github.com/maverick-js/observables/compare/v4.9.0...v4.9.1) (2022-11-25)
 
 
