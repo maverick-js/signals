@@ -190,6 +190,8 @@ export function computed<T>(
           currentValue = nextValue;
           dirtyNode($computed);
         }
+
+        if (!$computed[OBSERVING]?.size) dispose($computed);
       } catch (error) {
         handleError($computed, error);
       }
@@ -214,49 +216,6 @@ export function computed<T>(
  */
 export function isObserved(): boolean {
   return !!currentObserver?.[OBSERVING]?.size;
-}
-
-/**
- * Runs the given function when the parent scope computation is being disposed.
- *
- * @see {@link https://github.com/maverick-js/observables#ondispose}
- */
-export function onDispose(dispose: MaybeDispose): Dispose {
-  if (!dispose || !currentScope || currentScope[DISPOSED]) return NOOP;
-  (currentScope[DISPOSAL] ??= new Set()).add(dispose);
-  return () => {
-    (dispose as Dispose)();
-    currentScope![DISPOSAL]?.delete(dispose as Dispose);
-  };
-}
-
-/**
- * Unsubscribes the given observable and all inner computations. Disposed functions will retain
- * their current value but are no longer reactive.
- *
- * @see {@link https://github.com/maverick-js/observables#dispose}
- */
-export function dispose(fn: () => void) {
-  if (fn[DISPOSED]) return;
-
-  const children = fn[CHILDREN];
-  if (children) for (const child of children) dispose(child);
-
-  const observing = fn[OBSERVING];
-  if (observing) for (const node of observing) node[OBSERVED_BY]?.delete(fn);
-
-  emptyDisposal(fn);
-  fn[SCOPE] = undefined;
-  fn[OBSERVING] = undefined;
-  fn[CHILDREN]?.clear();
-  fn[CHILDREN] = undefined;
-  fn[DISPOSAL]?.clear();
-  fn[DISPOSAL] = undefined;
-  fn[OBSERVED_BY]?.clear();
-  fn[OBSERVED_BY] = undefined;
-  fn[CONTEXT] = undefined;
-  fn[DIRTY] = false;
-  fn[DISPOSED] = true;
 }
 
 /**
@@ -381,6 +340,46 @@ export function onError<T = Error>(handler: (error: T) => void): void {
   (((currentScope[CONTEXT] ??= {})[ERROR] as Set<any>) ??= new Set()).add(handler);
 }
 
+/**
+ * Runs the given function when the parent scope computation is being disposed.
+ *
+ * @see {@link https://github.com/maverick-js/observables#ondispose}
+ */
+export function onDispose(dispose: MaybeDispose): Dispose {
+  if (!dispose || !currentScope || currentScope[DISPOSED]) return NOOP;
+  (currentScope[DISPOSAL] ??= new Set()).add(dispose);
+  return () => {
+    (dispose as Dispose)();
+    currentScope![DISPOSAL]?.delete(dispose as Dispose);
+  };
+}
+
+/**
+ * Unsubscribes the given observable and all inner computations. Disposed functions will retain
+ * their current value but are no longer reactive.
+ *
+ * @see {@link https://github.com/maverick-js/observables#dispose}
+ */
+export function dispose(fn: () => void) {
+  if (fn[DISPOSED]) return;
+
+  if (fn[CHILDREN]) for (const node of fn[CHILDREN]) dispose(node);
+  if (fn[OBSERVING]) for (const node of fn[OBSERVING]) node[OBSERVED_BY]?.delete(fn);
+  if (fn[OBSERVED_BY]) for (const node of fn[OBSERVED_BY]) node[OBSERVING]?.delete(fn);
+
+  emptyDisposal(fn);
+  fn[SCOPE] = undefined;
+  fn[CHILDREN]?.clear();
+  fn[CHILDREN] = undefined;
+  fn[OBSERVING]?.clear();
+  fn[OBSERVING] = undefined;
+  fn[OBSERVED_BY]?.clear();
+  fn[OBSERVED_BY] = undefined;
+  fn[DISPOSAL] = undefined;
+  fn[CONTEXT] = undefined;
+  fn[DISPOSED] = true;
+}
+
 function compute<T>(scope: () => void, node: () => T, observer: () => void = scope): T {
   const prevScope = currentScope;
   const prevObserver = currentObserver;
@@ -410,13 +409,13 @@ function lookup(node: Node | undefined, key: string | symbol): any {
 }
 
 function adopt(node: Node, scope = currentScope) {
-  if (!scope || scope[DISPOSED]) return;
+  if (!scope) return;
   node[SCOPE] = scope;
   (scope[CHILDREN] ??= new Set()).add(node);
 }
 
 function observe(observable: Node, observer: Node) {
-  if (observable[DISPOSED]) return;
+  if (observable[DISPOSED] || observer[DISPOSED]) return;
   (observable[OBSERVED_BY] ??= new Set()).add(observer);
   (observer[OBSERVING] ??= new Set()).add(observable);
 }

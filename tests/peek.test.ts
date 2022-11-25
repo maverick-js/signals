@@ -74,7 +74,9 @@ it('should not trigger deep `onDispose`', async () => {
   const dispose = vi.fn();
   const computeB = vi.fn();
 
+  const $a = observable(0);
   const $b = computed(() => {
+    $a();
     computeB();
     onDispose(dispose);
     return 10;

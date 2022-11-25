@@ -1,4 +1,5 @@
 import { computed, effect, observable, tick } from '../src';
+import { DISPOSED } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -176,4 +177,15 @@ it('should accept dirty option', async () => {
   await tick();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
+});
+
+it('should auto-dispose computed if not observing anything', () => {
+  const $a = computed(() => null, { id: '$a' });
+  $a();
+
+  const $b = computed(() => $a(), { id: '$b' });
+  $b();
+
+  expect($a[DISPOSED]).toBeTruthy();
+  expect($b[DISPOSED]).toBeTruthy();
 });
