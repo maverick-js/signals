@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.9.1](https://github.com/maverick-js/observables/compare/v4.9.0...v4.9.1) (2022-11-25)
+
+
+### Bug Fixes
+
+* general error handling improvements ([3b7095f](https://github.com/maverick-js/observables/commit/3b7095f8cbde680f8dce00e959f40b021535c2d3))
+
 ## [4.9.0](https://github.com/maverick-js/observables/compare/v4.8.5...v4.9.0) (2022-11-25)
 
 
