@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.9.0](https://github.com/maverick-js/observables/compare/v4.8.5...v4.9.0) (2022-11-25)
+
+
+### Features
+
+* new `ObservableOptions` type export ([e6aa68c](https://github.com/maverick-js/observables/commit/e6aa68c1459566ba3783ce08ff3c65cb1b42d904))
+
+
+### Bug Fixes
+
+* auto-dispose computed if no observers ([0ab5855](https://github.com/maverick-js/observables/commit/0ab5855eb27dfcbe4fd5f5290fe725f6d0d76ebf))
+* only dispose needed parts ([a3db078](https://github.com/maverick-js/observables/commit/a3db078c366b7e4f4350f09cbd06b309ccd10953))
+* remove child from parent set on dispose ([4fcbaec](https://github.com/maverick-js/observables/commit/4fcbaec39dd37cd5cfb8df17d56b065c9ffd01c3))
+* stop observing computed after its disposed ([c2daca8](https://github.com/maverick-js/observables/commit/c2daca8ae29bdae7de08b815626eb7233283b8dd))
+
 ### [4.8.5](https://github.com/maverick-js/observables/compare/v4.8.4...v4.8.5) (2022-11-16)
 
 
