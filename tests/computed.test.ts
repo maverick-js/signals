@@ -1,4 +1,4 @@
-import { computed, effect, observable, tick } from '../src';
+import { computed, effect, observable, onError, root, tick } from '../src';
 
 afterEach(() => tick());
 
@@ -176,4 +176,20 @@ it('should accept dirty option', async () => {
   await tick();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
+});
+
+it('should use fallback if error is thrown during init', () => {
+  root(() => {
+    onError(() => {});
+
+    const $a = computed(
+      () => {
+        if (1) throw Error();
+        return '';
+      },
+      { fallback: 'foo' },
+    );
+
+    expect($a()).toBe('foo');
+  });
 });

@@ -78,7 +78,7 @@ export function computedMap<Item, MappedItem>(
         return map($o, i);
       }
     },
-    __DEV__ ? { id: options?.id, errors: true } : undefined,
+    { id: __DEV__ ? options?.id : undefined, fallback: [] },
   );
 }
 
@@ -224,6 +224,6 @@ export function computedKeyedMap<Item, MappedItem>(
         return map(newItems[j], () => -1);
       }
     },
-    __DEV__ ? { id: options?.id, errors: true } : undefined,
+    { id: __DEV__ ? options?.id : undefined, fallback: [] },
   );
 }

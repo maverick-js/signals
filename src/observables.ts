@@ -23,8 +23,13 @@ export type ObservableOptions<T> = {
   dirty?: (prev: T, next: T) => boolean;
 };
 
-export type ComputedOptions<T> = ObservableOptions<T> & {
-  errors?: boolean;
+export type ComputedOptions<T, R = never> = ObservableOptions<T> & {
+  /**
+   * It can be fatal if a computed fails by throwing an error during its first run. A `fallback`
+   * can be specified to indicate that this was expected, and that the given value should be
+   * returned in the event it does happen.
+   */
+  fallback?: R;
 };
 
 export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
@@ -160,7 +165,10 @@ export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
  *
  * @see {@link https://github.com/maverick-js/observables#computed}
  */
-export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observable<T> {
+export function computed<T, R = never>(
+  fn: () => T,
+  options?: ComputedOptions<T, R>,
+): Observable<T | R> {
   let currentValue,
     init = false;
 
@@ -197,22 +205,22 @@ export function computed<T>(fn: () => T, options?: ComputedOptions<T>): Observab
           dirtyNode($computed);
         }
       } catch (error) {
-        if (__DEV__ && !__TEST__ && !init && !options?.errors) {
+        if (__DEV__ && !__TEST__ && !init && (!options || !('fallback' in options))) {
           console.error(
             `computed \`${$computed.id}\` threw error during first run, this can be fatal.` +
               '\n\nSolutions:\n\n' +
-              '1. Set the `errors: true` option to silence this error if an `undefined` result is not fatal.' +
-              '\n2. Or, use an `effect` if the return value is not being used.',
+              '1. Set the `fallback` option to silence this error',
+            '\n2. Or, use an `effect` if the return value is not being used.',
             '\n\n',
             error,
           );
         }
 
         handleError($computed, error);
-        return currentValue;
+        return !init ? options?.fallback : currentValue;
       }
 
-      if (__DEV__) init = true;
+      init = true;
       $computed[DIRTY] = false;
     }
 
@@ -249,7 +257,7 @@ export function effect(fn: Effect, options?: { id?: string }): StopEffect {
       const result = fn();
       result && onDispose(result);
     },
-    __DEV__ ? { id: options?.id ?? 'effect', errors: true } : undefined,
+    __DEV__ ? { id: options?.id ?? 'effect', fallback: null } : undefined,
   );
   $effect();
   return () => dispose($effect);
