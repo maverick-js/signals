@@ -1,4 +1,4 @@
-import { computed, observable, effect, tick, onDispose } from '../src';
+import { computed, observable, effect, tick, onDispose, getScope } from '../src';
 
 afterEach(() => tick());
 
@@ -174,39 +174,39 @@ it('should dispose of nested effect', async () => {
   expect(innerEffect).not.toHaveBeenCalledWith(10);
 });
 
-it.skip('should conditionally observe', async () => {
+it('should conditionally observe', async () => {
   const $a = observable(0);
   const $b = observable(0);
   const $cond = observable(true);
-  const spy = vi.fn(() => ($cond() ? $a() : $b()));
+  const $c = computed(() => ($cond() ? $a() : $b()));
+  const $effect = vi.fn();
 
   effect(() => {
-    spy();
+    $c();
+    $effect();
   });
 
-  expect(spy).toHaveBeenCalledTimes(1);
+  expect($effect).toHaveBeenCalledTimes(1);
 
   $b.set(1);
   await tick();
-  expect(spy).toHaveBeenCalledTimes(1);
+  expect($effect).toHaveBeenCalledTimes(1);
 
   $a.set(1);
   await tick();
-  expect(spy).toHaveBeenCalledTimes(2);
+  expect($effect).toHaveBeenCalledTimes(2);
 
   $cond.set(false);
   await tick();
-  expect(spy).toHaveBeenCalledTimes(3);
-
-  spy.mockReset();
+  expect($effect).toHaveBeenCalledTimes(2);
 
   $b.set(2);
   await tick();
-  expect(spy).toHaveBeenCalledTimes(1);
+  expect($effect).toHaveBeenCalledTimes(3);
 
   $a.set(2);
   await tick();
-  expect(spy).toHaveBeenCalledTimes(1);
+  expect($effect).toHaveBeenCalledTimes(3);
 });
 
 it('should dispose of nested conditional effect', async () => {

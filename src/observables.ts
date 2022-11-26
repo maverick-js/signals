@@ -465,8 +465,10 @@ function adopt(node: Node) {
 }
 
 function observe(observable: Node, observer: Node) {
-  (observable[OBSERVED_BY] ??= new Set()).add(observer);
   (observer[OBSERVING] ??= new Set()).add(observable);
+  if (observable[SCOPE] !== observer) {
+    (observable[OBSERVED_BY] ??= new Set()).add(observer);
+  }
 }
 
 function dirtyNode(node: Node) {
