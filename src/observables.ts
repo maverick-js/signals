@@ -197,6 +197,7 @@ export function computed<T, R = never>(
           $computed[DISPOSAL].clear();
         }
 
+        $computed[OBSERVING]?.clear();
         $computed[CONTEXT]?.[ERROR]?.clear();
 
         const nextValue = compute($computed, fn, $computed);
