@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.10.0](https://github.com/maverick-js/observables/compare/v4.9.7...v4.10.0) (2022-11-30)
+
+
+### Features
+
+* new `untrack` export ([a5a3fa5](https://github.com/maverick-js/observables/commit/a5a3fa58e425da7146851a7e43746eb23306f968))
+
+
+### Bug Fixes
+
+* `onDispose` should return dispose function if no scope ([ca04b24](https://github.com/maverick-js/observables/commit/ca04b24001d890f9b69d72e14ac7a00c9ad06348))
+
 ### [4.9.7](https://github.com/maverick-js/observables/compare/v4.9.6...v4.9.7) (2022-11-26)
 
 
