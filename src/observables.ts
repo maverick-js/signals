@@ -374,7 +374,7 @@ export function onError<T = Error>(handler: (error: T) => void): void {
  * @see {@link https://github.com/maverick-js/observables#ondispose}
  */
 export function onDispose(dispose: MaybeDispose): Dispose {
-  if (!dispose || !currentScope) return NOOP;
+  if (!dispose || !currentScope) return dispose || NOOP;
   (currentScope[DISPOSAL] ??= new Set()).add(dispose);
   return () => {
     (dispose as Dispose)();
