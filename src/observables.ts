@@ -110,6 +110,20 @@ export function peek<T>(fn: () => T): T {
 }
 
 /**
+ * Returns the current value inside an observable whilst disabling both scope _and_ observer
+ * tracking. Use `peek` if only observer tracking should be disabled.
+ */
+export function untrack<T>(fn: () => T): T {
+  const prev = currentScope;
+
+  currentScope = undefined;
+  const result = peek(fn);
+  currentScope = prev;
+
+  return result;
+}
+
+/**
  * Wraps the given value into an observable function. The observable function will return the
  * current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
  * value can now be observed when used inside other computations created with `computed` and
