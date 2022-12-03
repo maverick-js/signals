@@ -6,8 +6,6 @@ import kleur from 'kleur';
 
 import * as cellx from 'cellx';
 import * as Sjs from 's-js';
-// @ts-expect-error
-import { default as sinuous } from 'sinuous/dist/observable.js';
 import * as solid from './solid-js-baseline.js';
 import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
@@ -38,13 +36,14 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 async function main() {
   const report = {
     'preact/signals': { fn: runPreact, runs: [] },
-    maverick: { fn: runMaverick, runs: [], avg: [] },
     S: { fn: runS, runs: [] },
     cellx: { fn: runCellx, runs: [] },
     solid: { fn: runSolid, runs: [] },
-    // TODO: running too slow so I need to leave it out for now - maybe something is wrong.
-    // sinuous: { fn: runSinuous, runs: [] },
   };
+
+  if (BATCHED) {
+    report.maverick = { fn: runMaverick, runs: [], avg: [] };
+  }
 
   for (const lib of Object.keys(report)) {
     const current = report[lib];
@@ -266,57 +265,6 @@ function runPreact(layers, done) {
     const solution = [end.a.value, end.b.value, end.c.value, end.d.value];
     const endTime = performance.now() - startTime;
 
-    done(isSolution(layers, solution) ? endTime : -1);
-  });
-}
-
-/**
- * @see {@link https://github.com/luwes/sinuous}
- */
-function runSinuous(layers, done) {
-  sinuous.root((dispose) => {
-    var start = {
-      a: sinuous.observable(1),
-      b: sinuous.observable(2),
-      c: sinuous.observable(3),
-      d: sinuous.observable(4),
-    };
-
-    let layer = start;
-
-    for (var i = layers; i--; ) {
-      layer = (function (m) {
-        var props = {
-          a: sinuous.computed(() => m.b()),
-          b: sinuous.computed(() => m.a() - m.c()),
-          c: sinuous.computed(() => m.b() + m.d()),
-          d: sinuous.computed(() => m.c()),
-        };
-
-        sinuous.subscribe(props.a),
-          sinuous.subscribe(props.b),
-          sinuous.subscribe(props.c),
-          sinuous.subscribe(props.d);
-
-        props.a(), props.b(), props.c(), props.d();
-
-        return props;
-      })(layer);
-    }
-
-    const startTime = performance.now();
-
-    // TODO: not sure how to batch Sinuous
-    const run = BATCHED ? (fn) => fn() : (fn) => fn();
-    run(() => {
-      start.a(4), start.b(3), start.c(2), start.d(1);
-    });
-
-    const end = layer;
-    const solution = [end.a(), end.b(), end.c(), end.d()];
-    const endTime = performance.now() - startTime;
-
-    dispose();
     done(isSolution(layers, solution) ? endTime : -1);
   });
 }
