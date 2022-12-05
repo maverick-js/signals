@@ -17,7 +17,7 @@ export interface ComputedOptions<T, R = never> extends ObservableOptions<T> {
   fallback?: R;
 }
 
-export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
+export type InferObservableValue<T> = T extends Observable<infer R> ? R : T;
 
 export interface ObservableSubject<T> extends Observable<T> {
   set: (value: T) => void;
