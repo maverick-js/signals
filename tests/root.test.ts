@@ -8,7 +8,7 @@ import {
   type Observable,
   type ObservableSubject,
 } from '../src';
-import { OBSERVED_BY, OBSERVING } from '../src/symbols';
+import { OBSERVED_BY, OBSERVERS } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -106,7 +106,7 @@ it('should not observe', () => {
   const $a = observable(0);
   root(() => {
     $a();
-    expect(getScope()![OBSERVING]).toBeUndefined();
+    expect(getScope()![OBSERVERS]).toBeUndefined();
     expect(getScope()![OBSERVED_BY]).toBeUndefined();
   });
 });

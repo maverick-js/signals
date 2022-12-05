@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "incremental": true,
-    "lib": ["es2020"],
+    "lib": ["esnext"],
     "module": "esnext",
     "moduleResolution": "node",
     "noImplicitAny": false,

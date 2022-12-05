@@ -1,11 +1,9 @@
 export const SCOPE = Symbol(__DEV__ ? 'SCOPE' : 0);
 export const OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : 0);
-export const COMPUTED = Symbol(__DEV__ ? 'COMPUTED' : 0);
 export const DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0);
 export const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0);
-export const OBSERVING = Symbol(__DEV__ ? 'OBSERVING' : 0);
-export const OBSERVED_BY = Symbol(__DEV__ ? 'OBSERVED_BY' : 0);
 export const CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0);
+export const OBSERVERS = Symbol(__DEV__ ? 'OBSERVERS' : 0);
 export const DISPOSAL = Symbol(__DEV__ ? 'DISPOSAL' : 0);
 export const CONTEXT = Symbol(__DEV__ ? 'CONTEXT' : 0);
 export const ERROR = Symbol(__DEV__ ? 'ERROR' : 0);

@@ -1,15 +1,13 @@
-import { createScheduler, type Scheduler } from '@maverick-js/scheduler';
+import { createScheduler, type Scheduler } from './scheduler';
 import {
   CHILDREN,
-  COMPUTED,
   CONTEXT,
   DIRTY,
   DISPOSAL,
   DISPOSED,
   ERROR,
   OBSERVABLE,
-  OBSERVED_BY,
-  OBSERVING,
+  OBSERVERS,
   SCOPE,
 } from './symbols';
 import type {
@@ -25,34 +23,31 @@ import type {
   StopEffect,
 } from './types';
 
-const _scheduler = createScheduler(),
-  NOOP = () => {};
-
 interface Node {
   id?: string;
   (): any;
-  [SCOPE]?: Node;
+  [SCOPE]?: Node | null;
   [OBSERVABLE]?: boolean;
-  [COMPUTED]?: boolean;
   [DIRTY]?: boolean;
   [DISPOSED]?: boolean;
-  [OBSERVING]?: Set<Node>;
-  [OBSERVED_BY]?: Set<Node>;
-  [CHILDREN]?: Set<Node>;
-  [CONTEXT]?: ContextRecord;
-  [DISPOSAL]?: Set<Dispose>;
+  [CHILDREN]?: Set<Node> | null;
+  [CONTEXT]?: ContextRecord | null;
+  [DISPOSAL]?: Set<Dispose> | null;
 }
 
-let currentScope: Node | undefined;
-let currentObserver: Node | undefined;
+let scheduler = createScheduler(),
+  currentScope: Node | null = null,
+  currentObserver: Node | null = null,
+  NOOP = () => {};
 
 // These are used only for debugging to determine how a cycle occurred.
-let callStack: Node[] = [];
-let computeStack: Node[] = [];
+let callStack: Node[], computeStack: Node[];
 
 if (__DEV__) {
-  _scheduler.onFlush(() => {
-    callStack = [];
+  callStack = [];
+  computeStack = [];
+  scheduler.onFlush(() => {
+    callStack.length = 0;
   });
 }
 
@@ -62,22 +57,21 @@ if (__DEV__) {
  *
  * @see {@link https://github.com/maverick-js/observables#root}
  */
-export function root<T>(fn: (dispose: Dispose) => T): T {
-  const $root = () => {};
-  $root[SCOPE] = currentScope;
-  return compute($root, () => fn(() => dispose($root)), undefined);
+export function root<T>(init: (dispose: Dispose) => T): T {
+  const $root = { [SCOPE]: currentScope, [CHILDREN]: null } as unknown as Node;
+  return compute($root, () => init(() => dispose($root)), null);
 }
 
 /**
- * Returns the current value stored inside an observable without triggering a dependency.
+ * Returns the current value stored inside a compute function without triggering a dependency.
  *
  * @see {@link https://github.com/maverick-js/observables#peek}
  */
-export function peek<T>(fn: () => T): T {
+export function peek<T>(compute: () => T): T {
   const prev = currentObserver;
 
-  currentObserver = undefined;
-  const result = fn();
+  currentObserver = null;
+  const result = compute();
   currentObserver = prev;
 
   return result;
@@ -87,11 +81,11 @@ export function peek<T>(fn: () => T): T {
  * Returns the current value inside an observable whilst disabling both scope _and_ observer
  * tracking. Use `peek` if only observer tracking should be disabled.
  */
-export function untrack<T>(fn: () => T): T {
+export function untrack<T>(compute: () => T): T {
   const prev = currentScope;
 
-  currentScope = undefined;
-  const result = peek(fn);
+  currentScope = null;
+  const result = peek(compute);
   currentScope = prev;
 
   return result;
@@ -109,20 +103,24 @@ export function observable<T>(
   initialValue: T,
   options?: ObservableOptions<T>,
 ): ObservableSubject<T> {
-  let currentValue = initialValue;
+  let currentValue = initialValue,
+    isDirty = options?.dirty ?? notEqual;
 
-  const isDirty = options?.dirty ?? notEqual;
-
-  const $observable: ObservableSubject<T> = () => {
+  const $observable: ObservableSubject<T> & Node = () => {
     if (__DEV__) callStack.push($observable);
-    if (currentObserver) observe($observable, currentObserver);
+
+    if (currentObserver) {
+      if (!$observable[OBSERVERS]) $observable[OBSERVERS] = new Set();
+      $observable[OBSERVERS].add(currentObserver);
+    }
+
     return currentValue;
   };
 
   $observable.set = (nextValue: T) => {
     if (!$observable[DISPOSED] && isDirty(currentValue, nextValue)) {
       currentValue = nextValue!;
-      dirtyNode($observable);
+      if ($observable[OBSERVERS]?.size) notify($observable[OBSERVERS]);
     }
   };
 
@@ -132,8 +130,12 @@ export function observable<T>(
 
   if (__DEV__) $observable.id = options?.id ?? 'observable';
 
+  $observable[SCOPE] = currentScope;
   $observable[OBSERVABLE] = true;
-  adopt($observable);
+  $observable[OBSERVERS] = null;
+
+  if (currentScope) adopt($observable);
+
   return $observable;
 }
 
@@ -158,11 +160,10 @@ export function computed<T, R = never>(
   options?: ComputedOptions<T, R>,
 ): Observable<T | R> {
   let currentValue,
-    init = false;
+    init = false,
+    isDirty = options?.dirty ?? notEqual;
 
-  const isDirty = options?.dirty ?? notEqual;
-
-  const $computed: Observable<T> = () => {
+  const $computed: Observable<T> & Node = () => {
     if (__DEV__ && computeStack.includes($computed)) {
       const calls = callStack.map((c) => c.id ?? '?').join(' --> ');
       throw Error(`cyclic dependency detected\n\n${calls}\n`);
@@ -171,27 +172,32 @@ export function computed<T, R = never>(
     if (__DEV__) callStack.push($computed);
 
     // Computed is observing another computed.
-    if (currentObserver) observe($computed, currentObserver);
+    if (currentObserver) {
+      if (!$computed[OBSERVERS]) $computed[OBSERVERS] = new Set();
+      $computed[OBSERVERS].add(currentObserver);
+    }
 
     if ($computed[DIRTY] && !$computed[DISPOSED]) {
       try {
-        if ($computed[CHILDREN]) {
-          for (const child of $computed[CHILDREN]) dispose(child);
-          $computed[CHILDREN].clear();
+        if ($computed[CHILDREN]?.size) {
+          const children = $computed[CHILDREN];
+          for (const child of children) dispose(child);
+          children.clear();
         }
 
-        if ($computed[DISPOSAL]) {
+        if ($computed[DISPOSAL]?.size) {
           for (const dispose of $computed[DISPOSAL]) dispose();
           $computed[DISPOSAL].clear();
         }
 
-        $computed[OBSERVING]?.clear();
-        $computed[CONTEXT]?.[ERROR]?.clear();
+        if (($computed[CONTEXT]?.[ERROR] as Set<any>)?.size) {
+          ($computed[CONTEXT]![ERROR] as Set<any>).clear();
+        }
 
         const nextValue = compute($computed, fn, $computed);
         if (isDirty(currentValue, nextValue)) {
           currentValue = nextValue;
-          dirtyNode($computed);
+          if ($computed[OBSERVERS]?.size) notify($computed[OBSERVERS]);
         }
       } catch (error) {
         if (__DEV__ && !__TEST__ && !init && (!options || !('fallback' in options))) {
@@ -218,12 +224,15 @@ export function computed<T, R = never>(
 
   if (__DEV__) $computed.id = options?.id ?? `computed`;
 
-  // Starts off dirty because it hasn't run yet.
-  $computed[DIRTY] = true;
+  $computed[SCOPE] = currentScope;
   $computed[OBSERVABLE] = true;
-  $computed[COMPUTED] = true;
+  $computed[DIRTY] = true;
+  $computed[CHILDREN] = null;
+  $computed[OBSERVERS] = null;
+  $computed[CONTEXT] = null;
+  $computed[DISPOSAL] = null;
 
-  adopt($computed);
+  if (currentScope) adopt($computed);
   return $computed;
 }
 
@@ -231,8 +240,11 @@ export function computed<T, R = never>(
  * Whether the given function is actively observing any computations.
  */
 export function isObserving(fn: () => void): boolean {
-  return [fn, ...(fn?.[CHILDREN] ?? [])].some((node) => node[OBSERVING]?.size);
+  // return [fn, ...(fn?.[CHILDREN] ?? [])].some((node) => node[OBSERVERS]?.size);
+  return false;
 }
+
+let effectResult: any;
 
 /**
  * Invokes the given function each time any of the observables that are read inside are updated
@@ -243,11 +255,12 @@ export function isObserving(fn: () => void): boolean {
 export function effect(fn: Effect, options?: { id?: string }): StopEffect {
   const $effect = computed(
     () => {
-      const result = fn();
-      result && onDispose(result);
+      effectResult = fn();
+      effectResult && currentScope && onDispose(effectResult);
     },
     __DEV__ ? { id: options?.id ?? 'effect', fallback: null } : undefined,
   );
+
   $effect();
   return () => dispose($effect);
 }
@@ -272,8 +285,8 @@ export function readonly<T>(observable: Observable<T>): Observable<T> {
  * @see {@link https://github.com/maverick-js/observables#tick}
  */
 export function tick() {
-  _scheduler.flush();
-  return _scheduler.tick;
+  scheduler.flush();
+  return scheduler.tick;
 }
 
 /**
@@ -282,7 +295,7 @@ export function tick() {
  * @see {@link https://github.com/maverick-js/observables#issubject}
  */
 export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
-  return isObservable(fn) && !!(fn as ObservableSubject<T>).set;
+  return isObservable(fn) && 'set' in fn;
 }
 
 /**
@@ -301,7 +314,7 @@ export function getScope(fn?: Observable<unknown>): Observable<unknown> | undefi
  * @see {@link https://github.com/maverick-js/observables#getscheduler}
  */
 export function getScheduler(): Scheduler {
-  return _scheduler;
+  return scheduler;
 }
 
 /**
@@ -313,7 +326,9 @@ export function getScheduler(): Scheduler {
  * because it doesn't require creating and tracking a `computed` observable.
  */
 export function scope<T>(fn: () => T): () => T | undefined {
-  adopt(fn);
+  fn[SCOPE] = currentScope;
+  if (currentScope) adopt(fn);
+
   return () => {
     try {
       return compute(fn[SCOPE], fn, currentObserver);
@@ -363,10 +378,15 @@ export function onError<T = Error>(handler: (error: T) => void): void {
  */
 export function onDispose(dispose: MaybeDispose): Dispose {
   if (!dispose || !currentScope) return dispose || NOOP;
-  (currentScope[DISPOSAL] ??= new Set()).add(dispose);
+
+  const scope = currentScope;
+
+  if (!scope[DISPOSAL]) scope[DISPOSAL] = new Set();
+  scope[DISPOSAL].add(dispose);
+
   return () => {
     (dispose as Dispose)();
-    currentScope![DISPOSAL]?.delete(dispose as Dispose);
+    scope[DISPOSAL]?.delete(dispose as Dispose);
   };
 }
 
@@ -377,51 +397,33 @@ export function onDispose(dispose: MaybeDispose): Dispose {
  * @see {@link https://github.com/maverick-js/observables#dispose}
  */
 export function dispose(fn: () => void) {
-  if (fn[DISPOSED]) return;
-
   if (fn[CHILDREN]) {
-    for (const node of fn[CHILDREN]) dispose(node);
-    fn[CHILDREN].clear();
-    fn[CHILDREN] = undefined;
-  }
-
-  if (fn[OBSERVING]) {
-    for (const node of fn[OBSERVING]) node[OBSERVED_BY]?.delete(fn);
-    fn[OBSERVING].clear();
-    fn[OBSERVING] = undefined;
-  }
-
-  if (fn[OBSERVED_BY]) {
-    for (const node of fn[OBSERVED_BY]) node[OBSERVING]?.delete(fn);
-    fn[OBSERVED_BY].clear();
-    fn[OBSERVED_BY] = undefined;
-  }
-
-  if (fn[SCOPE]) {
-    fn[SCOPE][CHILDREN]?.delete(fn);
-    fn[SCOPE] = undefined;
+    const children = fn[CHILDREN];
+    // set to null first so children don't attempt removing themselves.
+    fn[CHILDREN] = null;
+    for (const child of children) dispose(child);
   }
 
   if (fn[DISPOSAL]) {
     for (const dispose of fn[DISPOSAL]) dispose();
-    fn[DISPOSAL].clear();
-    fn[DISPOSAL] = undefined;
+    fn[DISPOSAL] = null;
   }
 
-  if (fn[CONTEXT]) {
-    fn[CONTEXT] = undefined;
+  if (fn[SCOPE]) {
+    fn[SCOPE][CHILDREN]?.delete(fn);
+    fn[SCOPE] = null;
   }
 
+  fn[OBSERVERS] = null;
+  fn[CONTEXT] = null;
   fn[DISPOSED] = true;
 }
 
-function compute<T>(
-  scope: (() => void) | undefined,
-  node: () => T,
-  observer: (() => void) | undefined,
-): T {
-  const prevScope = currentScope;
-  const prevObserver = currentObserver;
+let prevScope: Node | null, prevObserver: Node | null;
+
+function compute<T>(scope: Node, node: () => T, observer: Node | null): T {
+  prevScope = currentScope;
+  prevObserver = currentObserver;
 
   currentScope = scope;
   currentObserver = observer;
@@ -432,12 +434,14 @@ function compute<T>(
   } finally {
     currentScope = prevScope;
     currentObserver = prevObserver;
-    if (__DEV__ && scope) computeStack.pop();
+    prevScope = null;
+    prevObserver = null;
+    if (__DEV__) computeStack.pop();
   }
 }
 
-function lookup(node: Node | undefined, key: string | symbol): any {
-  let current = node,
+function lookup(node: Node | null, key: string | symbol): any {
+  let current: Node | null | undefined = node,
     value;
 
   while (current) {
@@ -448,38 +452,33 @@ function lookup(node: Node | undefined, key: string | symbol): any {
 }
 
 function adopt(node: Node) {
-  if (!currentScope) return;
-  node[SCOPE] = currentScope;
-  (currentScope[CHILDREN] ??= new Set()).add(node);
+  if (!currentScope![CHILDREN]) currentScope![CHILDREN] = new Set();
+  currentScope![CHILDREN]!.add(node);
 }
 
-function observe(observable: Node, observer: Node) {
-  (observer[OBSERVING] ??= new Set()).add(observable);
-  if (observable[SCOPE] !== observer) {
-    (observable[OBSERVED_BY] ??= new Set()).add(observer);
-  }
-}
+function notify(observers: Set<Node>) {
+  for (const observer of observers) {
+    if (observer[DISPOSED]) {
+      observers.delete(observer);
+      continue;
+    }
 
-function dirtyNode(node: Node) {
-  if (!node[OBSERVED_BY]) return;
-  for (const observer of node[OBSERVED_BY]) {
-    if (!observer[COMPUTED] || observer === currentObserver) continue;
     observer[DIRTY] = true;
-    _scheduler.enqueue(observer);
+    scheduler.enqueue(observer);
   }
 }
 
-function notEqual(a: unknown, b: unknown) {
-  return a !== b;
-}
-
-function handleError(node: () => void, error: unknown) {
+function handleError(node: Node | null, error: unknown) {
   const handlers = lookup(node, ERROR);
   if (!handlers) throw error;
   try {
     const coercedError = error instanceof Error ? error : Error(JSON.stringify(error));
     for (const handler of handlers) handler(coercedError);
   } catch (error) {
-    handleError(node[SCOPE], error);
+    handleError(node![SCOPE]!, error);
   }
+}
+
+function notEqual(a: unknown, b: unknown) {
+  return a !== b;
 }

@@ -34,16 +34,12 @@ const SOLUTIONS = {
 const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][i] === _);
 
 async function main() {
-  const report = {
-    'preact/signals': { fn: runPreact, runs: [] },
-    S: { fn: runS, runs: [] },
-    cellx: { fn: runCellx, runs: [] },
-    solid: { fn: runSolid, runs: [] },
-  };
-
-  if (BATCHED) {
-    report.maverick = { fn: runMaverick, runs: [], avg: [] };
-  }
+  const report = {};
+  report['preact/signals'] = { fn: runPreact, runs: [] };
+  if (BATCHED) report.maverick = { fn: runMaverick, runs: [], avg: [] };
+  report.S = { fn: runS, runs: [] };
+  report.cellx = { fn: runCellx, runs: [] };
+  report.solid = { fn: runSolid, runs: [] };
 
   for (const lib of Object.keys(report)) {
     const current = report[lib];

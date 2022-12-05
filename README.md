@@ -632,13 +632,6 @@ found [here](./bench/layers.js).
 Each column represents how deep computations were layered. The average time taken to update the
 computation out of a 100 runs is used for each library.
 
-> ❗ Do note that only Maverick and Solid JS are feature complete below which includes nested
-> effects, arbritrary node disposal, context, and error handling.
-
-> ❗ Nearly all computations in a real world app are going to be less than 10 layers deep, so
-> only the first column really matters. What this benchmark is really showing is how notification
-> propagation scales with computation depth.
-
 #### Sync
 
 <img src="./bench/layers.png" alt="Layers sync benchmark table" width="350px" />
@@ -646,6 +639,38 @@ computation out of a 100 runs is used for each library.
 #### Batched
 
 <img src="./bench/layers-batched.png" alt="Layers batched benchmark table" width="350px" />
+
+#### Notes
+
+- Only Maverick and Solid JS are feature complete below which includes nested effects, arbritrary
+  node disposal, context, and error handling.
+- Nearly all computations in a real world app are going to be less than 10 layers deep, so only the
+  first column really matters. What this benchmark is really showing is how notification propagation
+  scales with computation depth.
+
+### Reactively
+
+This benchmark was taken from [`reactively`](https://github.com/modderme123/reactively). It sets
+up various computation graphs with a set number of sources (e.g., `1000x5` is 1000 computations with
+a tree depth of 5). The benchmark measures how long it takes for changes to be applied after static
+or dynamic updates are made to the graph (i.e., pick a node and update its value).
+
+<img src="./bench/reactively.png" alt="Reactively benchmark charts" />
+
+#### Notes
+
+- This is not an apples to apples comparison. Reactively and Preact Signals are not feature
+  complete as they currently don't support scope tracking, nested effects, context, error handling,
+  and arbritray subtree disposal. This means their overall tracking logic is simplified. You can
+  safely apply a ~10-15% penalty to their scores (do note we haven't applied it here).
+- This assumes Solid JS is in batch-only mode which is not realistic as a real world app won't
+  have batch applied everywhere.
+- Preact Signals is reporting unusually slow numbers for the Wide Dense and Large Web App charts
+  which may be the result of a bug or something to do with how they've modelled the computation
+  graph. Issue is being tracked [here](https://github.com/preactjs/signals/issues/274).
+- Only Maverick uses a `Set` to track observers/dependencies. This means multiple observer calls in
+  other libraries will result in an edge being created every time a signal is called. This is one of
+  the reasons why Maverick does consistenly well across small and large data sets.
 
 ## Inspiration
 

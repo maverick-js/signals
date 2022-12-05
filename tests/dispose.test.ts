@@ -1,5 +1,5 @@
-import { computed, observable, tick, dispose, effect, root, getScope } from '../src';
-import { CHILDREN, OBSERVED_BY } from '../src/symbols';
+import { computed, observable, tick, dispose, root, getScope } from '../src';
+import { CHILDREN } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -32,15 +32,4 @@ it('shoud remove observable from parent children set', () => {
     dispose($a);
     expect(getScope()![CHILDREN].has($a)).toBeFalsy();
   });
-});
-
-it('should stop observing effect', async () => {
-  const $a = observable(0);
-
-  const stop = effect(() => {
-    $a();
-  });
-
-  stop();
-  expect($a[OBSERVED_BY].size).toBe(0);
 });

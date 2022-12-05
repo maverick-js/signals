@@ -2,7 +2,7 @@ import { effect, observable, peek, root, getScope } from '../src';
 
 it('should be orphan', () => {
   const $a = observable(0);
-  expect(getScope($a)).toBeUndefined();
+  expect(getScope($a)).toBeNull();
 });
 
 it('should return parent scope', () => {
@@ -44,7 +44,7 @@ it('should remove parent scope on dispose', () => {
   root((dispose) => {
     const $a = observable(0);
     dispose();
-    expect(getScope($a)).toBeUndefined();
+    expect(getScope($a)).toBeNull();
   });
 });
 

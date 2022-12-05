@@ -5,9 +5,9 @@ it('should not track scope', () => {
   root(() => {
     untrack(() => {
       const $a = observable(0);
-      expect($a[SCOPE]).toBeUndefined();
+      expect($a[SCOPE]).toBeNull();
     });
 
-    expect(getScope()![CHILDREN]).toBeUndefined();
+    expect(getScope()![CHILDREN]).toBeNull();
   });
 });

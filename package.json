@@ -19,14 +19,14 @@
     "index.d.ts"
   ],
   "scripts": {
-    "bundle": "rimraf dist && node .scripts/bundle.js",
+    "build": "rimraf dist && node .scripts/build.js",
     "types": "tsc -p tsconfig-build.json && api-extractor run -c types.json && rimraf dist/*.d.ts",
-    "test": "vitest --run",
     "format": "prettier src --write --loglevel warn",
-    "test:watch": "vitest --watch",
-    "validate": "pnpm test && pnpm bundle && pnpm types",
+    "test": "node --expose-gc ./vitest.js",
+    "test:watch": "node --expose-gc ./vitest.js --watch",
+    "validate": "pnpm test && pnpm build && pnpm types",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish",
-    "size": "pnpm bundle && export-size ."
+    "size": "pnpm build && export-size ."
   },
   "contributors": [
     "Rahim Alwer <rahim.alwer@gmail.com>"
@@ -37,9 +37,6 @@
   },
   "bugs": {
     "url": "https://github.com/maverick-js/observables/issues"
-  },
-  "dependencies": {
-    "@maverick-js/scheduler": "^2.1.0"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.25.3",
