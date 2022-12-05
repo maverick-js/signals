@@ -28,7 +28,7 @@ import type {
 const _scheduler = createScheduler(),
   NOOP = () => {};
 
-type Node = {
+interface Node {
   id?: string;
   (): any;
   [SCOPE]?: Node;
@@ -41,7 +41,7 @@ type Node = {
   [CHILDREN]?: Set<Node>;
   [CONTEXT]?: ContextRecord;
   [DISPOSAL]?: Set<Dispose>;
-};
+}
 
 let currentScope: Node | undefined;
 let currentObserver: Node | undefined;

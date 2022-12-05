@@ -1,28 +1,28 @@
-export type Observable<T> = {
+export interface Observable<T> {
   id?: string;
   (): T;
-};
+}
 
-export type ObservableOptions<T> = {
+export interface ObservableOptions<T> {
   id?: string;
   dirty?: (prev: T, next: T) => boolean;
-};
+}
 
-export type ComputedOptions<T, R = never> = ObservableOptions<T> & {
+export interface ComputedOptions<T, R = never> extends ObservableOptions<T> {
   /**
    * It can be fatal if a computed fails by throwing an error during its first run. A `fallback`
    * can be specified to indicate that this was expected, and that the given value should be
    * returned in the event it does happen.
    */
   fallback?: R;
-};
+}
 
 export type ObservableValue<T> = T extends Observable<infer R> ? R : T;
 
-export type ObservableSubject<T> = Observable<T> & {
+export interface ObservableSubject<T> extends Observable<T> {
   set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
-};
+}
 
 export type Dispose = () => void;
 export type Effect = () => MaybeStopEffect;
