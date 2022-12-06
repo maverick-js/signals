@@ -19,7 +19,7 @@ export interface ComputedOptions<T, R = never> extends ObservableOptions<T> {
 
 export type InferObservableValue<T> = T extends Observable<infer R> ? R : T;
 
-export interface ObservableSubject<T> extends Observable<T> {
+export interface Subject<T> extends Observable<T> {
   set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
 }

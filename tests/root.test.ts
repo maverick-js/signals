@@ -6,7 +6,7 @@ import {
   tick,
   getScope,
   type Observable,
-  type ObservableSubject,
+  type Subject,
 } from '../src';
 import { OBSERVED_BY, OBSERVERS } from '../src/symbols';
 
@@ -15,7 +15,7 @@ afterEach(() => tick());
 it('should dispose of inner computations', async () => {
   const computeB = vi.fn();
 
-  let $a: ObservableSubject<number>;
+  let $a: Subject<number>;
   let $b: Observable<number>;
 
   root((dispose) => {
@@ -76,7 +76,7 @@ it('should create new tracking scope', async () => {
 });
 
 it('should not be reactive', async () => {
-  let $a: ObservableSubject<number>;
+  let $a: Subject<number>;
 
   const rootCall = vi.fn();
 

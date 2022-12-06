@@ -599,6 +599,7 @@ import {
   isSubject,
   type Effect,
   type Observable,
+  type Subject,
   type MaybeObservable,
 } from '@maverick-js/observables';
 
@@ -617,7 +618,7 @@ if (isObservable($b)) {
 }
 
 if (isSubject($b)) {
-  $b.set(10); // ObservableSubject<number>
+  $b.set(10); // Subject<number>
 }
 ```
 

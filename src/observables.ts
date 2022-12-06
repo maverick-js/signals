@@ -19,7 +19,7 @@ import type {
   MaybeObservable,
   Observable,
   ObservableOptions,
-  ObservableSubject,
+  Subject,
   StopEffect,
 } from './types';
 
@@ -99,14 +99,11 @@ export function untrack<T>(compute: () => T): T {
  *
  * @see {@link https://github.com/maverick-js/observables#observable}
  */
-export function observable<T>(
-  initialValue: T,
-  options?: ObservableOptions<T>,
-): ObservableSubject<T> {
+export function observable<T>(initialValue: T, options?: ObservableOptions<T>): Subject<T> {
   let currentValue = initialValue,
     isDirty = options?.dirty ?? notEqual;
 
-  const $observable: ObservableSubject<T> & Node = () => {
+  const $observable: Subject<T> & Node = () => {
     if (__DEV__) callStack.push($observable);
 
     if (currentObserver) {
@@ -286,7 +283,7 @@ export function tick() {
  *
  * @see {@link https://github.com/maverick-js/observables#issubject}
  */
-export function isSubject<T>(fn: MaybeObservable<T>): fn is ObservableSubject<T> {
+export function isSubject<T>(fn: MaybeObservable<T>): fn is Subject<T> {
   return isObservable(fn) && 'set' in fn;
 }
 
