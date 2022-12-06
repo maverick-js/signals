@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0](https://github.com/maverick-js/signals/compare/v4.10.0...v5.0.0) (2022-12-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* most packages have converged around the name
+"signals." We'll follow suit so the same terminology can be
+used when talking about them all. It also ensures new users
+are familiar with what this package is about just from the name.
+
+### Features
+
+* `@maverick-js/observables` -> `@maverick-js/signals` ([c3b7b7d](https://github.com/maverick-js/signals/commit/c3b7b7dd08101fd1ba56f9affb4a00a94585bf63))
+* 54% perf boost and added reactively bench ([6576447](https://github.com/maverick-js/signals/commit/65764479bd92a846cfdc84dcff3d8b3eb269dad2))
+
+
+### Bug Fixes
+
+* `ObservabeleValue` -> `InferObservableValue` ([530ed2e](https://github.com/maverick-js/signals/commit/530ed2e59f742fe49f058296f47b0b3f51be3c78))
+* deprecate and remove `isObserving` ([3c9e46f](https://github.com/maverick-js/signals/commit/3c9e46f3c70af5d899cf6e7a8d5c060a7b412c0a))
+* rename type `ObservableSubject` -> `Subject` ([32e4a24](https://github.com/maverick-js/signals/commit/32e4a24dd00b376ab108ba872e562f67e135689d))
+* use ts interface over type alias where possible ([1464490](https://github.com/maverick-js/signals/commit/1464490d130010e939cb9182fbad9b7d4462659b))
+
 ## [4.10.0](https://github.com/maverick-js/observables/compare/v4.9.7...v4.10.0) (2022-11-30)
 
 
