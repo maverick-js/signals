@@ -236,14 +236,6 @@ export function computed<T, R = never>(
   return $computed;
 }
 
-/**
- * Whether the given function is actively observing any computations.
- */
-export function isObserving(fn: () => void): boolean {
-  // return [fn, ...(fn?.[CHILDREN] ?? [])].some((node) => node[OBSERVERS]?.size);
-  return false;
-}
-
 let effectResult: any;
 
 /**
