@@ -103,15 +103,15 @@ async function start(runner, layers) {
 }
 
 /**
- * @see {@link https://github.com/maverick-js/observables}
+ * @see {@link https://github.com/maverick-js/signals}
  */
 function runMaverick(layers, done) {
   maverick.root(async (dispose) => {
     const start = {
-      a: maverick.observable(1),
-      b: maverick.observable(2),
-      c: maverick.observable(3),
-      d: maverick.observable(4),
+      a: maverick.signal(1),
+      b: maverick.signal(2),
+      c: maverick.signal(3),
+      d: maverick.signal(4),
     };
 
     let layer = start;

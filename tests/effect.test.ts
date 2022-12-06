@@ -1,12 +1,12 @@
-import { computed, observable, effect, tick, onDispose, getScope } from '../src';
+import { computed, signal, effect, tick, onDispose, getScope } from '../src';
 
 afterEach(() => tick());
 
 it('should run effect on change', async () => {
   const effectA = vi.fn();
 
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => $a() + $b());
   const $d = computed(() => $c());
 
@@ -32,8 +32,8 @@ it('should run effect on change', async () => {
 });
 
 it('should handle nested effect', async () => {
-  const $a = observable(0);
-  const $b = observable(0);
+  const $a = signal(0);
+  const $b = signal(0);
 
   const outerEffect = vi.fn();
   const innerEffect = vi.fn();
@@ -91,7 +91,7 @@ it('should handle nested effect', async () => {
 it('should stop effect', async () => {
   const effectA = vi.fn();
 
-  const $a = observable(10);
+  const $a = signal(10);
 
   const stop = effect(() => {
     effectA();
@@ -108,7 +108,7 @@ it('should stop effect', async () => {
 it('should call returned dispose function', async () => {
   const dispose = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
 
   effect(() => {
     $a();
@@ -137,7 +137,7 @@ it('should run all disposals before each new run', async () => {
     onDispose(disposeB);
   }
 
-  const $a = observable(0);
+  const $a = signal(0);
   effect(() => {
     effectA();
     fnA(), fnB(), $a();
@@ -157,7 +157,7 @@ it('should run all disposals before each new run', async () => {
 });
 
 it('should dispose of nested effect', async () => {
-  const $a = observable(0);
+  const $a = signal(0);
   const innerEffect = vi.fn();
 
   const stop = effect(() => {
@@ -175,9 +175,9 @@ it('should dispose of nested effect', async () => {
 });
 
 it('should conditionally observe', async () => {
-  const $a = observable(0);
-  const $b = observable(0);
-  const $cond = observable(true);
+  const $a = signal(0);
+  const $b = signal(0);
+  const $cond = signal(true);
   const $c = computed(() => ($cond() ? $a() : $b()));
   const $effect = vi.fn();
 
@@ -210,7 +210,7 @@ it('should conditionally observe', async () => {
 });
 
 it('should dispose of nested conditional effect', async () => {
-  const $cond = observable(true);
+  const $cond = signal(true);
 
   const disposeA = vi.fn();
   const disposeB = vi.fn();
@@ -239,7 +239,7 @@ it('should handle looped effects', async () => {
   let values: number[] = [],
     loop = 2;
 
-  const $value = observable(0);
+  const $value = signal(0);
 
   effect(() => {
     values.push($value());

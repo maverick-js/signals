@@ -1,4 +1,4 @@
-import { getContext, root, setContext, scope, onError, observable, effect, tick } from '../src';
+import { getContext, root, setContext, scope, onError, signal, effect, tick } from '../src';
 
 it('should scope function to current scope', () => {
   let callback!: () => void;
@@ -44,7 +44,7 @@ it('should still run effect', async () => {
   let callback!: () => void,
     innerEffect = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
 
   root(() => {
     callback = scope(() => {

@@ -1,4 +1,4 @@
-import { computed, effect, getScope, root, observable, tick } from '../src';
+import { computed, effect, getScope, root, signal, tick } from '../src';
 
 function gc() {
   return new Promise((resolve) =>
@@ -11,7 +11,7 @@ function gc() {
 }
 
 it('should gc computed if there are no observers', async () => {
-  const $a = observable(0),
+  const $a = signal(0),
     ref = new WeakRef(computed(() => $a()));
 
   await gc();
@@ -19,7 +19,7 @@ it('should gc computed if there are no observers', async () => {
 });
 
 it('should _not_ gc computed if there are observers', async () => {
-  let $a = observable(0);
+  let $a = signal(0);
 
   const ref = new WeakRef(
     computed(() => {
@@ -34,7 +34,7 @@ it('should _not_ gc computed if there are observers', async () => {
 });
 
 it('should gc root if disposed', async () => {
-  let $a = observable(0),
+  let $a = signal(0),
     ref!: WeakRef<any>;
 
   const dispose = root((dispose) => {
@@ -56,7 +56,7 @@ it('should gc root if disposed', async () => {
 });
 
 it('should gc effect lazily', async () => {
-  let $a = observable(0),
+  let $a = signal(0),
     ref!: WeakRef<any>;
 
   const dispose = root((dispose) => {

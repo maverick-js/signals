@@ -6,20 +6,20 @@ import {
   DISPOSAL,
   DISPOSED,
   ERROR,
-  OBSERVABLE,
+  SIGNAL,
   OBSERVERS,
   SCOPE,
 } from './symbols';
 import type {
-  ComputedOptions,
+  ComputedSignalOptions,
   ContextRecord,
   Dispose,
   Effect,
   MaybeDispose,
-  MaybeObservable,
-  Observable,
-  ObservableOptions,
-  Subject,
+  MaybeSignal,
+  ReadSignal,
+  SignalOptions,
+  WriteSignal,
   StopEffect,
 } from './types';
 
@@ -27,7 +27,7 @@ interface Node {
   id?: string;
   (): any;
   [SCOPE]?: Node | null;
-  [OBSERVABLE]?: boolean;
+  [SIGNAL]?: boolean;
   [DIRTY]?: boolean;
   [DISPOSED]?: boolean;
   [CHILDREN]?: Set<Node> | null;
@@ -55,7 +55,7 @@ if (__DEV__) {
  * Creates a computation root which is given a `dispose()` function to dispose of all inner
  * computations.
  *
- * @see {@link https://github.com/maverick-js/observables#root}
+ * @see {@link https://github.com/maverick-js/signals#root}
  */
 export function root<T>(init: (dispose: Dispose) => T): T {
   const $root = { [SCOPE]: currentScope, [CHILDREN]: null } as unknown as Node;
@@ -63,9 +63,10 @@ export function root<T>(init: (dispose: Dispose) => T): T {
 }
 
 /**
- * Returns the current value stored inside a compute function without triggering a dependency.
+ * Returns the current value stored inside the given compute function without triggering any
+ * dependencies. Use `untrack` if you want to also disable scope tracking.
  *
- * @see {@link https://github.com/maverick-js/observables#peek}
+ * @see {@link https://github.com/maverick-js/signals#peek}
  */
 export function peek<T>(compute: () => T): T {
   const prev = currentObserver;
@@ -78,8 +79,10 @@ export function peek<T>(compute: () => T): T {
 }
 
 /**
- * Returns the current value inside an observable whilst disabling both scope _and_ observer
+ * Returns the current value inside a signal whilst disabling both scope _and_ observer
  * tracking. Use `peek` if only observer tracking should be disabled.
+ *
+ * @see {@link https://github.com/maverick-js/signals#untrack}
  */
 export function untrack<T>(compute: () => T): T {
   const prev = currentScope;
@@ -92,75 +95,74 @@ export function untrack<T>(compute: () => T): T {
 }
 
 /**
- * Wraps the given value into an observable function. The observable function will return the
- * current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
- * value can now be observed when used inside other computations created with `computed` and
- * `effect`.
+ * Wraps the given value into a signal. The signal will return the current value when invoked
+ * `fn()`, and provide a simple write API via `set()` and `next()`. The value can now be observed
+ * when used inside other computations created with `computed` and `effect`.
  *
- * @see {@link https://github.com/maverick-js/observables#observable}
+ * @see {@link https://github.com/maverick-js/signals#signal}
  */
-export function observable<T>(initialValue: T, options?: ObservableOptions<T>): Subject<T> {
+export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSignal<T> {
   let currentValue = initialValue,
     isDirty = options?.dirty ?? notEqual;
 
-  const $observable: Subject<T> & Node = () => {
-    if (__DEV__) callStack.push($observable);
+  const $signal: WriteSignal<T> & Node = () => {
+    if (__DEV__) callStack.push($signal);
 
     if (currentObserver) {
-      if (!$observable[OBSERVERS]) $observable[OBSERVERS] = new Set();
-      $observable[OBSERVERS].add(currentObserver);
+      if (!$signal[OBSERVERS]) $signal[OBSERVERS] = new Set();
+      $signal[OBSERVERS].add(currentObserver);
     }
 
     return currentValue;
   };
 
-  $observable.set = (nextValue: T) => {
-    if (!$observable[DISPOSED] && isDirty(currentValue, nextValue)) {
+  $signal.set = (nextValue: T) => {
+    if (!$signal[DISPOSED] && isDirty(currentValue, nextValue)) {
       currentValue = nextValue!;
-      if ($observable[OBSERVERS]?.size) notify($observable[OBSERVERS]);
+      if ($signal[OBSERVERS]?.size) notify($signal[OBSERVERS]);
     }
   };
 
-  $observable.next = (next: (prevValue: T) => T) => {
-    $observable.set(next(currentValue));
+  $signal.next = (next: (prevValue: T) => T) => {
+    $signal.set(next(currentValue));
   };
 
-  if (__DEV__) $observable.id = options?.id ?? 'observable';
+  if (__DEV__) $signal.id = options?.id ?? 'signal';
 
-  $observable[SCOPE] = currentScope;
-  $observable[OBSERVABLE] = true;
-  $observable[OBSERVERS] = null;
+  $signal[SCOPE] = currentScope;
+  $signal[SIGNAL] = true;
+  $signal[OBSERVERS] = null;
 
-  if (currentScope) adopt($observable);
+  if (currentScope) adopt($signal);
 
-  return $observable;
+  return $signal;
 }
 
 /**
- * Whether the given value is an observable (readonly).
+ * Whether the given value is a readonly signal.
  *
- * @see {@link https://github.com/maverick-js/observables#isobservable}
+ * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
-export function isObservable<T>(fn: MaybeObservable<T>): fn is Observable<T> {
-  return !!fn?.[OBSERVABLE];
+export function isReadSignal<T>(fn: MaybeSignal<T>): fn is ReadSignal<T> {
+  return !!fn?.[SIGNAL];
 }
 
 /**
- * Creates a new observable whose value is computed and returned by the given function. The given
+ * Creates a new signal whose value is computed and returned by the given function. The given
  * compute function is _only_ re-run when one of it's dependencies are updated. Dependencies are
- * are all observables that are read during execution.
+ * are all signals that are read during execution.
  *
- * @see {@link https://github.com/maverick-js/observables#computed}
+ * @see {@link https://github.com/maverick-js/signals#computed}
  */
 export function computed<T, R = never>(
   fn: () => T,
-  options?: ComputedOptions<T, R>,
-): Observable<T | R> {
+  options?: ComputedSignalOptions<T, R>,
+): ReadSignal<T | R> {
   let currentValue,
     init = false,
     isDirty = options?.dirty ?? notEqual;
 
-  const $computed: Observable<T> & Node = () => {
+  const $computed: ReadSignal<T> & Node = () => {
     if (__DEV__ && computeStack.includes($computed)) {
       const calls = callStack.map((c) => c.id ?? '?').join(' --> ');
       throw Error(`cyclic dependency detected\n\n${calls}\n`);
@@ -222,7 +224,7 @@ export function computed<T, R = never>(
   if (__DEV__) $computed.id = options?.id ?? `computed`;
 
   $computed[SCOPE] = currentScope;
-  $computed[OBSERVABLE] = true;
+  $computed[SIGNAL] = true;
   $computed[DIRTY] = true;
   $computed[CHILDREN] = null;
   $computed[OBSERVERS] = null;
@@ -236,10 +238,10 @@ export function computed<T, R = never>(
 let effectResult: any;
 
 /**
- * Invokes the given function each time any of the observables that are read inside are updated
+ * Invokes the given function each time any of the signals that are read inside are updated
  * (i.e., their value changes). The effect is immediately invoked on initialization.
  *
- * @see {@link https://github.com/maverick-js/observables#effect}
+ * @see {@link https://github.com/maverick-js/signals#effect}
  */
 export function effect(fn: Effect, options?: { id?: string }): StopEffect {
   const $effect = computed(
@@ -255,14 +257,14 @@ export function effect(fn: Effect, options?: { id?: string }): StopEffect {
 }
 
 /**
- * Takes in the given observable and makes it read only by removing access to write
- * operations (i.e., `set()` and `next()`).
+ * Takes in the given signal and makes it read only by removing access to write operations
+ * (i.e., `set()` and `next()`).
  *
- * @see {@link https://github.com/maverick-js/observables#readonly}
+ * @see {@link https://github.com/maverick-js/signals#readonly}
  */
-export function readonly<T>(observable: Observable<T>): Observable<T> {
-  const $readonly = () => observable();
-  $readonly[OBSERVABLE] = true;
+export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
+  const $readonly = () => signal();
+  $readonly[SIGNAL] = true;
   return $readonly;
 }
 
@@ -271,7 +273,7 @@ export function readonly<T>(observable: Observable<T>): Observable<T> {
  * actions performed in the same execution window is applied. You can wait for the microtask
  * queue to be flushed before writing a new value so it takes effect.
  *
- * @see {@link https://github.com/maverick-js/observables#tick}
+ * @see {@link https://github.com/maverick-js/signals#tick}
  */
 export function tick() {
   scheduler.flush();
@@ -279,28 +281,28 @@ export function tick() {
 }
 
 /**
- * Whether the given value is an observable subject (i.e., can produce new values via write API).
+ * Whether the given value is a write signal (i.e., can produce new values via write API).
  *
- * @see {@link https://github.com/maverick-js/observables#issubject}
+ * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
-export function isSubject<T>(fn: MaybeObservable<T>): fn is Subject<T> {
-  return isObservable(fn) && 'set' in fn;
+export function isWriteSignal<T>(fn: MaybeSignal<T>): fn is WriteSignal<T> {
+  return isReadSignal(fn) && 'set' in fn;
 }
 
 /**
  * Returns the owning scope of the given function. If no function is given it'll return the
  * currently executing parent scope. You can use this to walk up the computation tree.
  *
- * @see {@link https://github.com/maverick-js/observables#getscope}
+ * @see {@link https://github.com/maverick-js/signals#getscope}
  */
-export function getScope(fn?: Observable<unknown>): Observable<unknown> | undefined {
+export function getScope(fn?: ReadSignal<unknown>): ReadSignal<unknown> | undefined {
   return !arguments.length ? currentScope : fn?.[SCOPE];
 }
 
 /**
  * Returns the global scheduler.
  *
- * @see {@link https://github.com/maverick-js/observables#getscheduler}
+ * @see {@link https://github.com/maverick-js/signals#getscheduler}
  */
 export function getScheduler(): Scheduler {
   return scheduler;
@@ -308,11 +310,13 @@ export function getScheduler(): Scheduler {
 
 /**
  * Scopes the given function to the current parent scope so context and error handling continue to
- * work as expected. Generally this should be called on non-observable functions. A scoped
+ * work as expected. Generally this should be called on non-signal functions. A scoped
  * function will return `undefined` if an error is thrown.
  *
  * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
- * because it doesn't require creating and tracking a `computed` observable.
+ * because it doesn't require creating and tracking a `computed` signal.
+ *
+ * @see {@link https://github.com/maverick-js/signals#scope}
  */
 export function scope<T>(fn: () => T): () => T | undefined {
   fn[SCOPE] = currentScope;
@@ -333,7 +337,7 @@ export function scope<T>(fn: () => T): () => T | undefined {
  * walk up the computation tree trying to find a context record and matching key. If no value can
  * be found `undefined` will be returned.
  *
- * @see {@link https://github.com/maverick-js/observables#getcontext}
+ * @see {@link https://github.com/maverick-js/signals#getcontext}
  */
 export function getContext<T>(key: string | symbol): T | undefined {
   return lookup(currentScope, key);
@@ -343,7 +347,7 @@ export function getContext<T>(key: string | symbol): T | undefined {
  * Attempts to set a context value on the parent scope with the given key. This will be a no-op if
  * no parent is defined.
  *
- * @see {@link https://github.com/maverick-js/observables#setcontext}
+ * @see {@link https://github.com/maverick-js/signals#setcontext}
  */
 export function setContext<T>(key: string | symbol, value: T) {
   if (currentScope) (currentScope[CONTEXT] ??= {})[key] = value;
@@ -353,7 +357,7 @@ export function setContext<T>(key: string | symbol, value: T) {
  * Runs the given function when an error is thrown in a child scope. If the error is thrown again
  * inside the error handler, it will trigger the next available parent scope handler.
  *
- * @see {@link https://github.com/maverick-js/observables#onerror}
+ * @see {@link https://github.com/maverick-js/signals#onerror}
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
   if (!currentScope) return;
@@ -363,7 +367,7 @@ export function onError<T = Error>(handler: (error: T) => void): void {
 /**
  * Runs the given function when the parent scope computation is being disposed.
  *
- * @see {@link https://github.com/maverick-js/observables#ondispose}
+ * @see {@link https://github.com/maverick-js/signals#ondispose}
  */
 export function onDispose(dispose: MaybeDispose): Dispose {
   if (!dispose || !currentScope) return dispose || NOOP;
@@ -380,10 +384,10 @@ export function onDispose(dispose: MaybeDispose): Dispose {
 }
 
 /**
- * Unsubscribes the given observable and all inner computations. Disposed functions will retain
+ * Unsubscribes the given signal and all inner computations. Disposed functions will retain
  * their current value but are no longer reactive.
  *
- * @see {@link https://github.com/maverick-js/observables#dispose}
+ * @see {@link https://github.com/maverick-js/signals#dispose}
  */
 export function dispose(fn: () => void) {
   if (fn[CHILDREN]) {

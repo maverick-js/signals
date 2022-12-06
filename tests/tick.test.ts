@@ -1,11 +1,11 @@
-import { effect, observable, tick } from '../src';
+import { effect, signal, tick } from '../src';
 
 afterEach(() => tick());
 
 it('should batch updates', async () => {
   const effectA = vi.fn();
 
-  const $a = observable(10);
+  const $a = signal(10);
 
   effect(() => {
     effectA();
@@ -24,7 +24,7 @@ it('should batch updates', async () => {
 it('should wait for queue to flush', async () => {
   const effectA = vi.fn();
 
-  const $a = observable(10);
+  const $a = signal(10);
 
   effect(() => {
     effectA();

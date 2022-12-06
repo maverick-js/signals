@@ -1,9 +1,9 @@
-import { observable, tick, readonly } from '../src';
+import { signal, tick, readonly } from '../src';
 
 afterEach(() => tick());
 
 it('should create readonly proxy', async () => {
-  const $a = observable(10);
+  const $a = signal(10);
   const $b = readonly($a);
 
   expect(() => {

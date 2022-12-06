@@ -1,5 +1,5 @@
 export const SCOPE = Symbol(__DEV__ ? 'SCOPE' : 0);
-export const OBSERVABLE = Symbol(__DEV__ ? 'OBSERVABLE' : 0);
+export const SIGNAL = Symbol(__DEV__ ? 'SIGNAL' : 0);
 export const DIRTY = Symbol(__DEV__ ? 'DIRTY' : 0);
 export const DISPOSED = Symbol(__DEV__ ? 'DISPOSED' : 0);
 export const CHILDREN = Symbol(__DEV__ ? 'CHILDREN' : 0);

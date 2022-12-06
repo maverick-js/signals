@@ -1,4 +1,4 @@
-# Observables
+# Signals
 
 [![package-badge]][package]
 [![license-badge]][license]
@@ -7,9 +7,9 @@
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
 > do any unnecessary work and don't place the burden of figuring it out on the developer.
 
-This is a tiny (~850B minzipped) library for creating reactive observables via functions. You
-can use observables to store state, create computed properties (`y = mx + b`), and subscribe to
-updates as its value changes.
+This is a tiny (~850B minzipped) library for creating reactive observables via functions called
+signals. You can use signals to store state, create computed properties (`y = mx + b`), and subscribe
+to updates as its value changes.
 
 - 🪶 Light (~850B minzipped)
 - 💽 Works in both browsers and Node.js
@@ -34,13 +34,13 @@ Here's a simple demo to see how it works:
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)][stackblitz-demo]
 
 ```js
-import { root, observable, computed, effect, tick } from '@maverick-js/observables';
+import { root, signal, computed, effect, tick } from '@maverick-js/signals';
 
 root(async (dispose) => {
   // Create - all types supported (string, array, object, etc.)
-  const $m = observable(1);
-  const $x = observable(1);
-  const $b = observable(0);
+  const $m = signal(1);
+  const $x = signal(1);
+  const $b = signal(0);
 
   // Compute - only re-computed when `$m`, `$x`, or `$b` changes.
   const $y = computed(() => $m() * $x() + $b());
@@ -71,7 +71,7 @@ root(async (dispose) => {
 
   // ...
 
-  // Dispose of all observables inside `root`.
+  // Dispose of all signals inside `root`.
   dispose();
 });
 ```
@@ -87,25 +87,26 @@ root(async (dispose) => {
 You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
 
 > **Note**
-> Maverick Observables is treeshakable and side-effect free so you'll only end up with what you use.
+> Maverick Signals is treeshakable and side-effect free so you'll only end up with what you use.
 
 ## Installation
 
 ```bash
-$: npm i @maverick-js/observables
+$: npm i @maverick-js/signals
 
-$: pnpm i @maverick-js/observables
+$: pnpm i @maverick-js/signals
 
-$: yarn add @maverick-js/observables
+$: yarn add @maverick-js/signals
 ```
 
 ## API
 
 - [`root`](#root)
-- [`observable`](#observable)
+- [`signal`](#signal)
 - [`computed`](#computed)
 - [`effect`](#effect)
 - [`peek`](#peek)
+- [`untrack`](#untrack)
 - [`readonly`](#readonly)
 - [`tick`](#tick)
 - [`computedMap`](#computedmap)
@@ -113,8 +114,9 @@ $: yarn add @maverick-js/observables
 - [`dispose`](#dispose)
 - [`onError`](#onerror)
 - [`onDispose`](#ondispose)
-- [`isObservable`](#isobservable)
-- [`isSubject`](#issubject)
+- [`isReadSignal`](#isreadsignal)
+- [`isWriteSignal`](#iswritesignal)
+- [`scope`](#scope)
 - [`getScope`](#getscope)
 - [`getContext`](#getcontext)
 - [`setContext`](#setcontext)
@@ -127,7 +129,7 @@ are they. You _can_ create orphan computations (i.e., no parent). Orphans will l
 their internal object references are garbage collected (GC) (i.e., dropped from memory):
 
 ```js
-import { computed } from '@maverick-js/observables';
+import { computed } from '@maverick-js/signals';
 
 const obj = {};
 
@@ -140,10 +142,10 @@ ensure you only create child computations. The `root` function stores all inner 
 a child and provides a function to easily dispose of them all:
 
 ```js
-import { root, observable, computed, effect } from '@maverick-js/observables';
+import { root, signal, computed, effect } from '@maverick-js/signals';
 
 root((dispose) => {
-  const $a = observable(10);
+  const $a = signal(10);
   const $b = computed(() => $a());
 
   effect(() => console.log($b()));
@@ -160,17 +162,16 @@ const result = root(() => 10);
 console.log(result); // logs `10`
 ```
 
-### `observable`
+### `signal`
 
-Wraps the given value into an observable function. The observable function will return the
-current value when invoked `fn()`, and provide a simple write API via `set()` and `next()`. The
-value can now be observed when used inside other computations created with [`computed`](#computed)
-and [`effect`](#effect).
+Wraps the given value into a signal. The signal will return the current value when invoked `fn()`,
+and provide a simple write API via `set()` and `next()`. The value can now be observed when used
+inside other computations created with [`computed`](#computed) and [`effect`](#effect).
 
 ```js
-import { observable } from '@maverick-js/observables';
+import { signal } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 
 $a(); // read
 $a.set(20); // write (1)
@@ -182,15 +183,15 @@ $a.next((prev) => prev + 10); // write (2)
 
 ### `computed`
 
-Creates a new observable whose value is computed and returned by the given function. The given
+Creates a new signal whose value is computed and returned by the given function. The given
 compute function is _only_ re-run when one of it's dependencies are updated. Dependencies are
-are all observables that are read during execution.
+are all signals that are read during execution.
 
 ```js
-import { observable, computed, tick } from '@maverick-js/observables';
+import { signal, computed, tick } from '@maverick-js/signals';
 
-const $a = observable(10);
-const $b = observable(10);
+const $a = signal(10);
+const $b = signal(10);
 const $c = computed(() => $a() + $b());
 
 console.log($c()); // logs 20
@@ -208,27 +209,27 @@ console.log($c()); // logs 40
 ```
 
 ```js
-import { observable, computed } from '@maverick-js/observables';
+import { signal, computed } from '@maverick-js/signals';
 
-const $a = observable(10);
-const $b = observable(10);
+const $a = signal(10);
+const $b = signal(10);
 const $c = computed(() => $a() + $b());
 
-// Computed observables can be deeply nested.
+// Computed signals can be deeply nested.
 const $d = computed(() => $a() + $b() + $c());
 const $e = computed(() => $d());
 ```
 
 ### `effect`
 
-Invokes the given function each time any of the observables that are read inside are updated
+Invokes the given function each time any of the signals that are read inside are updated
 (i.e., their value changes). The effect is immediately invoked on initialization.
 
 ```js
-import { observable, computed, effect } from '@maverick-js/observables';
+import { signal, computed, effect } from '@maverick-js/signals';
 
-const $a = observable(10);
-const $b = observable(20);
+const $a = signal(10);
+const $b = signal(20);
 const $c = computed(() => $a() + $b());
 
 // This effect will run each time `$a` or `$b` is updated.
@@ -251,28 +252,45 @@ effect(() => {
 
 ### `peek`
 
-Returns the current value stored inside an observable without triggering a dependency.
+Returns the current value stored inside the given compute function without triggering any
+dependencies. Use [`untrack`](#untrack) if you want to also disable scope tracking.
 
 ```js
-import { observable, computed, peek } from '@maverick-js/observables';
+import { signal, computed, peek } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 
-computed(() => {
-  // `$a` will not be considered a dependency.
+const $b = computed(() => {
+  // `$a` will not trigger updates on `$b`.
   const value = peek($a);
+});
+```
+
+### `untrack`
+
+Returns the current value inside a signal whilst disabling both scope _and_ observer
+tracking. Use [`peek`](#peek) if only observer tracking should be disabled.
+
+```js
+import { signal, effect, untrack } from '@maverick-js/signals';
+
+effect(() => {
+  untrack(() => {
+    // `$a` is now an orphan and also not tracked by the outer effect.
+    const $a = signal(10);
+  });
 });
 ```
 
 ### `readonly`
 
-Takes in the given observable and makes it read only by removing access to write
-operations (i.e., `set()` and `next()`).
+Takes in the given signal and makes it read only by removing access to write operations (i.e.,
+`set()` and `next()`).
 
 ```js
-import { observable, readonly } from '@maverick-js/observables';
+import { signal, readonly } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 const $b = readonly($a);
 
 console.log($b()); // logs 10
@@ -293,9 +311,9 @@ queue to be flushed before writing a new value so it takes effect.
 > You can read more about microtasks on [MDN][mdn-microtasks].
 
 ```js
-import { observable } from '@maverick-js/observables';
+import { signal } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 
 $a.set(10);
 $a.set(20);
@@ -303,9 +321,9 @@ $a.set(30); // only this write is applied
 ```
 
 ```js
-import { observable, tick } from '@maverick-js/observables';
+import { signal, tick } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 
 // All writes are applied.
 $a.set(10);
@@ -326,9 +344,9 @@ It only runs the mapping function once per item and adds/removes as needed. In a
 this the index is fixed but value can change (opposite of a keyed map).
 
 ```js
-import { observable, tick, computedMap } from '@maverick-js/observables';
+import { signal, tick, computedMap } from '@maverick-js/signals';
 
-const source = observable([1, 2, 3]);
+const source = signal([1, 2, 3]);
 
 const map = computedMap(source, (value, index) => {
   return {
@@ -359,9 +377,9 @@ updates. It only runs the mapping function once per item and then moves or remov
 a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
 
 ```js
-import { observable, tick, computedKeyedMap } from '@maverick-js/observables';
+import { signal, tick, computedKeyedMap } from '@maverick-js/signals';
 
-const source = observable([{ id: 0 }, { id: 1 }, { id: 2 }]);
+const source = signal([{ id: 0 }, { id: 1 }, { id: 2 }]);
 
 const nodes = computedKeyedMap(source, (value, index) => {
   const div = document.createElement('div');
@@ -394,13 +412,13 @@ console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];
 
 ### `dispose`
 
-Unsubscribes the given observable and optionally all inner computations. Disposed functions will
-retain their current value but are no longer reactive.
+Unsubscribes the given signal and all inner child computations. Disposed functions will retain
+their current value but are no longer reactive.
 
 ```js
-import { observable, dispose } from '@maverick-js/observables';
+import { signal, dispose } from '@maverick-js/signals';
 
-const $a = observable(10);
+const $a = signal(10);
 const $b = computed(() => $a());
 
 // `$b` will no longer update if `$a` is updated.
@@ -416,7 +434,7 @@ Runs the given function when an error is thrown in a child scope. If the error i
 inside the error handler, it will trigger the next available parent scope handler.
 
 ```js
-import { effect, onError } from '@maverick-js/observables';
+import { effect, onError } from '@maverick-js/signals';
 
 effect(() => {
   onError((error) => {
@@ -430,7 +448,7 @@ effect(() => {
 Runs the given function when the parent scope computation is being disposed of.
 
 ```js
-import { effect, onDispose } from '@maverick-js/observables';
+import { effect, onDispose } from '@maverick-js/signals';
 
 const listen = (type, callback) => {
   window.addEventListener(type, callback);
@@ -459,38 +477,63 @@ effect(() => {
 });
 ```
 
-### `isObservable`
+### `isReadSignal`
 
-Whether the given value is an observable (readonly).
+Whether the given value is a readonly signal.
 
 ```js
 // True
-isObservable(observable(10));
-isObservable(computed(() => 10));
-isObservable(readonly(observable(10)));
+isReadSignal(10);
+isReadSignal(computed(() => 10));
+isReadSignal(readonly(signal(10)));
 
 // False
-isObservable(false);
-isObservable(null);
-isObservable(undefined);
-isObservable(() => {});
+isReadSignal(false);
+isReadSignal(null);
+isReadSignal(undefined);
+isReadSignal(() => {});
 ```
 
-### `isSubject`
+### `isWriteSignal`
 
-Whether the given value is an observable subject (i.e., can produce new values via write API).
+Whether the given value is a write signal (i.e., can produce new values via write API).
 
 ```js
 // True
-isSubject(observable(10));
+isWriteSignal(signal(10));
 
 // False
-isSubject(false);
-isSubject(null);
-isSubject(undefined);
-isSubject(() => {});
-isSubject(computed(() => 10));
-isSubject(readonly(observable(10)));
+isWriteSignal(false);
+isWriteSignal(null);
+isWriteSignal(undefined);
+isWriteSignal(() => {});
+isWriteSignal(computed(() => 10));
+isWriteSignal(readonly(signal(10)));
+```
+
+### `scope`
+
+Scopes the given function to the current parent scope so context and error handling continue to
+work as expected. Generally this should be called on non-signal functions. A scoped function will
+return `undefined` if an error is thrown.
+
+This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
+because it doesn't require creating and tracking a `computed` signal.
+
+```js
+import { root, scope } from '@maverick-js/signals';
+
+let callback;
+
+root(() => {
+  // This is now scoped to root.
+  callback = scope(() => {
+    // Context and error handling will work here.
+  });
+});
+
+// This will be still be scoped until root is disposed of.
+callback();
 ```
 
 ### `getScope`
@@ -501,7 +544,7 @@ currently executing parent scope. You can use this to walk up the computation tr
 ```js
 root(() => {
   effect(() => {
-    const $a = observable(0);
+    const $a = signal(0);
     getScope($a); // returns `effect`
     getScope(getScope()); // returns `root`
   });
@@ -517,7 +560,7 @@ walk up the computation tree trying to find a context record and matching key. I
 found `undefined` will be returned. This is intentionally low-level so you can design a context API
 in your library as desired.
 
-In your implementation make sure to check if a parent scpoe exists via `getScope()`. If one does
+In your implementation make sure to check if a parent scope exists via `getScope()`. If one does
 not exist log a warning that this function should not be called outside a computation or render
 function.
 
@@ -535,7 +578,7 @@ not exist log a warning that this function should not be called outside a comput
 function.
 
 ```js
-import { root, getContext, setContext } from '@maverick-js/observables';
+import { root, getContext, setContext } from '@maverick-js/signals';
 
 const key = Symbol();
 
@@ -570,14 +613,14 @@ scheduler.syncFlush();
 
 ## Debugging
 
-The `observable`, `computed`, and `effect` functions accept a debugging ID (string) as part
+The `signal`, `computed`, and `effect` functions accept a debugging ID (string) as part
 of their options. This can be helpful when logging a cyclic dependency chain to understand
 where it's occurring.
 
 ```js
-import { observable, computed } from '@maverick-js/observables';
+import { signal, computed } from '@maverick-js/signals';
 
-const $a = observable(10, { id: 'a' });
+const $a = signal(10, { id: 'a' });
 
 // Cyclic dependency chain.
 const $b = computed(() => $a() + $c(), { id: 'b' });
@@ -595,30 +638,30 @@ const $c = computed(() => $a() + $b(), { id: 'c' });
 
 ```ts
 import {
-  isObservable,
-  isSubject,
+  isReadSignal,
+  isWriteSignal,
   type Effect,
-  type Observable,
-  type Subject,
-  type MaybeObservable,
-} from '@maverick-js/observables';
+  type ReadSignal,
+  type WriteSignal,
+  type MaybeSignal,
+} from '@maverick-js/signals';
 
 // Types
-const observable: Observable<number>;
-const computed: Observable<string>;
+const signal: ReadSignal<number>;
+const computed: ReadSignal<string>;
 const effect: Effect;
 
 // Provide generic if TS fails to infer correct type.
 const $a = computed<string>(() => /* ... */);
 
-const $b: MaybeObservable<number>;
+const $b: MaybeSignal<number>;
 
-if (isObservable($b)) {
-  $b(); // Observable<number>
+if (isReadSignal($b)) {
+  $b(); // ReadSignal<number>
 }
 
-if (isSubject($b)) {
-  $b.set(10); // Subject<number>
+if (isWriteSignal($b)) {
+  $b.set(10); // WriteSignal<number>
 }
 ```
 
@@ -675,7 +718,7 @@ or dynamic updates are made to the graph (i.e., pick a node and update its value
 
 ## Inspiration
 
-`@maverick-js/observables` was made possible based on my learnings from:
+`@maverick-js/signals` was made possible based on my learnings from:
 
 - [Solid JS][solidjs]
 - [Sinuous][sinuous]
@@ -684,16 +727,16 @@ or dynamic updates are made to the graph (i.e., pick a node and update its value
 
 Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their work 🎉
 
-[package]: https://www.npmjs.com/package/@maverick-js/observables
-[package-badge]: https://img.shields.io/npm/v/@maverick-js/observables/latest
-[license]: https://github.com/maverick-js/observables/blob/main/LICENSE
-[license-badge]: https://img.shields.io/github/license/maverick-js/observables
-[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/observables@^4.3.0
+[package]: https://www.npmjs.com/package/@maverick-js/signals
+[package-badge]: https://img.shields.io/npm/v/@maverick-js/signals/latest
+[license]: https://github.com/maverick-js/signals/blob/main/LICENSE
+[license-badge]: https://img.shields.io/github/license/maverick-js/signals
+[size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/signals@^5.0.0
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
 [svelte-scheduler]: https://github.com/sveltejs/svelte/blob/master/src/runtime/internal/scheduler.ts
 [mdn-microtasks]: https://developer.mozilla.org/en-US/docs/Web/API/HTML_DOM_API/Microtask_guide
-[stackblitz-demo]: https://stackblitz.com/edit/maverick-observables?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
-[bundlephobia]: https://bundlephobia.com/package/@maverick-js/observables@^4.3.0
+[stackblitz-demo]: https://stackblitz.com/edit/maverick-signals?embed=1&file=index.ts&hideExplorer=1&hideNavigation=1&view=editor
+[bundlephobia]: https://bundlephobia.com/package/@maverick-js/signals@^5.0.0
 [maverick-scheduler]: https://github.com/maverick-js/scheduler

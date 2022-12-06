@@ -1,14 +1,14 @@
-export interface Observable<T> {
+export interface ReadSignal<T> {
   id?: string;
   (): T;
 }
 
-export interface ObservableOptions<T> {
+export interface SignalOptions<T> {
   id?: string;
   dirty?: (prev: T, next: T) => boolean;
 }
 
-export interface ComputedOptions<T, R = never> extends ObservableOptions<T> {
+export interface ComputedSignalOptions<T, R = never> extends SignalOptions<T> {
   /**
    * It can be fatal if a computed fails by throwing an error during its first run. A `fallback`
    * can be specified to indicate that this was expected, and that the given value should be
@@ -17,9 +17,9 @@ export interface ComputedOptions<T, R = never> extends ObservableOptions<T> {
   fallback?: R;
 }
 
-export type InferObservableValue<T> = T extends Observable<infer R> ? R : T;
+export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 
-export interface Subject<T> extends Observable<T> {
+export interface WriteSignal<T> extends ReadSignal<T> {
   set: (value: T) => void;
   next: (next: (prevValue: T) => T) => void;
 }
@@ -32,6 +32,6 @@ export type Maybe<T> = T | void | null | undefined | false;
 export type MaybeFunction = Maybe<(...args: any) => any>;
 export type MaybeDispose = Maybe<Dispose>;
 export type MaybeStopEffect = Maybe<StopEffect>;
-export type MaybeObservable<T> = MaybeFunction | Observable<T>;
+export type MaybeSignal<T> = MaybeFunction | ReadSignal<T>;
 
 export type ContextRecord = Record<string | symbol, unknown>;

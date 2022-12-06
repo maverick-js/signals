@@ -1,5 +1,5 @@
 {
-  "name": "@maverick-js/observables",
+  "name": "@maverick-js/signals",
   "description": "A lightweight (~850B) library for creating reactive observables via functions.",
   "license": "MIT",
   "version": "4.10.0",
@@ -33,10 +33,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/maverick-js/observables.git"
+    "url": "https://github.com/maverick-js/signals.git"
   },
   "bugs": {
-    "url": "https://github.com/maverick-js/observables/issues"
+    "url": "https://github.com/maverick-js/signals/issues"
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.25.3",

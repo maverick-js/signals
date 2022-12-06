@@ -1,16 +1,7 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import {
-  computed,
-  Dispose,
-  Maybe,
-  observable,
-  Observable,
-  onDispose,
-  peek,
-  readonly,
-  root,
-} from './observables';
+import { computed, signal, onDispose, peek, readonly, root } from './signals';
+import type { Dispose, Maybe, ReadSignal } from './types';
 
 function runAll(fns: (() => void)[]) {
   for (let i = 0; i < fns.length; i++) fns[i]();
@@ -23,17 +14,17 @@ function runAll(fns: (() => void)[]) {
  *
  * Prefer `computedKeyedMap` when referential checks are required.
  *
- * @see {@link https://github.com/maverick-js/observables#computedmap}
+ * @see {@link https://github.com/maverick-js/signals#computedmap}
  */
 export function computedMap<Item, MappedItem>(
-  list: Observable<Maybe<readonly Item[]>>,
-  map: (value: Observable<Item>, index: number) => MappedItem,
+  list: ReadSignal<Maybe<readonly Item[]>>,
+  map: (value: ReadSignal<Item>, index: number) => MappedItem,
   options?: { id?: string },
-): Observable<MappedItem[]> {
+): ReadSignal<MappedItem[]> {
   let items: Item[] = [],
     mapped: MappedItem[] = [],
     disposal: Dispose[] = [],
-    observables: ((v: any) => void)[] = [],
+    signals: ((v: any) => void)[] = [],
     i: number,
     len = 0;
 
@@ -50,7 +41,7 @@ export function computedMap<Item, MappedItem>(
             items = [];
             mapped = [];
             len = 0;
-            observables = [];
+            signals = [];
           }
 
           return mapped;
@@ -58,7 +49,7 @@ export function computedMap<Item, MappedItem>(
 
         for (i = 0; i < newItems.length; i++) {
           if (i < items.length && items[i] !== newItems[i]) {
-            observables[i](newItems[i]);
+            signals[i](newItems[i]);
           } else if (i >= items.length) {
             mapped[i] = root(mapper);
           }
@@ -66,15 +57,15 @@ export function computedMap<Item, MappedItem>(
 
         for (; i < items.length; i++) disposal[i]();
 
-        len = observables.length = disposal.length = newItems.length;
+        len = signals.length = disposal.length = newItems.length;
         items = newItems.slice(0);
         return (mapped = mapped.slice(0, len));
       });
 
       function mapper(dispose: () => void) {
         disposal[i] = dispose;
-        const $o = observable(newItems[i]);
-        observables[i] = $o.set;
+        const $o = signal(newItems[i]);
+        signals[i] = $o.set;
         return map($o, i);
       }
     },
@@ -90,13 +81,13 @@ export function computedMap<Item, MappedItem>(
  *
  * Prefer `computedMap` when working with primitives to avoid unncessary re-renders.
  *
- * @see {@link https://github.com/maverick-js/observables#computedkeyedmap}
+ * @see {@link https://github.com/maverick-js/signals#computedkeyedmap}
  */
 export function computedKeyedMap<Item, MappedItem>(
-  list: Observable<Maybe<readonly Item[]>>,
-  map: (value: Item, index: Observable<number>) => MappedItem,
+  list: ReadSignal<Maybe<readonly Item[]>>,
+  map: (value: Item, index: ReadSignal<number>) => MappedItem,
   options?: { id?: string },
-): Observable<MappedItem[]> {
+): ReadSignal<MappedItem[]> {
   let items: Item[] = [],
     mapping: MappedItem[] = [],
     disposal: Dispose[] = [],
@@ -213,7 +204,7 @@ export function computedKeyedMap<Item, MappedItem>(
         disposal[j] = dispose;
 
         if (indicies) {
-          const $i = observable(j);
+          const $i = signal(j);
           indicies[j] = (v) => {
             $i.set(v);
             return v;

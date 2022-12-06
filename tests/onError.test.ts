@@ -1,4 +1,4 @@
-import { root, effect, onError, observable, tick } from '../src';
+import { root, effect, onError, signal, tick } from '../src';
 
 it('should let errors should bubble up when not handled', () => {
   const error = new Error();
@@ -29,7 +29,7 @@ it('should forward error to another handler', async () => {
   const error = new Error();
   const handler = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
 
   root(() => {
     effect(() => {
@@ -58,7 +58,7 @@ it('should not duplicate error handler', async () => {
   const error = new Error();
   const handler = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
 
   let shouldThrow = false;
   root(() => {

@@ -1,6 +1,6 @@
 // https://github.com/preactjs/signals/blob/main/packages/core/test/signal.test.tsx#L1249
 
-import { computed, effect, observable, tick } from '../src';
+import { computed, signal, tick } from '../src';
 
 it('should drop A->B->A updates', async () => {
   //     A
@@ -11,7 +11,7 @@ it('should drop A->B->A updates', async () => {
   //     |
   //     D
 
-  const $a = observable(2);
+  const $a = signal(2);
   const $b = computed(() => $a() - 1);
   const $c = computed(() => $a() + $b());
 
@@ -37,7 +37,7 @@ it('should only update every signal once (diamond graph)', async () => {
   //   \   /
   //     D
 
-  const $a = observable('a');
+  const $a = signal('a');
   const $b = computed(() => $a());
   const $c = computed(() => $a());
 
@@ -63,7 +63,7 @@ it('should only update every signal once (diamond graph + tail)', async () => {
   //     |
   //     E
 
-  const $a = observable('a');
+  const $a = signal('a');
   const $b = computed(() => $a());
   const $c = computed(() => $a());
   const $d = computed(() => $b() + ' ' + $c());
@@ -84,7 +84,7 @@ it('should bail out if result is the same', async () => {
   // Bail out if value of "B" never changes
   // A->B->C
 
-  const $a = observable('a');
+  const $a = signal('a');
 
   const $b = computed(() => {
     $a();
@@ -115,7 +115,7 @@ it('should only update every signal once (jagged diamond graph + tails)', async 
   //   /   \
   //  F     G
 
-  const $a = observable('a', { id: '$a' });
+  const $a = signal('a', { id: '$a' });
   const $b = computed(() => $a(), { id: '$b' });
   const $c = computed(() => $a(), { id: '$c' });
   const $d = computed(() => $c(), { id: '$d' });
@@ -164,7 +164,7 @@ it('should only subscribe to signals listened to', async () => {
   //   /   \
   // *B     C <- we don't listen to C
 
-  const $a = observable('a');
+  const $a = signal('a');
 
   const $b = computed(() => $a());
   const spy = vi.fn(() => $a());
@@ -191,7 +191,7 @@ it('should ensure subs update even if one dep unmarks it', async () => {
   //   \   /
   //     D
 
-  const $a = observable('a');
+  const $a = signal('a');
   const $b = computed(() => $a());
   const $c = computed(() => {
     $a();
@@ -220,7 +220,7 @@ it('should ensure subs update even if two deps unmark it', async () => {
   //   \ | /
   //     E
 
-  const $a = observable('a');
+  const $a = signal('a');
   const $b = computed(() => $a());
   const $c = computed(() => {
     $a();

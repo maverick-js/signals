@@ -1,4 +1,4 @@
-import { computed, observable, peek, effect, tick, onDispose, root } from '../src';
+import { computed, signal, peek, effect, tick, onDispose, root } from '../src';
 
 afterEach(() => tick());
 
@@ -6,7 +6,7 @@ it('should not create dependency', async () => {
   const effectA = vi.fn();
   const computeC = vi.fn();
 
-  const $a = observable(10);
+  const $a = signal(10);
   const $b = computed(() => $a() + 10);
   const $c = computed(() => {
     computeC();
@@ -33,9 +33,9 @@ it('should not affect deep dependency being created', async () => {
   const effectA = vi.fn();
   const computeD = vi.fn();
 
-  const $a = observable(10);
-  const $b = observable(10);
-  const $c = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
+  const $c = signal(10);
   const $d = computed(() => {
     computeD();
     return $a() + peek($b) + peek($c) + 10;
@@ -74,7 +74,7 @@ it('should not trigger deep `onDispose`', async () => {
   const dispose = vi.fn();
   const computeB = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
   const $b = computed(() => {
     $a();
     computeB();
@@ -97,7 +97,7 @@ it('should not trigger deep `onDispose`', async () => {
 });
 
 it('should track parent across peeks', async () => {
-  const $a = observable(0);
+  const $a = signal(0);
 
   const childCompute = vi.fn();
   const childDispose = vi.fn();

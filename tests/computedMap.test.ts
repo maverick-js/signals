@@ -1,7 +1,7 @@
-import { observable, tick, computedMap } from '../src';
+import { signal, tick, computedMap } from '../src';
 
 it('should compute map', async () => {
-  const source = observable([1, 2, 3]);
+  const source = signal([1, 2, 3]);
 
   const compute = vi.fn();
 

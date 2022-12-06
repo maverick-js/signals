@@ -1,7 +1,7 @@
-import { observable, tick, computedKeyedMap } from '../src';
+import { signal, tick, computedKeyedMap } from '../src';
 
 it('should compute keyed map', async () => {
-  const source = observable([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+  const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
 
   const compute = vi.fn();
 

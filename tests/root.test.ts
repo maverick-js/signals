@@ -1,12 +1,12 @@
 import {
   root,
-  observable,
+  signal,
   computed,
   effect,
   tick,
   getScope,
-  type Observable,
-  type Subject,
+  type ReadSignal,
+  type WriteSignal,
 } from '../src';
 import { OBSERVED_BY, OBSERVERS } from '../src/symbols';
 
@@ -15,11 +15,11 @@ afterEach(() => tick());
 it('should dispose of inner computations', async () => {
   const computeB = vi.fn();
 
-  let $a: Subject<number>;
-  let $b: Observable<number>;
+  let $a: WriteSignal<number>;
+  let $b: ReadSignal<number>;
 
   root((dispose) => {
-    $a = observable(10);
+    $a = signal(10);
 
     $b = computed(() => {
       computeB();
@@ -54,7 +54,7 @@ it('should return result', () => {
 it('should create new tracking scope', async () => {
   const innerEffect = vi.fn();
 
-  const $a = observable(0);
+  const $a = signal(0);
   const stop = effect(() => {
     $a();
     root(() => {
@@ -76,12 +76,12 @@ it('should create new tracking scope', async () => {
 });
 
 it('should not be reactive', async () => {
-  let $a: Subject<number>;
+  let $a: WriteSignal<number>;
 
   const rootCall = vi.fn();
 
   root(() => {
-    $a = observable(0);
+    $a = signal(0);
     $a();
     rootCall();
   });
@@ -103,7 +103,7 @@ it('should hold parent tracking', async () => {
 });
 
 it('should not observe', () => {
-  const $a = observable(0);
+  const $a = signal(0);
   root(() => {
     $a();
     expect(getScope()![OBSERVERS]).toBeUndefined();

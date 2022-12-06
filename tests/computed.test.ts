@@ -1,10 +1,10 @@
-import { computed, effect, observable, onError, root, tick } from '../src';
+import { computed, effect, signal, onError, root, tick } from '../src';
 
 afterEach(() => tick());
 
 it('should store and return value on read', async () => {
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => $a() + $b());
 
   expect($c()).toBe(20);
@@ -15,8 +15,8 @@ it('should store and return value on read', async () => {
 });
 
 it('should update when dependency is updated', () => {
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => $a() + $b());
 
   $a.set(20);
@@ -27,8 +27,8 @@ it('should update when dependency is updated', () => {
 });
 
 it('should update when deep dependency is updated', async () => {
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => $a() + $b());
   const $d = computed(() => $c());
 
@@ -37,8 +37,8 @@ it('should update when deep dependency is updated', async () => {
 });
 
 it('should update when deep computed dependency is updated', () => {
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => $a() + $b());
   const $d = computed(() => $c());
   const $e = computed(() => $d());
@@ -50,8 +50,8 @@ it('should update when deep computed dependency is updated', () => {
 it('should only re-compute when needed', () => {
   const compute = vi.fn();
 
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => compute($a() + $b()));
 
   expect(compute).not.toHaveBeenCalled();
@@ -79,8 +79,8 @@ it('should only re-compute whats needed', async () => {
   const computeC = vi.fn();
   const computeD = vi.fn();
 
-  const $a = observable(10);
-  const $b = observable(10);
+  const $a = signal(10);
+  const $b = signal(10);
   const $c = computed(() => {
     const a = $a();
     computeC(a);
@@ -127,8 +127,8 @@ it('should throw on cyclic computation', () => {
 });
 
 it('should discover new dependencies', async () => {
-  const $a = observable(1);
-  const $b = observable(0);
+  const $a = signal(1);
+  const $b = signal(0);
 
   const $c = computed(() => {
     if ($a()) {
@@ -150,7 +150,7 @@ it('should discover new dependencies', async () => {
 });
 
 it('should accept dirty option', async () => {
-  const $a = observable(0);
+  const $a = signal(0);
 
   const $b = computed(() => $a(), {
     // Skip odd numbers.

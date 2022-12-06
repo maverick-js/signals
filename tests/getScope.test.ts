@@ -1,13 +1,13 @@
-import { effect, observable, peek, root, getScope } from '../src';
+import { effect, signal, peek, root, getScope } from '../src';
 
 it('should be orphan', () => {
-  const $a = observable(0);
+  const $a = signal(0);
   expect(getScope($a)).toBeNull();
 });
 
 it('should return parent scope', () => {
   root(() => {
-    const $a = observable(0);
+    const $a = signal(0);
     expect(getScope($a)).toBeDefined();
   });
 });
@@ -24,7 +24,7 @@ it('should return current scope', () => {
 it('should return parent scope from inside peek', () => {
   root(() => {
     peek(() => {
-      const $a = observable(0);
+      const $a = signal(0);
       expect(getScope($a)).toBeDefined();
     });
   });
@@ -33,7 +33,7 @@ it('should return parent scope from inside peek', () => {
 it('should return grandparent scope', () => {
   root(() => {
     effect(() => {
-      const $a = observable(0);
+      const $a = signal(0);
       expect(getScope($a)).toBeDefined();
       expect(getScope(getScope($a)!)).toBeDefined();
     });
@@ -42,7 +42,7 @@ it('should return grandparent scope', () => {
 
 it('should remove parent scope on dispose', () => {
   root((dispose) => {
-    const $a = observable(0);
+    const $a = signal(0);
     dispose();
     expect(getScope($a)).toBeNull();
   });
