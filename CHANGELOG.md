@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.1](https://github.com/maverick-js/signals/compare/v5.0.0...v5.0.1) (2022-12-08)
+
+
+### Bug Fixes
+
+* `tick` is now a sync flush ([734cd4d](https://github.com/maverick-js/signals/commit/734cd4d8183f8d3948a7d493668816a28627f061))
+* set effect result tracking to null when done ([1e9f057](https://github.com/maverick-js/signals/commit/1e9f0574f6b177d4d24c78362aca4df005087989))
+
 ## [5.0.0](https://github.com/maverick-js/signals/compare/v4.10.0...v5.0.0) (2022-12-06)
 
 
