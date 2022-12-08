@@ -2,7 +2,7 @@
 
 import { computed, signal, tick } from '../src';
 
-it('should drop A->B->A updates', async () => {
+it('should drop A->B->A updates', () => {
   //     A
   //   / |
   //  B  | <- Looks like a flag doesn't it? :D
@@ -24,11 +24,11 @@ it('should drop A->B->A updates', async () => {
 
   $a.set(4);
   $d();
-  await tick();
+  tick();
   expect(compute).toHaveBeenCalledTimes(1);
 });
 
-it('should only update every signal once (diamond graph)', async () => {
+it('should only update every signal once (diamond graph)', () => {
   // In this scenario "D" should only update once when "A" receives
   // an update. This is sometimes referred to as the "diamond" scenario.
   //     A
@@ -48,12 +48,12 @@ it('should only update every signal once (diamond graph)', async () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  await tick();
+  tick();
   expect($d()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
-it('should only update every signal once (diamond graph + tail)', async () => {
+it('should only update every signal once (diamond graph + tail)', () => {
   // "E" will be likely updated twice if our mark+sweep logic is buggy.
   //     A
   //   /   \
@@ -75,12 +75,12 @@ it('should only update every signal once (diamond graph + tail)', async () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  await tick();
+  tick();
   expect($e()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
-it('should bail out if result is the same', async () => {
+it('should bail out if result is the same', () => {
   // Bail out if value of "B" never changes
   // A->B->C
 
@@ -98,12 +98,12 @@ it('should bail out if result is the same', async () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  await tick();
+  tick();
   expect($c()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 });
 
-it('should only update every signal once (jagged diamond graph + tails)', async () => {
+it('should only update every signal once (jagged diamond graph + tails)', () => {
   // "F" and "G" will be likely updated >3 if our mark+sweep logic is buggy.
   //     A
   //   /   \
@@ -135,7 +135,7 @@ it('should only update every signal once (jagged diamond graph + tails)', async 
   expect(gSpy).toHaveBeenCalledTimes(1);
 
   $a.set('b');
-  await tick();
+  tick();
 
   expect($e()).toBe('b b');
   expect(eSpy).toHaveBeenCalledTimes(2);
@@ -147,7 +147,7 @@ it('should only update every signal once (jagged diamond graph + tails)', async 
   expect(gSpy).toHaveBeenCalledTimes(2);
 
   $a.set('c');
-  await tick();
+  tick();
 
   expect($e()).toBe('c c');
   expect(eSpy).toHaveBeenCalledTimes(3);
@@ -159,7 +159,7 @@ it('should only update every signal once (jagged diamond graph + tails)', async 
   expect(gSpy).toHaveBeenCalledTimes(3);
 });
 
-it('should only subscribe to signals listened to', async () => {
+it('should only subscribe to signals listened to', () => {
   //    *A
   //   /   \
   // *B     C <- we don't listen to C
@@ -174,13 +174,13 @@ it('should only subscribe to signals listened to', async () => {
   expect(spy).toBeCalledTimes(0);
 
   $a.set('aa');
-  await tick();
+  tick();
 
   expect($b()).toBe('aa');
   expect(spy).toBeCalledTimes(0);
 });
 
-it('should ensure subs update even if one dep unmarks it', async () => {
+it('should ensure subs update even if one dep unmarks it', () => {
   // In this scenario "C" always returns the same value. When "A"
   // changes, "B" will update, then "C" at which point its update
   // to "D" will be unmarked. But "D" must still update because
@@ -204,13 +204,13 @@ it('should ensure subs update even if one dep unmarks it', async () => {
   expect($d()).toBe('a c');
 
   $a.set('aa');
-  await tick();
+  tick();
 
   expect($d()).toBe('aa c');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
-it('should ensure subs update even if two deps unmark it', async () => {
+it('should ensure subs update even if two deps unmark it', () => {
   // In this scenario both "C" and "D" always return the same
   // value. But "E" must still update because "A"  marked it.
   // If "E" isn't updated, then we have a bug.
@@ -236,7 +236,7 @@ it('should ensure subs update even if two deps unmark it', async () => {
   expect($e()).toBe('a c d');
 
   $a.set('aa');
-  await tick();
+  tick();
 
   expect($e()).toBe('aa c d');
   expect(spy).toHaveBeenCalledTimes(2);

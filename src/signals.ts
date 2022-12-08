@@ -269,15 +269,13 @@ export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
 }
 
 /**
- * Tasks are batched onto the microtask queue. This means only the last write of multiple write
- * actions performed in the same execution window is applied. You can wait for the microtask
- * queue to be flushed before writing a new value so it takes effect.
+ * By default, signal updates are batched on the microtask queue which is an async process. You can
+ * flush the queue synchronously to get the latest updates by calling `tick()`.
  *
  * @see {@link https://github.com/maverick-js/signals#tick}
  */
-export function tick() {
-  scheduler.flush();
-  return scheduler.tick;
+export function tick(): void {
+  scheduler.flushSync();
 }
 
 /**

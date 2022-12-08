@@ -3,7 +3,7 @@ import { CHILDREN } from '../src/symbols';
 
 afterEach(() => tick());
 
-it('should dispose', async () => {
+it('should dispose', () => {
   const $a = signal(10);
   const $b = computed(() => $a() + 10);
   const $c = signal(10);
@@ -15,14 +15,14 @@ it('should dispose', async () => {
   dispose($a);
 
   $a.set(20);
-  await tick();
+  tick();
 
   expect($b()).toBe(20);
   expect($e()).toBe(50);
 
   // $c/$d should keep working.
   $c.set(20);
-  await tick();
+  tick();
   expect($d()).toBe(30);
 });
 

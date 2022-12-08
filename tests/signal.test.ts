@@ -20,21 +20,21 @@ it('should update signal via `next()`', () => {
   expect($a()).toBe(20);
 });
 
-it('should accept dirty option', async () => {
+it('should accept dirty option', () => {
   const $a = signal(10, {
     // Skip odd numbers.
     dirty: (prev, next) => prev + 1 !== next,
   });
 
   $a.set(11);
-  await tick();
+  tick();
   expect($a()).toBe(10);
 
   $a.set(12);
-  await tick();
+  tick();
   expect($a()).toBe(12);
 
   $a.set(13);
-  await tick();
+  tick();
   expect($a()).toBe(12);
 });

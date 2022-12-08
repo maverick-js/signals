@@ -1,6 +1,6 @@
 import { signal, tick, computedKeyedMap } from '../src';
 
-it('should compute keyed map', async () => {
+it('should compute keyed map', () => {
   const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
 
   const compute = vi.fn();
@@ -31,7 +31,7 @@ it('should compute keyed map', async () => {
     p[0] = tmp;
     return [...p];
   });
-  await tick();
+  tick();
 
   const [a2, b2, c2] = map();
   expect(a2.id).toBe('b');
@@ -47,7 +47,7 @@ it('should compute keyed map', async () => {
 
   // Add new value
   source.next((p) => [...p, { id: 'd' }]);
-  await tick();
+  tick();
 
   expect(map().length).toBe(4);
   expect(map()[map().length - 1].id).toBe('d');
@@ -56,7 +56,7 @@ it('should compute keyed map', async () => {
 
   // Remove value
   source.next((p) => p.slice(1));
-  await tick();
+  tick();
 
   expect(map().length).toBe(3);
   expect(map()[0].id).toBe('a');
@@ -65,7 +65,7 @@ it('should compute keyed map', async () => {
 
   // Empty
   source.set([]);
-  await tick();
+  tick();
 
   expect(map().length).toBe(0);
   expect(compute).toHaveBeenCalledTimes(4);

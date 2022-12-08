@@ -36,7 +36,7 @@ Here's a simple demo to see how it works:
 ```js
 import { root, signal, computed, effect, tick } from '@maverick-js/signals';
 
-root(async (dispose) => {
+root((dispose) => {
   // Create - all types supported (string, array, object, etc.)
   const $m = signal(1);
   const $x = signal(1);
@@ -55,13 +55,13 @@ root(async (dispose) => {
 
   $m.set(10); // logs `10` inside effect
 
-  // Wait a tick so update is applied and effect is run.
-  await tick();
+  // Flush queue synchronously so effect is run.
+  // Otherwise, computations will be batched and run on the microtask queue.
+  tick();
 
   $b.next((prev) => prev + 5); // logs `15` inside effect
 
-  // Wait a tick so effect runs last update.
-  await tick();
+  tick();
 
   // Nothing has changed - no re-compute.
   $y();
@@ -197,11 +197,11 @@ const $c = computed(() => $a() + $b());
 console.log($c()); // logs 20
 
 $a.set(20);
-await tick();
+tick();
 console.log($c()); // logs 30
 
 $b.set(20);
-await tick();
+tick();
 console.log($c()); // logs 40
 
 // Nothing changed - no re-compute.
@@ -303,9 +303,8 @@ console.log($b()); // logs 20
 
 ### `tick`
 
-Tasks are batched onto the microtask queue. This means only the last write of multiple write
-actions performed in the same execution window is applied. You can wait for the microtask
-queue to be flushed before writing a new value so it takes effect.
+By default, signal updates are batched on the microtask queue which is an async process. You can
+flush the queue synchronously to get the latest updates by calling `tick()`.
 
 > **Note**
 > You can read more about microtasks on [MDN][mdn-microtasks].
@@ -327,9 +326,9 @@ const $a = signal(10);
 
 // All writes are applied.
 $a.set(10);
-await tick();
+tick();
 $a.set(20);
-await tick();
+tick();
 $a.set(30);
 ```
 
@@ -360,7 +359,7 @@ const map = computedMap(source, (value, index) => {
 console.log(map()); // logs `[{ i: 0, id: $2 }, { i: 1, id: $4 }, { i: 2, id: $6 }]`
 
 source.set([3, 2, 1]);
-await tick();
+tick();
 
 // Notice the index `i` remains fixed but `id` has updated.
 console.log(map()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2 }]`
@@ -404,7 +403,7 @@ source.next((prev) => {
   return [...prev]; // new array
 });
 
-await tick();
+tick();
 
 // No nodes were created/destroyed, simply nodes at index 0 and 1 switched.
 console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];

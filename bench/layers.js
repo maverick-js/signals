@@ -106,7 +106,7 @@ async function start(runner, layers) {
  * @see {@link https://github.com/maverick-js/signals}
  */
 function runMaverick(layers, done) {
-  maverick.root(async (dispose) => {
+  maverick.root((dispose) => {
     const start = {
       a: maverick.signal(1),
       b: maverick.signal(2),

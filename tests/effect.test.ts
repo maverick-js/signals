@@ -1,8 +1,8 @@
-import { computed, signal, effect, tick, onDispose, getScope } from '../src';
+import { computed, signal, effect, tick, onDispose } from '../src';
 
 afterEach(() => tick());
 
-it('should run effect on change', async () => {
+it('should run effect on change', () => {
   const effectA = vi.fn();
 
   const $a = signal(10);
@@ -18,20 +18,20 @@ it('should run effect on change', async () => {
   expect(effectA).to.toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  await tick();
+  tick();
   expect(effectA).to.toHaveBeenCalledTimes(2);
 
   $b.set(20);
-  await tick();
+  tick();
   expect(effectA).to.toHaveBeenCalledTimes(3);
 
   $a.set(20);
   $b.set(20);
-  await tick();
+  tick();
   expect(effectA).to.toHaveBeenCalledTimes(3);
 });
 
-it('should handle nested effect', async () => {
+it('should handle nested effect', () => {
   const $a = signal(0);
   const $b = signal(0);
 
@@ -54,13 +54,13 @@ it('should handle nested effect', async () => {
   expect(innerDispose).toHaveBeenCalledTimes(0);
 
   $b.set(1);
-  await tick();
+  tick();
   expect(outerEffect).toHaveBeenCalledTimes(1);
   expect(innerEffect).toHaveBeenCalledTimes(2);
   expect(innerDispose).toHaveBeenCalledTimes(1);
 
   $b.set(2);
-  await tick();
+  tick();
   expect(outerEffect).toHaveBeenCalledTimes(1);
   expect(innerEffect).toHaveBeenCalledTimes(3);
   expect(innerDispose).toHaveBeenCalledTimes(2);
@@ -69,13 +69,13 @@ it('should handle nested effect', async () => {
   innerDispose.mockReset();
 
   $a.set(1);
-  await tick();
+  tick();
   expect(outerEffect).toHaveBeenCalledTimes(2);
   expect(innerEffect).toHaveBeenCalledTimes(1); // new one is created
   expect(innerDispose).toHaveBeenCalledTimes(1);
 
   $b.set(3);
-  await tick();
+  tick();
   expect(outerEffect).toHaveBeenCalledTimes(2);
   expect(innerEffect).toHaveBeenCalledTimes(2);
   expect(innerDispose).toHaveBeenCalledTimes(2);
@@ -88,7 +88,7 @@ it('should handle nested effect', async () => {
   expect(innerDispose).toHaveBeenCalledTimes(3);
 });
 
-it('should stop effect', async () => {
+it('should stop effect', () => {
   const effectA = vi.fn();
 
   const $a = signal(10);
@@ -101,11 +101,11 @@ it('should stop effect', async () => {
   stop();
 
   $a.set(20);
-  await tick();
+  tick();
   expect(effectA).toHaveBeenCalledTimes(1);
 });
 
-it('should call returned dispose function', async () => {
+it('should call returned dispose function', () => {
   const dispose = vi.fn();
 
   const $a = signal(0);
@@ -119,12 +119,12 @@ it('should call returned dispose function', async () => {
 
   for (let i = 1; i <= 3; i += 1) {
     $a.set(i);
-    await tick();
+    tick();
     expect(dispose).toHaveBeenCalledTimes(i);
   }
 });
 
-it('should run all disposals before each new run', async () => {
+it('should run all disposals before each new run', () => {
   const effectA = vi.fn();
   const disposeA = vi.fn();
   const disposeB = vi.fn();
@@ -149,14 +149,14 @@ it('should run all disposals before each new run', async () => {
 
   for (let i = 1; i <= 3; i += 1) {
     $a.set(i);
-    await tick();
+    tick();
     expect(effectA).toHaveBeenCalledTimes(i + 1);
     expect(disposeA).toHaveBeenCalledTimes(i);
     expect(disposeB).toHaveBeenCalledTimes(i);
   }
 });
 
-it('should dispose of nested effect', async () => {
+it('should dispose of nested effect', () => {
   const $a = signal(0);
   const innerEffect = vi.fn();
 
@@ -169,12 +169,12 @@ it('should dispose of nested effect', async () => {
   stop();
 
   $a.set(10);
-  await tick();
+  tick();
   expect(innerEffect).toHaveBeenCalledTimes(1);
   expect(innerEffect).not.toHaveBeenCalledWith(10);
 });
 
-it('should conditionally observe', async () => {
+it('should conditionally observe', () => {
   const $a = signal(0);
   const $b = signal(0);
   const $cond = signal(true);
@@ -189,27 +189,27 @@ it('should conditionally observe', async () => {
   expect($effect).toHaveBeenCalledTimes(1);
 
   $b.set(1);
-  await tick();
+  tick();
   expect($effect).toHaveBeenCalledTimes(1);
 
   $a.set(1);
-  await tick();
+  tick();
   expect($effect).toHaveBeenCalledTimes(2);
 
   $cond.set(false);
-  await tick();
+  tick();
   expect($effect).toHaveBeenCalledTimes(2);
 
   $b.set(2);
-  await tick();
+  tick();
   expect($effect).toHaveBeenCalledTimes(3);
 
   $a.set(2);
-  await tick();
+  tick();
   expect($effect).toHaveBeenCalledTimes(3);
 });
 
-it('should dispose of nested conditional effect', async () => {
+it('should dispose of nested conditional effect', () => {
   const $cond = signal(true);
 
   const disposeA = vi.fn();
@@ -230,12 +230,12 @@ it('should dispose of nested conditional effect', async () => {
   effect(() => ($cond() ? fnA() : fnB()));
 
   $cond.set(false);
-  await tick();
+  tick();
   expect(disposeA).toHaveBeenCalledTimes(1);
 });
 
 // https://github.com/preactjs/signals/issues/152
-it('should handle looped effects', async () => {
+it('should handle looped effects', () => {
   let values: number[] = [],
     loop = 2;
 
@@ -256,14 +256,14 @@ it('should handle looped effects', async () => {
   loop = 1;
   values = [];
   $value.set(1);
-  await tick();
+  tick();
 
   expect(values).toHaveLength(2);
   expect(values.join(',')).toBe('1,1');
 
   values = [];
   $value.set(2);
-  await tick();
+  tick();
 
   expect(values).toHaveLength(2);
   expect(values.join(',')).toBe('2,2');

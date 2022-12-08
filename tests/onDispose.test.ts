@@ -20,7 +20,7 @@ it('should be invoked when computation is disposed', () => {
   expect(callback3).toHaveBeenCalled();
 });
 
-it('should clear disposal early', async () => {
+it('should clear disposal early', () => {
   const dispose = vi.fn();
 
   const stop = effect(() => {
@@ -31,7 +31,7 @@ it('should clear disposal early', async () => {
   expect(dispose).toHaveBeenCalledTimes(1);
 
   stop();
-  await tick();
+  tick();
 
   expect(dispose).toHaveBeenCalledTimes(1);
 });

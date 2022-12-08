@@ -12,7 +12,7 @@ import { OBSERVED_BY, OBSERVERS } from '../src/symbols';
 
 afterEach(() => tick());
 
-it('should dispose of inner computations', async () => {
+it('should dispose of inner computations', () => {
   const computeB = vi.fn();
 
   let $a: WriteSignal<number>;
@@ -33,10 +33,10 @@ it('should dispose of inner computations', async () => {
   expect($b!()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 
-  await tick();
+  tick();
 
   $a!.set(50);
-  await tick();
+  tick();
 
   expect($b!()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
@@ -51,7 +51,7 @@ it('should return result', () => {
   expect(result).toBe(10);
 });
 
-it('should create new tracking scope', async () => {
+it('should create new tracking scope', () => {
   const innerEffect = vi.fn();
 
   const $a = signal(0);
@@ -70,12 +70,12 @@ it('should create new tracking scope', async () => {
   stop();
 
   $a.set(10);
-  await tick();
+  tick();
   expect(innerEffect).toHaveBeenCalledWith(10);
   expect(innerEffect).toHaveBeenCalledTimes(2);
 });
 
-it('should not be reactive', async () => {
+it('should not be reactive', () => {
   let $a: WriteSignal<number>;
 
   const rootCall = vi.fn();
@@ -89,11 +89,11 @@ it('should not be reactive', async () => {
   expect(rootCall).toHaveBeenCalledTimes(1);
 
   $a!.set(1);
-  await tick();
+  tick();
   expect(rootCall).toHaveBeenCalledTimes(1);
 });
 
-it('should hold parent tracking', async () => {
+it('should hold parent tracking', () => {
   root(() => {
     const parent = getScope();
     root(() => {

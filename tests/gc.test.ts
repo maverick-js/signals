@@ -3,7 +3,7 @@ import { computed, effect, getScope, root, signal, tick } from '../src';
 function gc() {
   return new Promise((resolve) =>
     setTimeout(async () => {
-      await tick(); // flush call stack (holds a reference)
+      tick(); // flush call stack (holds a reference)
       global.gc!();
       resolve(void 0);
     }, 0),

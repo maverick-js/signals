@@ -2,7 +2,7 @@ import { signal, tick, readonly } from '../src';
 
 afterEach(() => tick());
 
-it('should create readonly proxy', async () => {
+it('should create readonly proxy', () => {
   const $a = signal(10);
   const $b = readonly($a);
 
@@ -16,10 +16,10 @@ it('should create readonly proxy', async () => {
     $b.next((n) => n + 10);
   }).toThrow();
 
-  await tick();
+  tick();
   expect($b()).toBe(10);
 
   $a.set(20);
-  await tick();
+  tick();
   expect($b()).toBe(20);
 });

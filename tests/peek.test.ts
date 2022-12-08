@@ -2,7 +2,7 @@ import { computed, signal, peek, effect, tick, onDispose, root } from '../src';
 
 afterEach(() => tick());
 
-it('should not create dependency', async () => {
+it('should not create dependency', () => {
   const effectA = vi.fn();
   const computeC = vi.fn();
 
@@ -24,12 +24,12 @@ it('should not create dependency', async () => {
   expect(computeC).toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  await tick();
+  tick();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeC).toHaveBeenCalledTimes(1);
 });
 
-it('should not affect deep dependency being created', async () => {
+it('should not affect deep dependency being created', () => {
   const effectA = vi.fn();
   const computeD = vi.fn();
 
@@ -52,25 +52,25 @@ it('should not affect deep dependency being created', async () => {
   expect($d()).toBe(40);
 
   $a.set(20);
-  await tick();
+  tick();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeD).toHaveBeenCalledTimes(2);
   expect($d()).toBe(50);
 
   $b.set(20);
-  await tick();
+  tick();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeD).toHaveBeenCalledTimes(2);
   expect($d()).toBe(50);
 
   $c.set(20);
-  await tick();
+  tick();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeD).toHaveBeenCalledTimes(2);
   expect($d()).toBe(50);
 });
 
-it('should not trigger deep `onDispose`', async () => {
+it('should not trigger deep `onDispose`', () => {
   const dispose = vi.fn();
   const computeB = vi.fn();
 
@@ -87,7 +87,7 @@ it('should not trigger deep `onDispose`', async () => {
   });
 
   stop();
-  await tick();
+  tick();
 
   expect(computeB).to.toHaveBeenCalledTimes(1);
   expect(dispose).to.toHaveBeenCalledTimes(0);
@@ -96,7 +96,7 @@ it('should not trigger deep `onDispose`', async () => {
   expect(dispose).to.toHaveBeenCalledTimes(1);
 });
 
-it('should track parent across peeks', async () => {
+it('should track parent across peeks', () => {
   const $a = signal(0);
 
   const childCompute = vi.fn();
@@ -116,7 +116,7 @@ it('should track parent across peeks', async () => {
   });
 
   $a.set(1);
-  await tick();
+  tick();
   expect(childCompute).toHaveBeenCalledWith(2);
   expect(childDispose).toHaveBeenCalledTimes(1);
 
@@ -124,7 +124,7 @@ it('should track parent across peeks', async () => {
   expect(childDispose).toHaveBeenCalledTimes(2);
 
   $a.set(2);
-  await tick();
+  tick();
   expect(childCompute).not.toHaveBeenCalledWith(4);
   expect(childDispose).toHaveBeenCalledTimes(2);
 });

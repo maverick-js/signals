@@ -40,7 +40,7 @@ it('should handle errors', () => {
   expect(handler).toHaveBeenCalledWith(error);
 });
 
-it('should still run effect', async () => {
+it('should still run effect', () => {
   let callback!: () => void,
     innerEffect = vi.fn();
 
@@ -60,7 +60,7 @@ it('should still run effect', async () => {
   expect(innerEffect).toBeCalledTimes(1);
 
   $a.set(1);
-  await tick();
+  tick();
 
   expect(innerEffect).toBeCalledTimes(2);
 });

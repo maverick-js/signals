@@ -25,7 +25,7 @@ it('should handle error', () => {
   expect(handler).toHaveBeenCalledWith(error);
 });
 
-it('should forward error to another handler', async () => {
+it('should forward error to another handler', () => {
   const error = new Error();
   const handler = vi.fn();
 
@@ -50,11 +50,11 @@ it('should forward error to another handler', async () => {
   expect(handler).toHaveBeenCalledWith(error);
 
   $a.set(1);
-  await tick();
+  tick();
   expect(handler).toHaveBeenCalledTimes(2);
 });
 
-it('should not duplicate error handler', async () => {
+it('should not duplicate error handler', () => {
   const error = new Error();
   const handler = vi.fn();
 
@@ -70,10 +70,10 @@ it('should not duplicate error handler', async () => {
   });
 
   $a.set(1);
-  await tick();
+  tick();
 
   shouldThrow = true;
   $a.set(2);
-  await tick();
+  tick();
   expect(handler).toHaveBeenCalledTimes(1);
 });

@@ -2,7 +2,6 @@ export type ScheduledTask = () => void;
 export type StopFlushUpdates = () => void;
 
 export type Scheduler = {
-  tick: Promise<void>;
   enqueue: (task: ScheduledTask) => void;
   flush: () => void;
   flushSync: () => void;
@@ -25,8 +24,8 @@ export type Scheduler = {
  * // Schedule a flush - can be invoked more than once.
  * scheduler.flush();
  *
- * // Wait for flush to complete.
- * await scheduler.tick;
+ * // Run a synchronous flush.
+ * await scheduler.flushSync();
  * ```
  */
 export function createScheduler(): Scheduler {
@@ -34,7 +33,6 @@ export function createScheduler(): Scheduler {
     j = 0,
     flushing = false,
     tasks: ScheduledTask[] = [],
-    microtask = Promise.resolve(),
     beforeTasks: (() => void)[] = [],
     afterTasks: (() => void)[] = [];
 
@@ -68,7 +66,6 @@ export function createScheduler(): Scheduler {
   };
 
   return {
-    tick: microtask,
     enqueue,
     flush: scheduleFlush,
     flushSync: flush,

@@ -2,13 +2,13 @@ import { computed, effect, signal, onError, root, tick } from '../src';
 
 afterEach(() => tick());
 
-it('should store and return value on read', async () => {
+it('should store and return value on read', () => {
   const $a = signal(10);
   const $b = signal(10);
   const $c = computed(() => $a() + $b());
 
   expect($c()).toBe(20);
-  await tick();
+  tick();
 
   // Try again to ensure state is maintained.
   expect($c()).toBe(20);
@@ -26,7 +26,7 @@ it('should update when dependency is updated', () => {
   expect($c()).toBe(40);
 });
 
-it('should update when deep dependency is updated', async () => {
+it('should update when deep dependency is updated', () => {
   const $a = signal(10);
   const $b = signal(10);
   const $c = computed(() => $a() + $b());
@@ -75,7 +75,7 @@ it('should only re-compute when needed', () => {
   expect(compute).toHaveBeenCalledTimes(3);
 });
 
-it('should only re-compute whats needed', async () => {
+it('should only re-compute whats needed', () => {
   const computeC = vi.fn();
   const computeD = vi.fn();
 
@@ -102,7 +102,7 @@ it('should only re-compute whats needed', async () => {
   expect($e()).toBe(20);
 
   $a.set(20);
-  await tick();
+  tick();
 
   $e();
   expect(computeC).toHaveBeenCalledTimes(2);
@@ -110,7 +110,7 @@ it('should only re-compute whats needed', async () => {
   expect($e()).toBe(30);
 
   $b.set(20);
-  await tick();
+  tick();
 
   $e();
   expect(computeC).toHaveBeenCalledTimes(2);
@@ -126,7 +126,7 @@ it('should throw on cyclic computation', () => {
   }).toThrow(/cyclic dependency detected/);
 });
 
-it('should discover new dependencies', async () => {
+it('should discover new dependencies', () => {
   const $a = signal(1);
   const $b = signal(0);
 
@@ -141,15 +141,15 @@ it('should discover new dependencies', async () => {
   expect($c()).toBe(1);
 
   $a.set(0);
-  await tick();
+  tick();
   expect($c()).toBe(0);
 
   $b.set(10);
-  await tick();
+  tick();
   expect($c()).toBe(10);
 });
 
-it('should accept dirty option', async () => {
+it('should accept dirty option', () => {
   const $a = signal(0);
 
   const $b = computed(() => $a(), {
@@ -167,13 +167,13 @@ it('should accept dirty option', async () => {
   expect(effectA).toHaveBeenCalledTimes(1);
 
   $a.set(2);
-  await tick();
+  tick();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 
   // no-change
   $a.set(3);
-  await tick();
+  tick();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 });

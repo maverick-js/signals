@@ -1,6 +1,6 @@
 import { signal, tick, computedMap } from '../src';
 
-it('should compute map', async () => {
+it('should compute map', () => {
   const source = signal([1, 2, 3]);
 
   const compute = vi.fn();
@@ -26,7 +26,7 @@ it('should compute map', async () => {
 
   // Move values around
   source.set([3, 2, 1]);
-  await tick();
+  tick();
 
   const [a2, b2, c2] = map();
   expect(a2.i).toBe(0);
@@ -42,7 +42,7 @@ it('should compute map', async () => {
 
   // Add new value
   source.set([3, 2, 1, 4]);
-  await tick();
+  tick();
 
   expect(map().length).toBe(4);
   expect(map()[map().length - 1].i).toBe(3);
@@ -51,14 +51,14 @@ it('should compute map', async () => {
 
   // Remove value
   source.set([2, 1, 4]);
-  await tick();
+  tick();
 
   expect(map().length).toBe(3);
   expect(map()[0].id).toBe(4);
 
   // Empty
   source.set([]);
-  await tick();
+  tick();
 
   expect(map().length).toBe(0);
   expect(compute).toHaveBeenCalledTimes(4);
