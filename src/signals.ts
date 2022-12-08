@@ -248,6 +248,7 @@ export function effect(fn: Effect, options?: { id?: string }): StopEffect {
     () => {
       effectResult = fn();
       effectResult && currentScope && onDispose(effectResult);
+      effectResult = null;
     },
     __DEV__ ? { id: options?.id ?? 'effect', fallback: null } : undefined,
   );
