@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.3](https://github.com/maverick-js/signals/compare/v5.0.2...v5.0.3) (2022-12-09)
+
+
+### Bug Fixes
+
+* `tick` should not throw if called while running ([f45a59d](https://github.com/maverick-js/signals/commit/f45a59d950a8305cc6cc07ccc7e4f3d8ee7f936f))
+
 ### [5.0.2](https://github.com/maverick-js/signals/compare/v5.0.1...v5.0.2) (2022-12-09)
 
 
