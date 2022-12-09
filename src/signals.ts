@@ -312,24 +312,19 @@ export function getScheduler(): Scheduler {
 
 /**
  * Scopes the given function to the current parent scope so context and error handling continue to
- * work as expected. Generally this should be called on non-signal functions. A scoped
- * function will return `undefined` if an error is thrown.
- *
- * This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
- * because it doesn't require creating and tracking a `computed` signal.
+ * work as expected.
  *
  * @see {@link https://github.com/maverick-js/signals#scope}
  */
-export function scope<T>(fn: () => T): () => T | undefined {
+export function scope(fn: () => void) {
   fn[SCOPE] = currentScope;
   if (currentScope) adopt(fn);
   return function runScoped() {
     try {
-      return compute(fn[SCOPE], fn, currentObserver);
+      compute(fn[SCOPE], fn, currentObserver);
     } catch (error) {
       handleError(fn, error);
     }
-    return; // make TS happy -_-
   };
 }
 
@@ -415,7 +410,7 @@ export function dispose(fn: () => void) {
 
 let prevScope: Node | null, prevObserver: Node | null;
 
-function compute<T>(scope: Node, node: () => T, observer: Node | null): T {
+function compute<T>(scope: Node | null, node: () => T, observer: Node | null): T {
   prevScope = currentScope;
   prevObserver = currentObserver;
 
@@ -430,7 +425,7 @@ function compute<T>(scope: Node, node: () => T, observer: Node | null): T {
     currentObserver = prevObserver;
     prevScope = null;
     prevObserver = null;
-    if (__DEV__) computeStack.pop();
+    if (__DEV__ && scope) computeStack.pop();
   }
 }
 

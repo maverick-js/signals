@@ -12,16 +12,6 @@ it('should scope function to current scope', () => {
   callback();
 });
 
-it('should return value', () => {
-  let callback!: () => void;
-
-  root(() => {
-    callback = scope(() => 10);
-  });
-
-  expect(callback()).toBe(10);
-});
-
 it('should handle errors', () => {
   let callback!: () => void;
 

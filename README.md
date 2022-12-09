@@ -513,11 +513,7 @@ isWriteSignal(readonly(signal(10)));
 ### `scope`
 
 Scopes the given function to the current parent scope so context and error handling continue to
-work as expected. Generally this should be called on non-signal functions. A scoped function will
-return `undefined` if an error is thrown.
-
-This is more compute and memory efficient than the alternative `effect(() => peek(callback))`
-because it doesn't require creating and tracking a `computed` signal.
+work as expected.
 
 ```js
 import { root, scope } from '@maverick-js/signals';
@@ -525,7 +521,7 @@ import { root, scope } from '@maverick-js/signals';
 let callback;
 
 root(() => {
-  // This is now scoped to root.
+  // The callback is now scoped to root.
   callback = scope(() => {
     // Context and error handling will work here.
   });
