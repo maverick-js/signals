@@ -24,14 +24,26 @@ export interface WriteSignal<T> extends ReadSignal<T> {
   next: (next: (prevValue: T) => T) => void;
 }
 
-export type Dispose = () => void;
-export type Effect = () => MaybeStopEffect;
-export type StopEffect = () => void;
+export interface Scope {
+  id?: string;
+  (): unknown;
+}
+
+export interface Dispose {
+  (): void;
+}
+
+export interface Effect {
+  (): MaybeStopEffect;
+}
+
+export interface StopEffect {
+  (): void;
+}
 
 export type Maybe<T> = T | void | null | undefined | false;
 export type MaybeFunction = Maybe<(...args: any) => any>;
 export type MaybeDispose = Maybe<Dispose>;
 export type MaybeStopEffect = Maybe<StopEffect>;
 export type MaybeSignal<T> = MaybeFunction | ReadSignal<T>;
-
 export type ContextRecord = Record<string | symbol, unknown>;

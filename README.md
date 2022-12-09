@@ -116,8 +116,8 @@ $: yarn add @maverick-js/signals
 - [`onDispose`](#ondispose)
 - [`isReadSignal`](#isreadsignal)
 - [`isWriteSignal`](#iswritesignal)
-- [`scope`](#scope)
 - [`getScope`](#getscope)
+- [`scoped`](#scoped)
 - [`getContext`](#getcontext)
 - [`setContext`](#setcontext)
 - [`getScheduler`](#getscheduler)
@@ -510,41 +510,37 @@ isWriteSignal(computed(() => 10));
 isWriteSignal(readonly(signal(10)));
 ```
 
-### `scope`
+### `scoped`
 
-Scopes the given function to the current parent scope so context and error handling continue to
-work as expected.
+Runs the given function in the given scope so context and error handling continue to work.
 
 ```js
-import { root, scope } from '@maverick-js/signals';
-
-let callback;
+import { root, scope, scoped } from '@maverick-js/signals';
 
 root(() => {
-  // The callback is now scoped to root.
-  callback = scope(() => {
-    // Context and error handling will work here.
-  });
-});
+  const scope = getScope();
 
-// This will be still be scoped until root is disposed of.
-callback();
+  // Timeout will lose tracking of the current scope.
+  setTimeout(() => {
+    scoped(() => {
+      // Code here will run with root scope.
+    }, scope);
+  }, 0);
+});
 ```
 
 ### `getScope`
 
-Returns the owning scope of the given function. If no function is given it'll return the
-currently executing parent scope. You can use this to walk up the computation tree.
+Returns the currently executing parent scope.
 
 ```js
 root(() => {
+  const scope = getScope(); // returns `root` scope.
+
   effect(() => {
     const $a = signal(0);
-    getScope($a); // returns `effect`
-    getScope(getScope()); // returns `root`
+    getScope(); // returns `effect` scope.
   });
-
-  getScope(); // returns `root`.
 });
 ```
 

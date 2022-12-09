@@ -1,22 +1,12 @@
-import { effect, signal, peek, root, getScope } from '../src';
-
-it('should be orphan', () => {
-  const $a = signal(0);
-  expect(getScope($a)).toBeNull();
-});
-
-it('should return parent scope', () => {
-  root(() => {
-    const $a = signal(0);
-    expect(getScope($a)).toBeDefined();
-  });
-});
+import { effect, peek, root, getScope } from '../src';
 
 it('should return current scope', () => {
   root(() => {
-    expect(getScope()).toBeDefined();
+    const rootScope = getScope();
+    expect(rootScope).toBeDefined();
     effect(() => {
-      expect(getScope(getScope())).toBeDefined();
+      expect(getScope()).toBeDefined();
+      expect(getScope()).not.toBe(rootScope);
     });
   });
 });
@@ -24,32 +14,7 @@ it('should return current scope', () => {
 it('should return parent scope from inside peek', () => {
   root(() => {
     peek(() => {
-      const $a = signal(0);
-      expect(getScope($a)).toBeDefined();
+      expect(getScope()).toBeDefined();
     });
-  });
-});
-
-it('should return grandparent scope', () => {
-  root(() => {
-    effect(() => {
-      const $a = signal(0);
-      expect(getScope($a)).toBeDefined();
-      expect(getScope(getScope($a)!)).toBeDefined();
-    });
-  });
-});
-
-it('should remove parent scope on dispose', () => {
-  root((dispose) => {
-    const $a = signal(0);
-    dispose();
-    expect(getScope($a)).toBeNull();
-  });
-});
-
-it('should return undefined for scope when given arg', () => {
-  root(() => {
-    expect(getScope(undefined)).toBeUndefined();
   });
 });

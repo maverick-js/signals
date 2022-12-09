@@ -21,6 +21,7 @@ import type {
   SignalOptions,
   WriteSignal,
   StopEffect,
+  Scope,
 } from './types';
 
 interface Node {
@@ -292,13 +293,12 @@ export function isWriteSignal<T>(fn: MaybeSignal<T>): fn is WriteSignal<T> {
 }
 
 /**
- * Returns the owning scope of the given function. If no function is given it'll return the
- * currently executing parent scope. You can use this to walk up the computation tree.
+ * Returns the currently executing parent scope.
  *
  * @see {@link https://github.com/maverick-js/signals#getscope}
  */
-export function getScope(fn?: ReadSignal<unknown>): ReadSignal<unknown> | undefined {
-  return !arguments.length ? currentScope : fn?.[SCOPE];
+export function getScope(): Scope | null {
+  return currentScope;
 }
 
 /**
@@ -311,21 +311,16 @@ export function getScheduler(): Scheduler {
 }
 
 /**
- * Scopes the given function to the current parent scope so context and error handling continue to
- * work as expected.
+ * Runs the given function in the given scope so context and error handling continue to work.
  *
- * @see {@link https://github.com/maverick-js/signals#scope}
+ * @see {@link https://github.com/maverick-js/signals#scoped}
  */
-export function scope(fn: () => void) {
-  fn[SCOPE] = currentScope;
-  if (currentScope) adopt(fn);
-  return function runScoped() {
-    try {
-      compute(fn[SCOPE], fn, currentObserver);
-    } catch (error) {
-      handleError(fn, error);
-    }
-  };
+export function scoped(run: () => void, scope: Scope | null): void {
+  try {
+    compute(scope, run, null);
+  } catch (error) {
+    handleError(scope, error);
+  }
 }
 
 /**

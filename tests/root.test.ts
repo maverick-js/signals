@@ -8,7 +8,7 @@ import {
   type ReadSignal,
   type WriteSignal,
 } from '../src';
-import { OBSERVED_BY, OBSERVERS } from '../src/symbols';
+import { OBSERVERS, SCOPE } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -97,7 +97,7 @@ it('should hold parent tracking', () => {
   root(() => {
     const parent = getScope();
     root(() => {
-      expect(getScope(getScope())).toBe(parent);
+      expect(getScope()![SCOPE]).toBe(parent);
     });
   });
 });
@@ -107,6 +107,5 @@ it('should not observe', () => {
   root(() => {
     $a();
     expect(getScope()![OBSERVERS]).toBeUndefined();
-    expect(getScope()![OBSERVED_BY]).toBeUndefined();
   });
 });
