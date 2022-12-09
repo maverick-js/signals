@@ -41,3 +41,21 @@ it('should wait for queue to flush', () => {
   tick();
   expect(effectA).to.toHaveBeenCalledTimes(3);
 });
+
+it('should not fail if called while flushing', () => {
+  const effectA = vi.fn();
+
+  const $a = signal(10);
+
+  effect(() => {
+    effectA();
+    $a();
+    tick();
+  });
+
+  expect(effectA).to.toHaveBeenCalledTimes(1);
+
+  $a.set(20);
+  tick();
+  expect(effectA).to.toHaveBeenCalledTimes(2);
+});

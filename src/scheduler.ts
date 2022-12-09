@@ -31,6 +31,7 @@ export type Scheduler = {
 export function createScheduler(): Scheduler {
   let i = 0,
     j = 0,
+    scheduled = false,
     flushing = false,
     tasks: ScheduledTask[] = [],
     beforeTasks: (() => void)[] = [],
@@ -38,12 +39,12 @@ export function createScheduler(): Scheduler {
 
   function enqueue(task: ScheduledTask) {
     tasks.push(task);
-    if (!flushing) scheduleFlush();
+    if (!scheduled) scheduleFlush();
   }
 
   function scheduleFlush() {
-    if (!flushing) {
-      flushing = true;
+    if (!scheduled) {
+      scheduled = true;
       queueMicrotask(flush);
     }
   }
@@ -54,7 +55,9 @@ export function createScheduler(): Scheduler {
   }
 
   function flush() {
+    if (flushing) return;
     try {
+      flushing = true;
       for (j = 0; j < beforeTasks.length; j++) beforeTasks[j]();
       runTasks();
       for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
@@ -62,6 +65,7 @@ export function createScheduler(): Scheduler {
       tasks = tasks.slice(i);
       i = 0;
       flushing = false;
+      scheduled = false;
     }
   }
 
