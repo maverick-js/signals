@@ -510,6 +510,21 @@ isWriteSignal(computed(() => 10));
 isWriteSignal(readonly(signal(10)));
 ```
 
+### `getScope`
+
+Returns the currently executing parent scope.
+
+```js
+root(() => {
+  const scope = getScope(); // returns `root` scope.
+
+  effect(() => {
+    const $a = signal(0);
+    getScope(); // returns `effect` scope.
+  });
+});
+```
+
 ### `scoped`
 
 Runs the given function in the given scope so context and error handling continue to work.
@@ -526,21 +541,6 @@ root(() => {
       // Code here will run with root scope.
     }, scope);
   }, 0);
-});
-```
-
-### `getScope`
-
-Returns the currently executing parent scope.
-
-```js
-root(() => {
-  const scope = getScope(); // returns `root` scope.
-
-  effect(() => {
-    const $a = signal(0);
-    getScope(); // returns `effect` scope.
-  });
 });
 ```
 
