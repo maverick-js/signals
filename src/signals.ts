@@ -408,11 +408,9 @@ export function dispose(fn: () => void) {
   fn[DISPOSED] = true;
 }
 
-let prevScope: Node | null, prevObserver: Node | null;
-
 function compute<T>(scope: Node | null, node: () => T, observer: Node | null): T {
-  prevScope = currentScope;
-  prevObserver = currentObserver;
+  let prevScope = currentScope,
+    prevObserver = currentObserver;
 
   currentScope = scope;
   currentObserver = observer;
@@ -423,8 +421,6 @@ function compute<T>(scope: Node | null, node: () => T, observer: Node | null): T
   } finally {
     currentScope = prevScope;
     currentObserver = prevObserver;
-    prevScope = null;
-    prevObserver = null;
     if (__DEV__ && scope) computeStack.pop();
   }
 }
