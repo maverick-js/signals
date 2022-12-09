@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.2](https://github.com/maverick-js/signals/compare/v5.0.1...v5.0.2) (2022-12-09)
+
+
+### Bug Fixes
+
+* make `untrack` a single fn call ([3972e40](https://github.com/maverick-js/signals/commit/3972e40cebcf642717e63251492df432c5e34fb0))
+* prefer named functions over anon for debugging ([e57a0cf](https://github.com/maverick-js/signals/commit/e57a0cfcab09025ef1a5e4cc4ebee5c6f8bcfeb5))
+
 ### [5.0.1](https://github.com/maverick-js/signals/compare/v5.0.0...v5.0.1) (2022-12-08)
 
 
