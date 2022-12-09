@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.5](https://github.com/maverick-js/signals/compare/v5.0.4...v5.0.5) (2022-12-09)
+
+
+### Bug Fixes
+
+* locally scope compute prev tracking variables ([8305d52](https://github.com/maverick-js/signals/commit/8305d5273ce326151928fa932a42516069540765))
+
 ### [5.0.4](https://github.com/maverick-js/signals/compare/v5.0.3...v5.0.4) (2022-12-09)
 
 
