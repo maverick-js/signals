@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.0.6](https://github.com/maverick-js/signals/compare/v5.0.5...v5.0.6) (2022-12-09)
+
+
+### Bug Fixes
+
+* rework `scope` and rename to `scoped` ([f5e1789](https://github.com/maverick-js/signals/commit/f5e1789bd5004b6bc00021d184bb17512b9ffb26))
+
 ### [5.0.5](https://github.com/maverick-js/signals/compare/v5.0.4...v5.0.5) (2022-12-09)
 
 
