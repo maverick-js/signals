@@ -530,7 +530,7 @@ root(() => {
 Runs the given function in the given scope so context and error handling continue to work.
 
 ```js
-import { root, scope, scoped } from '@maverick-js/signals';
+import { root, getScope, scoped } from '@maverick-js/signals';
 
 root(() => {
   const scope = getScope();
