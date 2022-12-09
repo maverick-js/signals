@@ -248,7 +248,7 @@ let effectResult: any;
  */
 export function effect(fn: Effect, options?: { id?: string }): StopEffect {
   const $effect = computed(
-    () => {
+    function runEffect() {
       effectResult = fn();
       effectResult && currentScope && onDispose(effectResult);
       effectResult = null;
@@ -323,8 +323,7 @@ export function getScheduler(): Scheduler {
 export function scope<T>(fn: () => T): () => T | undefined {
   fn[SCOPE] = currentScope;
   if (currentScope) adopt(fn);
-
-  return () => {
+  return function runScoped() {
     try {
       return compute(fn[SCOPE], fn, currentObserver);
     } catch (error) {
@@ -379,7 +378,7 @@ export function onDispose(dispose: MaybeDispose): Dispose {
   if (!scope[DISPOSAL]) scope[DISPOSAL] = new Set();
   scope[DISPOSAL].add(dispose);
 
-  return () => {
+  return function removeDispose() {
     (dispose as Dispose)();
     scope[DISPOSAL]?.delete(dispose as Dispose);
   };

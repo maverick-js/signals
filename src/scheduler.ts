@@ -36,24 +36,24 @@ export function createScheduler(): Scheduler {
     beforeTasks: (() => void)[] = [],
     afterTasks: (() => void)[] = [];
 
-  const enqueue = (task: ScheduledTask) => {
+  function enqueue(task: ScheduledTask) {
     tasks.push(task);
     if (!flushing) scheduleFlush();
-  };
+  }
 
-  const scheduleFlush = () => {
+  function scheduleFlush() {
     if (!flushing) {
       flushing = true;
       queueMicrotask(flush);
     }
-  };
+  }
 
   function runTasks(start = 0) {
     for (i = start; i < tasks.length; i++) tasks[i]();
     if (tasks.length > start) runTasks(i);
   }
 
-  const flush = () => {
+  function flush() {
     try {
       for (j = 0; j < beforeTasks.length; j++) beforeTasks[j]();
       runTasks();
@@ -63,7 +63,7 @@ export function createScheduler(): Scheduler {
       i = 0;
       flushing = false;
     }
-  };
+  }
 
   return {
     enqueue,
@@ -75,7 +75,7 @@ export function createScheduler(): Scheduler {
 }
 
 function hook(callbacks: (() => void)[]) {
-  return (callback: () => void) => {
+  return function removeFlushHook(callback: () => void) {
     callbacks.push(callback);
     return () => callbacks.splice(callbacks.indexOf(callback), 1);
   };
