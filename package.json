@@ -2,7 +2,7 @@
   "name": "@maverick-js/signals",
   "description": "A lightweight (~850B) library for creating reactive observables via functions.",
   "license": "MIT",
-  "version": "5.0.3",
+  "version": "5.0.4",
   "type": "module",
   "module": "dist/prod/index.js",
   "sideEffects": false,
