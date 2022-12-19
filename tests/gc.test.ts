@@ -10,70 +10,80 @@ function gc() {
   );
 }
 
-it('should gc computed if there are no observers', async () => {
-  const $a = signal(0),
-    ref = new WeakRef(computed(() => $a()));
+if (global.gc) {
+  it('should gc computed if there are no observers', async () => {
+    const $a = signal(0),
+      ref = new WeakRef(computed(() => $a()));
 
-  await gc();
-  expect(ref.deref()).toBeUndefined();
-});
-
-it('should _not_ gc computed if there are observers', async () => {
-  let $a = signal(0);
-
-  const ref = new WeakRef(
-    computed(() => {
-      $a();
-    }),
-  );
-
-  ref.deref()!();
-
-  await gc();
-  expect(ref.deref()).toBeDefined();
-});
-
-it('should gc root if disposed', async () => {
-  let $a = signal(0),
-    ref!: WeakRef<any>;
-
-  const dispose = root((dispose) => {
-    ref = new WeakRef(
-      computed(() => {
-        $a();
-      }),
-    );
-
-    return dispose;
+    await gc();
+    expect(ref.deref()).toBeUndefined();
   });
 
-  await gc();
-  expect(ref.deref()).toBeDefined();
+  it('should _not_ gc computed if there are observers', async () => {
+    let $a = signal(0),
+      pointer;
 
-  dispose();
-  await gc();
-  expect(ref.deref()).toBeUndefined();
-});
+    const ref = new WeakRef((pointer = computed(() => $a())));
 
-it('should gc effect lazily', async () => {
-  let $a = signal(0),
-    ref!: WeakRef<any>;
+    ref.deref()!();
 
-  const dispose = root((dispose) => {
-    effect(() => {
-      $a();
-      ref = new WeakRef(getScope()!);
+    await gc();
+    expect(ref.deref()).toBeDefined();
+
+    pointer = undefined;
+    await gc();
+    expect(ref.deref()).toBeUndefined();
+  });
+
+  it('should gc root if disposed', async () => {
+    let $a = signal(0),
+      ref!: WeakRef<any>,
+      pointer;
+
+    const dispose = root((dispose) => {
+      ref = new WeakRef(
+        (pointer = computed(() => {
+          $a();
+        })),
+      );
+
+      return dispose;
     });
 
-    return dispose;
+    await gc();
+    expect(ref.deref()).toBeDefined();
+
+    dispose();
+    await gc();
+    expect(ref.deref()).toBeDefined();
+
+    pointer = undefined;
+    await gc();
+    expect(ref.deref()).toBeUndefined();
   });
 
-  await gc();
-  expect(ref.deref()).toBeDefined();
+  it('should gc effect lazily', async () => {
+    let $a = signal(0),
+      ref!: WeakRef<any>;
 
-  dispose();
-  $a.set(1);
+    const dispose = root((dispose) => {
+      effect(() => {
+        $a();
+        ref = new WeakRef(getScope()!);
+      });
 
-  await gc();
-  expect(ref.deref()).toBeUndefined();
-});
+      return dispose;
+    });
+
+    await gc();
+    expect(ref.deref()).toBeDefined();
+
+    dispose();
+    $a.set(1);
+
+    await gc();
+    expect(ref.deref()).toBeUndefined();
+  });
+} else {
+  it('', () => {});
+}

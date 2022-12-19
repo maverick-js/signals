@@ -1,4 +1,4 @@
-import { computed, signal, peek, effect, tick, onDispose, root } from '../src';
+import { computed, signal, peek, effect, tick, onDispose, root, getScope } from '../src';
 
 afterEach(() => tick());
 
@@ -70,40 +70,14 @@ it('should not affect deep dependency being created', () => {
   expect($d()).toBe(50);
 });
 
-it('should not trigger deep `onDispose`', () => {
-  const dispose = vi.fn();
-  const computeB = vi.fn();
-
-  const $a = signal(0);
-  const $b = computed(() => {
-    $a();
-    computeB();
-    onDispose(dispose);
-    return 10;
-  });
-
-  const stop = effect(() => {
-    peek(() => $b());
-  });
-
-  stop();
-  tick();
-
-  expect(computeB).to.toHaveBeenCalledTimes(1);
-  expect(dispose).to.toHaveBeenCalledTimes(0);
-
-  dispose($b);
-  expect(dispose).to.toHaveBeenCalledTimes(1);
-});
-
 it('should track parent across peeks', () => {
-  const $a = signal(0);
+  const $a = signal(0, { id: '$a' });
 
   const childCompute = vi.fn();
   const childDispose = vi.fn();
 
   function child() {
-    const $b = computed(() => $a() * 2);
+    const $b = computed(() => $a() * 2, { id: '$b' });
     effect(() => {
       childCompute($b());
       onDispose(childDispose);

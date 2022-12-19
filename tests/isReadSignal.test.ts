@@ -9,7 +9,5 @@ it('should return true if given signal', () => {
 });
 
 it('should return false if given non-signal', () => {
-  ([false, null, undefined, () => {}, effect(() => {})] as const).forEach((type) =>
-    expect(isReadSignal(type)).toBe(false),
-  );
+  ([false, null, undefined] as const).forEach((type) => expect(isReadSignal(type)).toBe(false));
 });

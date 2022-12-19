@@ -1,11 +1,7 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { computed, signal, onDispose, peek, readonly, root } from './signals';
+import { computed, signal, onDispose, root, readonly, untrack } from './signals';
 import type { Dispose, Maybe, ReadSignal } from './types';
-
-function runAll(fns: (() => void)[]) {
-  for (let i = 0; i < fns.length; i++) fns[i]();
-}
 
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
@@ -33,7 +29,7 @@ export function computedMap<Item, MappedItem>(
   return computed(
     () => {
       const newItems = list() || [];
-      return peek(() => {
+      return untrack(() => {
         if (newItems.length === 0) {
           if (len !== 0) {
             runAll(disposal);
@@ -69,7 +65,7 @@ export function computedMap<Item, MappedItem>(
         return map($o, i);
       }
     },
-    { id: __DEV__ ? options?.id : undefined, fallback: [] },
+    { id: __DEV__ ? options?.id : undefined, initial: [] },
   );
 }
 
@@ -102,7 +98,7 @@ export function computedKeyedMap<Item, MappedItem>(
         i: number,
         j: number;
 
-      return peek(() => {
+      return untrack(() => {
         let newLen = newItems.length;
 
         // fast path for empty arrays
@@ -205,16 +201,23 @@ export function computedKeyedMap<Item, MappedItem>(
 
         if (indicies) {
           const $i = signal(j);
+
           indicies[j] = (v) => {
             $i.set(v);
             return v;
           };
+
           return map(newItems[j], readonly($i));
         }
 
         return map(newItems[j], () => -1);
       }
     },
-    { id: __DEV__ ? options?.id : undefined, fallback: [] },
+    { id: __DEV__ ? options?.id : undefined, initial: [] },
   );
+}
+
+let i = 0;
+function runAll(fns: (() => void)[]) {
+  for (i = 0; i < fns.length; i++) fns[i]();
 }

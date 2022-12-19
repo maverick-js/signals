@@ -2,7 +2,6 @@ import { signal, tick, computedMap } from '../src';
 
 it('should compute map', () => {
   const source = signal([1, 2, 3]);
-
   const compute = vi.fn();
 
   const map = computedMap(source, (value, index) => {

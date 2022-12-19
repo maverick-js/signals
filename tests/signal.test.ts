@@ -14,9 +14,9 @@ it('should update signal via `set()`', () => {
   expect($a()).toBe(20);
 });
 
-it('should update signal via `next()`', () => {
+it('should update signal via next function', () => {
   const $a = signal(10);
-  $a.next((n) => n + 10);
+  $a.set((n) => n + 10);
   expect($a()).toBe(20);
 });
 

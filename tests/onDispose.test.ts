@@ -1,4 +1,4 @@
-import { effect, tick, onDispose } from '../src';
+import { effect, tick, onDispose, root } from '../src';
 
 afterEach(() => tick());
 
@@ -34,4 +34,21 @@ it('should clear disposal early', () => {
   tick();
 
   expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+it('should not trigger wrong onDispose', () => {
+  const dispose = vi.fn();
+
+  root(() => {
+    effect(() => {
+      onDispose(dispose);
+    });
+
+    const stop = effect(() => {});
+
+    stop();
+    tick();
+
+    expect(dispose).toHaveBeenCalledTimes(0);
+  });
 });

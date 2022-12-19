@@ -25,7 +25,7 @@ it('should compute keyed map', () => {
   expect(compute).toHaveBeenCalledTimes(3);
 
   // Move values around
-  source.next((p) => {
+  source.set((p) => {
     const tmp = p[1];
     p[1] = p[0];
     p[0] = tmp;
@@ -46,7 +46,7 @@ it('should compute keyed map', () => {
   expect(compute).toHaveBeenCalledTimes(3);
 
   // Add new value
-  source.next((p) => [...p, { id: 'd' }]);
+  source.set((p) => [...p, { id: 'd' }]);
   tick();
 
   expect(map().length).toBe(4);
@@ -55,7 +55,7 @@ it('should compute keyed map', () => {
   expect(compute).toHaveBeenCalledTimes(4);
 
   // Remove value
-  source.next((p) => p.slice(1));
+  source.set((p) => p.slice(1));
   tick();
 
   expect(map().length).toBe(3);

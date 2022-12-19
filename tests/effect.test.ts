@@ -1,4 +1,4 @@
-import { computed, signal, effect, tick, onDispose } from '../src';
+import { computed, signal, effect, tick, onDispose, getScope } from '../src';
 
 afterEach(() => tick());
 
@@ -204,7 +204,7 @@ it('should conditionally observe', () => {
   tick();
   expect($effect).toHaveBeenCalledTimes(3);
 
-  $a.set(2);
+  $a.set(3);
   tick();
   expect($effect).toHaveBeenCalledTimes(3);
 });
@@ -241,14 +241,24 @@ it('should handle looped effects', () => {
 
   const $value = signal(0);
 
-  effect(() => {
-    values.push($value());
-    for (let i = 0; i < loop; i++) {
-      effect(() => {
-        values.push($value() + i);
-      });
-    }
-  });
+  let x = 0;
+  effect(
+    () => {
+      x++;
+      values.push($value());
+      for (let i = 0; i < loop; i++) {
+        effect(
+          () => {
+            values.push($value() + i);
+          },
+          { id: `inner-effect-${x}-${i}` },
+        );
+      }
+    },
+    { id: 'root-effect' },
+  );
+
+  tick();
 
   expect(values).toHaveLength(3);
   expect(values.join(',')).toBe('0,0,1');

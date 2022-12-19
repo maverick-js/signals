@@ -1,13 +1,25 @@
-import { getScope, signal, root, untrack } from '../src';
-import { CHILDREN, SCOPE } from '../src/symbols';
+import { signal, root, untrack, effect, tick } from '../src';
 
 it('should not track scope', () => {
-  root(() => {
+  root((dispose) => {
+    let innerEffect = vi.fn(),
+      update!: () => void;
+
     untrack(() => {
       const $a = signal(0);
-      expect($a[SCOPE]).toBeNull();
+
+      effect(() => {
+        innerEffect($a());
+      });
+
+      update = () => {
+        $a.set(10);
+      };
     });
 
-    expect(getScope()![CHILDREN]).toBeNull();
+    dispose();
+    update();
+    tick();
+    expect(innerEffect).toHaveBeenCalledWith(10);
   });
 });

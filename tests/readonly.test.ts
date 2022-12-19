@@ -13,7 +13,7 @@ it('should create readonly proxy', () => {
 
   expect(() => {
     // @ts-expect-error
-    $b.next((n) => n + 10);
+    $b.set((n) => n + 10);
   }).toThrow();
 
   tick();

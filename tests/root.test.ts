@@ -5,10 +5,10 @@ import {
   effect,
   tick,
   getScope,
+  SCOPE,
   type ReadSignal,
   type WriteSignal,
 } from '../src';
-import { OBSERVERS, SCOPE } from '../src/symbols';
 
 afterEach(() => tick());
 
@@ -55,6 +55,7 @@ it('should create new tracking scope', () => {
   const innerEffect = vi.fn();
 
   const $a = signal(0);
+
   const stop = effect(() => {
     $a();
     root(() => {
@@ -71,8 +72,8 @@ it('should create new tracking scope', () => {
 
   $a.set(10);
   tick();
-  expect(innerEffect).toHaveBeenCalledWith(10);
-  expect(innerEffect).toHaveBeenCalledTimes(2);
+  expect(innerEffect).not.toHaveBeenCalledWith(10);
+  expect(innerEffect).toHaveBeenCalledTimes(1);
 });
 
 it('should not be reactive', () => {
@@ -106,6 +107,7 @@ it('should not observe', () => {
   const $a = signal(0);
   root(() => {
     $a();
-    expect(getScope()![OBSERVERS]).toBeUndefined();
+    expect(getScope()!._sources).toBeUndefined();
+    expect(getScope()!._observers).toBeUndefined();
   });
 });

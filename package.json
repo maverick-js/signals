@@ -8,6 +8,7 @@
   "sideEffects": false,
   "exports": {
     ".": {
+      "production": "./dist/prod/index.js",
       "development": "./dist/dev/index.js",
       "test": "./dist/dev/index.js",
       "default": "./dist/prod/index.js"
@@ -22,11 +23,12 @@
     "build": "rimraf dist && node .scripts/build.js",
     "types": "tsc -p tsconfig-build.json && api-extractor run -c types.json && rimraf dist/*.d.ts",
     "format": "prettier src --write --loglevel warn",
-    "test": "node --expose-gc ./vitest.js",
-    "test:watch": "node --expose-gc ./vitest.js --watch",
-    "validate": "pnpm test && pnpm build && pnpm types",
-    "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish",
-    "size": "pnpm build && export-size ."
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:gc": "node --expose-gc ./vitest.js",
+    "test:gc:watch": "node --expose-gc ./vitest.js --watch",
+    "validate": "pnpm test && pnpm test:gc && pnpm build && pnpm types",
+    "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish"
   },
   "contributors": [
     "Rahim Alwer <rahim.alwer@gmail.com>"
@@ -45,7 +47,6 @@
     "cellx": "^1.10.26",
     "cli-table": "^0.3.11",
     "esbuild": "^0.14.47",
-    "export-size": "^0.5.2",
     "kleur": "^4.1.5",
     "prettier": "^2.7.1",
     "rimraf": "^3.0.2",

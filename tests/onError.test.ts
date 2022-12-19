@@ -1,4 +1,4 @@
-import { root, effect, onError, signal, tick } from '../src';
+import { root, effect, onError, signal, tick, getContext } from '../src';
 
 it('should let errors should bubble up when not handled', () => {
   const error = new Error();
@@ -12,8 +12,8 @@ it('should let errors should bubble up when not handled', () => {
 });
 
 it('should handle error', () => {
-  const error = new Error();
-  const handler = vi.fn();
+  const error = new Error(),
+    handler = vi.fn();
 
   root(() => {
     effect(() => {
@@ -26,10 +26,10 @@ it('should handle error', () => {
 });
 
 it('should forward error to another handler', () => {
-  const error = new Error();
-  const handler = vi.fn();
+  const error = new Error(),
+    handler = vi.fn();
 
-  const $a = signal(0);
+  let $a = signal(0);
 
   root(() => {
     effect(() => {
@@ -55,12 +55,12 @@ it('should forward error to another handler', () => {
 });
 
 it('should not duplicate error handler', () => {
-  const error = new Error();
-  const handler = vi.fn();
+  const error = new Error(),
+    handler = vi.fn();
 
-  const $a = signal(0);
+  let $a = signal(0),
+    shouldThrow = false;
 
-  let shouldThrow = false;
   root(() => {
     effect(() => {
       $a();
@@ -76,4 +76,33 @@ it('should not duplicate error handler', () => {
   $a.set(2);
   tick();
   expect(handler).toHaveBeenCalledTimes(1);
+});
+
+it('should not trigger wrong handler', () => {
+  const error = new Error(),
+    rootHandler = vi.fn(),
+    handler = vi.fn();
+
+  let $a = signal(0),
+    shouldThrow = false;
+
+  root(() => {
+    onError(rootHandler);
+
+    effect(() => {
+      $a();
+      if (shouldThrow) throw error;
+    });
+
+    effect(() => {
+      onError(handler);
+    });
+  });
+
+  shouldThrow = true;
+  $a.set(1);
+  tick();
+
+  expect(rootHandler).toHaveBeenCalledWith(error);
+  expect(handler).not.toHaveBeenCalledWith(error);
 });

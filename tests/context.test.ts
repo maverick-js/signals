@@ -5,6 +5,10 @@ it('should get context value', () => {
   root(() => {
     setContext(key, 100);
     root(() => {
+      root(() => {
+        setContext(key, 200);
+      });
+
       effect(() => {
         expect(getContext(key)).toBe(100);
       });

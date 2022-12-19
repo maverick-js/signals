@@ -11,9 +11,9 @@ import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
 import Table from 'cli-table';
 
+const BATCHED = true;
 const RUNS_PER_TIER = 150;
 const LAYER_TIERS = [10, 100, 500, 1000, 2000];
-const BATCHED = process.argv.includes('--batched');
 
 const med = (array) =>
   array.sort((a, b) => (a - b < 0 ? 1 : -1))[Math.floor(array.length / 2)] || 0;
@@ -35,11 +35,13 @@ const isSolution = (layers, answer) => answer.every((_, i) => SOLUTIONS[layers][
 
 async function main() {
   const report = {};
-  report['preact/signals'] = { fn: runPreact, runs: [] };
-  if (BATCHED) report.maverick = { fn: runMaverick, runs: [], avg: [] };
+  report.maverick = { fn: runMaverick, runs: [], avg: [] };
   report.S = { fn: runS, runs: [] };
-  report.cellx = { fn: runCellx, runs: [] };
   report.solid = { fn: runSolid, runs: [] };
+
+  // These libraries are not comparable in terms of features.
+  // report['preact/signals'] = { fn: runPreact, runs: [] };
+  // report.cellx = { fn: runCellx, runs: [] };
 
   for (const lib of Object.keys(report)) {
     const current = report[lib];

@@ -1,11 +1,12 @@
 export type ScheduledTask = () => void;
+export type BatchTasks = (queue: ScheduledTask[]) => void;
 export type StopFlushUpdates = () => void;
 
 export type Scheduler = {
   enqueue: (task: ScheduledTask) => void;
+  enqueueBatch: (batch: BatchTasks) => void;
   flush: () => void;
   flushSync: () => void;
-  onBeforeFlush: (callback: () => void) => StopFlushUpdates;
   onFlush: (callback: () => void) => StopFlushUpdates;
 };
 
@@ -34,11 +35,15 @@ export function createScheduler(): Scheduler {
     scheduled = false,
     flushing = false,
     tasks: ScheduledTask[] = [],
-    beforeTasks: (() => void)[] = [],
     afterTasks: (() => void)[] = [];
 
   function enqueue(task: ScheduledTask) {
     tasks.push(task);
+    if (!scheduled) scheduleFlush();
+  }
+
+  function enqueueBatch(batch: BatchTasks) {
+    batch(tasks);
     if (!scheduled) scheduleFlush();
   }
 
@@ -49,21 +54,19 @@ export function createScheduler(): Scheduler {
     }
   }
 
-  function runTasks(start = 0) {
-    for (i = start; i < tasks.length; i++) tasks[i]();
-    if (tasks.length > start) runTasks(i);
+  function performWork() {
+    for (i = 0; i < tasks.length; i++) tasks[i]();
+    for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
+    if (tasks.length > i) performWork();
   }
 
   function flush() {
     if (flushing) return;
     try {
       flushing = true;
-      for (j = 0; j < beforeTasks.length; j++) beforeTasks[j]();
-      runTasks();
-      for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
+      performWork();
     } finally {
       tasks = tasks.slice(i);
-      i = 0;
       flushing = false;
       scheduled = false;
     }
@@ -71,9 +74,9 @@ export function createScheduler(): Scheduler {
 
   return {
     enqueue,
+    enqueueBatch,
     flush: scheduleFlush,
     flushSync: flush,
-    onBeforeFlush: hook(beforeTasks),
     onFlush: hook(afterTasks),
   };
 }

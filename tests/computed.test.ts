@@ -187,7 +187,7 @@ it('should use fallback if error is thrown during init', () => {
         if (1) throw Error();
         return '';
       },
-      { fallback: 'foo' },
+      { initial: 'foo' },
     );
 
     expect($a()).toBe('foo');

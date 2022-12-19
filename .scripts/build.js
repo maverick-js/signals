@@ -9,8 +9,10 @@ async function main() {
       treeShaking: true,
       format: 'esm',
       bundle: true,
+      // minify: true,
       platform: 'browser',
       target: 'esnext',
+      mangleProps: !dev ? /^_/ : undefined,
       write: true,
       watch: hasArg('-w'),
       define: {

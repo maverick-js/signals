@@ -1,6 +1,27 @@
+import type { FLAGS, SCOPE } from './symbols';
+
+export interface Computation<T = any> {
+  id?: string | undefined;
+
+  [FLAGS]: number;
+  [SCOPE]: Computation | null;
+  _prevSibling: Computation | null;
+  _nextSibling: Computation | null;
+
+  _value: T;
+  _disposal: Dispose[] | null;
+  _context: ContextRecord | null;
+  _sources: Computation[] | null;
+  _observers: Computation[] | null;
+
+  _compute: (() => T) | null;
+  _changed: (prev: T, next: T) => boolean;
+}
+
 export interface ReadSignal<T> {
-  id?: string;
   (): T;
+  /** only available during dev. */
+  node?: Computation<T>;
 }
 
 export interface SignalOptions<T> {
@@ -9,25 +30,23 @@ export interface SignalOptions<T> {
 }
 
 export interface ComputedSignalOptions<T, R = never> extends SignalOptions<T> {
-  /**
-   * It can be fatal if a computed fails by throwing an error during its first run. A `fallback`
-   * can be specified to indicate that this was expected, and that the given value should be
-   * returned in the event it does happen.
-   */
-  fallback?: R;
+  initial?: R;
+  scoped?: boolean;
 }
 
 export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 
 export interface WriteSignal<T> extends ReadSignal<T> {
-  set: (value: T) => void;
-  next: (next: (prevValue: T) => T) => void;
+  /** only available during dev. */
+  node?: Computation<T>;
+  set: (value: T | ((prevValue: T) => T)) => void;
 }
 
-export interface Scope {
-  id?: string;
-  (): unknown;
+export interface SelectorSignal<T> {
+  (key: T): boolean;
 }
+
+export interface Scope extends Computation<unknown> {}
 
 export interface Dispose {
   (): void;

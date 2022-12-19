@@ -59,7 +59,7 @@ root((dispose) => {
   // Otherwise, computations will be batched and run on the microtask queue.
   tick();
 
-  $b.next((prev) => prev + 5); // logs `15` inside effect
+  $b.set((prev) => prev + 5); // logs `15` inside effect
 
   tick();
 
@@ -75,19 +75,6 @@ root((dispose) => {
   dispose();
 });
 ```
-
-## Export Sizes
-
-<img src="./export-sizes.png" alt="Library export sizes" width="250px" />
-
-- **Average:** ~850B (brotli)
-- **Without Computed Maps:** ~1KB (brotli)
-- **Total:** ~1.5KB (brotli)
-
-You can also check out the library size on [Bundlephobia][bundlephobia] (less accurate).
-
-> **Note**
-> Maverick Signals is treeshakable and side-effect free so you'll only end up with what you use.
 
 ## Installation
 
@@ -111,7 +98,6 @@ $: yarn add @maverick-js/signals
 - [`tick`](#tick)
 - [`computedMap`](#computedmap)
 - [`computedKeyedMap`](#computedkeyedmap)
-- [`dispose`](#dispose)
 - [`onError`](#onerror)
 - [`onDispose`](#ondispose)
 - [`isReadSignal`](#isreadsignal)
@@ -165,7 +151,7 @@ console.log(result); // logs `10`
 ### `signal`
 
 Wraps the given value into a signal. The signal will return the current value when invoked `fn()`,
-and provide a simple write API via `set()` and `next()`. The value can now be observed when used
+and provide a simple write API via `set()`. The value can now be observed when used
 inside other computations created with [`computed`](#computed) and [`effect`](#effect).
 
 ```js
@@ -175,7 +161,7 @@ const $a = signal(10);
 
 $a(); // read
 $a.set(20); // write (1)
-$a.next((prev) => prev + 10); // write (2)
+$a.set((prev) => prev + 10); // write (2)
 ```
 
 > **Warning**
@@ -285,7 +271,7 @@ effect(() => {
 ### `readonly`
 
 Takes in the given signal and makes it read only by removing access to write operations (i.e.,
-`set()` and `next()`).
+`set()`).
 
 ```js
 import { signal, readonly } from '@maverick-js/signals';
@@ -395,7 +381,7 @@ const nodes = computedKeyedMap(source, (value, index) => {
 
 console.log(nodes()); // [{ id: 0, i: $0 }, { id: 1, i: $1 }, { id: 2, i: $2 }];
 
-source.next((prev) => {
+source.set((prev) => {
   // Swap index 0 and 1
   const tmp = prev[1];
   prev[1] = prev[0];
@@ -407,24 +393,6 @@ tick();
 
 // No nodes were created/destroyed, simply nodes at index 0 and 1 switched.
 console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];
-```
-
-### `dispose`
-
-Unsubscribes the given signal and all inner child computations. Disposed functions will retain
-their current value but are no longer reactive.
-
-```js
-import { signal, dispose } from '@maverick-js/signals';
-
-const $a = signal(10);
-const $b = computed(() => $a());
-
-// `$b` will no longer update if `$a` is updated.
-dispose($a);
-
-$a.set(100);
-console.log($b()); // still logs `10`
 ```
 
 ### `onError`
@@ -667,21 +635,15 @@ found [here](./bench/layers.js).
 Each column represents how deep computations were layered. The average time taken to update the
 computation out of a 100 runs is used for each library.
 
-#### Sync
-
-<img src="./bench/layers.png" alt="Layers sync benchmark table" width="350px" />
-
-#### Batched
-
-<img src="./bench/layers-batched.png" alt="Layers batched benchmark table" width="350px" />
+<img src="./bench/layers.png" alt="Layers benchmark table" width="350px" />
 
 #### Notes
 
-- Only Maverick and Solid JS are feature complete below which includes nested effects, arbritrary
-  node disposal, context, and error handling.
 - Nearly all computations in a real world app are going to be less than 10 layers deep, so only the
-  first column really matters. What this benchmark is really showing is how notification propagation
-  scales with computation depth.
+  first column really matters.
+- This benchmark favours eagerly scheduling computations and aggresive caching in a single long
+  computation subtree. This is not a great benchmark for signals libraries as it doesn't measure
+  what really matters such as dynamic graph updates, source/observer changes, and scope disposals.
 
 ### Reactively
 
@@ -694,35 +656,27 @@ or dynamic updates are made to the graph (i.e., pick a node and update its value
 
 #### Notes
 
-- This is not an apples to apples comparison. Reactively and Preact Signals are not feature
-  complete as they currently don't support scope tracking, nested effects, context, error handling,
-  and arbritray subtree disposal. This means their overall tracking logic is simplified. You can
-  safely apply a ~10-15% penalty to their scores (do note we haven't applied it here).
 - This assumes Solid JS is in batch-only mode which is not realistic as a real world app won't
   have batch applied everywhere.
-- Preact Signals is reporting unusually slow numbers for the Wide Dense and Large Web App charts
-  which may be the result of a bug or something to do with how they've modelled the computation
-  graph. Issue is being tracked [here](https://github.com/preactjs/signals/issues/274).
-- Only Maverick uses a `Set` to track observers/dependencies. This means multiple observer calls in
-  other libraries will result in an edge being created every time a signal is called. This is one of
-  the reasons why Maverick does consistenly well across small and large data sets.
 
 ## Inspiration
 
-`@maverick-js/signals` was made possible based on my learnings from:
+`@maverick-js/signals` was made possible based on code and learnings from:
 
+- [Reactively][reactively]
 - [Solid JS][solidjs]
 - [Sinuous][sinuous]
 - [Hyperactiv][hyperactiv]
 - [Svelte Scheduler][svelte-scheduler]
 
-Special thanks to Wesley, Julien, and Solid/Svelte contributors for all their work 🎉
+Special thanks to Modderme, Wesley, Julien, and Solid/Svelte contributors for all their work 🎉
 
 [package]: https://www.npmjs.com/package/@maverick-js/signals
 [package-badge]: https://img.shields.io/npm/v/@maverick-js/signals/latest
 [license]: https://github.com/maverick-js/signals/blob/main/LICENSE
 [license-badge]: https://img.shields.io/github/license/maverick-js/signals
 [size-badge]: https://img.shields.io/bundlephobia/minzip/@maverick-js/signals@^5.0.0
+[reactively]: https://github.com/modderme123/reactively
 [solidjs]: https://github.com/solidjs/solid
 [sinuous]: https://github.com/luwes/sinuous
 [hyperactiv]: https://github.com/elbywan/hyperactiv
