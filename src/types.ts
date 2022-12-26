@@ -21,7 +21,7 @@ export interface Computation<T = any> {
 export interface ReadSignal<T> {
   (): T;
   /** only available during dev. */
-  node?: Computation<T>;
+  node?: Computation;
 }
 
 export interface SignalOptions<T> {
@@ -38,7 +38,7 @@ export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 
 export interface WriteSignal<T> extends ReadSignal<T> {
   /** only available during dev. */
-  node?: Computation<T>;
+  node?: Computation;
   set: (value: T | ((prevValue: T) => T)) => void;
 }
 
