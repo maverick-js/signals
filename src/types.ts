@@ -39,7 +39,11 @@ export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 export interface WriteSignal<T> extends ReadSignal<T> {
   /** only available during dev. */
   node?: Computation;
-  set: (value: T | ((prevValue: T) => T)) => void;
+  set: (value: T extends Function ? T : T | NextValue<T>) => void;
+}
+
+export interface NextValue<T> {
+  (prevValue: T): T;
 }
 
 export interface SelectorSignal<T> {

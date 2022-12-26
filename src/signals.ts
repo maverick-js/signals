@@ -129,7 +129,7 @@ export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSig
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
 export function isReadSignal<T>(fn: MaybeSignal<T>): fn is ReadSignal<T> {
-  return typeof fn === 'function';
+  return isFunction(fn);
 }
 
 /**
@@ -435,12 +435,16 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
   };
 }
 
-function equal(a: unknown, b: unknown) {
+export function equal(a: unknown, b: unknown) {
   return a === b;
 }
 
-function notEqual(a: unknown, b: unknown) {
+export function notEqual(a: unknown, b: unknown) {
   return a !== b;
+}
+
+export function isFunction(value: unknown): value is Function {
+  return typeof value === 'function';
 }
 
 function createComputation<T>(
@@ -572,7 +576,7 @@ function read(this: Computation<any>): any {
 }
 
 function write(this: Computation<any>, newValue: any): void {
-  const value = typeof newValue === 'function' ? newValue(this._value) : newValue;
+  const value = !isFunction(this._value) && isFunction(newValue) ? newValue(this._value) : newValue;
 
   if (this[FLAGS] & FLAGS_DISPOSED || !this._changed(this._value, value)) return;
 

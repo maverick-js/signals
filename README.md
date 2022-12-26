@@ -451,6 +451,7 @@ Whether the given value is a readonly signal.
 ```js
 // True
 isReadSignal(10);
+isReadSignal(() => {});
 isReadSignal(computed(() => 10));
 isReadSignal(readonly(signal(10)));
 
@@ -458,7 +459,6 @@ isReadSignal(readonly(signal(10)));
 isReadSignal(false);
 isReadSignal(null);
 isReadSignal(undefined);
-isReadSignal(() => {});
 ```
 
 ### `isWriteSignal`
