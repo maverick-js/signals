@@ -35,7 +35,7 @@ SCHEDULER.onFlush(function flushEffects() {
   for (let i = 0; i < effects.length; i++) {
     effect = effects[i];
     // If parent scope is dirty it means that this effect will be disposed of so we skip.
-    if (!effect[SCOPE] || !isDirty(effect[SCOPE]!)) read.call(effect);
+    if (!isZombie(effect)) read.call(effect);
   }
 
   effects = [];
@@ -402,9 +402,7 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
           if (isEqual(key, currentKey) !== isEqual(key, prevKey)) {
             for (const node of nodes.values()) {
               node[FLAGS] |= FLAG_DIRTY;
-              queue.push(function dirtySignal() {
-                read.call(node);
-              });
+              queue.push(read.bind(node));
             }
           }
         }
@@ -572,12 +570,11 @@ function write(this: Computation<any>, newValue: any): void {
       const observer = this._observers![i];
       if (observer._compute) {
         observer[FLAGS] |= FLAG_DIRTY;
+
         if (isScoped(observer)) {
           effects.push(observer);
         } else {
-          queue.push(function dirtySignal() {
-            read.call(observer);
-          });
+          queue.push(read.bind(observer));
         }
       }
     }
@@ -634,4 +631,10 @@ function isInit(node: Computation) {
 
 function isScoped(node: Computation) {
   return node[FLAGS] & FLAG_SCOPED;
+}
+
+function isZombie(node: Computation) {
+  let scope = node[SCOPE];
+  while (scope && !isDirty(scope)) scope = scope[SCOPE];
+  return scope !== null;
 }
