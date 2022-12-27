@@ -24,10 +24,10 @@ let i = 0,
 
 const SCHEDULER = createScheduler(),
   NOOP = () => {},
-  FLAGS_DIRTY = 1 << 0,
-  FLAGS_SCOPED = 1 << 1,
-  FLAGS_INIT = 1 << 2,
-  FLAGS_DISPOSED = 1 << 3;
+  FLAG_DIRTY = 1 << 0,
+  FLAG_SCOPED = 1 << 1,
+  FLAG_INIT = 1 << 2,
+  FLAG_DISPOSED = 1 << 3;
 
 SCHEDULER.onFlush(function flushEffects() {
   let effect: Computation;
@@ -35,10 +35,10 @@ SCHEDULER.onFlush(function flushEffects() {
   for (let i = 0; i < effects.length; i++) {
     effect = effects[i];
     // If parent scope is dirty it means that this effect will be disposed of so we skip.
-    if (!effect[SCOPE] || !(effect[SCOPE]![FLAGS] & FLAGS_DIRTY)) read.call(effect);
+    if (!effect[SCOPE] || !isDirty(effect[SCOPE]!)) read.call(effect);
   }
 
-  effects = effects.slice(i);
+  effects = [];
 });
 
 // These are used only for debugging to determine how a cycle occurred.
@@ -180,7 +180,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
-  signal[FLAGS] |= FLAGS_SCOPED;
+  signal[FLAGS] |= FLAG_SCOPED;
 
   read.call(signal);
 
@@ -302,7 +302,7 @@ export function onDispose(dispose: MaybeDispose): Dispose {
   node._disposal.push(dispose);
 
   return function removeDispose() {
-    if (node[FLAGS] & FLAGS_DISPOSED) return;
+    if (isDisposed(node)) return;
     dispose();
     node._disposal!.splice(node._disposal!.indexOf(dispose), 1);
   };
@@ -311,7 +311,7 @@ export function onDispose(dispose: MaybeDispose): Dispose {
 const scopes = new Set();
 
 function dispose(scope: Computation, self = false) {
-  if (scope[FLAGS] & FLAGS_DISPOSED) return;
+  if (isDisposed(scope)) return;
 
   let current: Computation | null = self ? scope : scope._nextSibling,
     head = self ? scope._prevSibling : scope;
@@ -326,7 +326,7 @@ function dispose(scope: Computation, self = false) {
       current._observers = null;
       current._prevSibling = null;
       current._context = null;
-      current[FLAGS] |= FLAGS_DISPOSED;
+      current[FLAGS] |= FLAG_DISPOSED;
       scopes.add(current);
       current = current._nextSibling;
       if (current) current._prevSibling!._nextSibling = null;
@@ -399,9 +399,9 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
 
       SCHEDULER.enqueueBatch((queue) => {
         for (const [key, nodes] of observers.entries()) {
-          if (equal(key, currentKey) !== equal(key, prevKey)) {
+          if (isEqual(key, currentKey) !== isEqual(key, prevKey)) {
             for (const node of nodes.values()) {
-              node[FLAGS] |= FLAGS_DIRTY;
+              node[FLAGS] |= FLAG_DIRTY;
               queue.push(function dirtySignal() {
                 read.call(node);
               });
@@ -431,20 +431,8 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
       });
     }
 
-    return equal(key, node._value);
+    return isEqual(key, node._value);
   };
-}
-
-export function equal(a: unknown, b: unknown) {
-  return a === b;
-}
-
-export function notEqual(a: unknown, b: unknown) {
-  return a !== b;
-}
-
-export function isFunction(value: unknown): value is Function {
-  return typeof value === 'function';
 }
 
 function createComputation<T>(
@@ -453,7 +441,7 @@ function createComputation<T>(
   options?: ComputedSignalOptions<T>,
 ): Computation<T> {
   const node = {
-    [FLAGS]: FLAGS_DIRTY,
+    [FLAGS]: FLAG_DIRTY,
     [SCOPE]: currentScope,
     _nextSibling: null,
     _prevSibling: null,
@@ -463,19 +451,19 @@ function createComputation<T>(
     _disposal: null,
     _value: initialValue,
     _compute: compute,
-    _changed: notEqual,
+    _changed: isNotEqual,
   } as Computation;
 
   if (__DEV__) node.id = options?.id ?? (node._compute ? 'computed' : 'signal');
   if (currentScope) appendScope(node);
-  if (options && options.scoped) node[FLAGS] |= FLAGS_SCOPED;
+  if (options && options.scoped) node[FLAGS] |= FLAG_SCOPED;
   if (options && options.dirty) node._changed = options.dirty;
 
   return node;
 }
 
 function read(this: Computation<any>): any {
-  if (this[FLAGS] & FLAGS_DISPOSED) return this._value;
+  if (isDisposed(this)) return this._value;
 
   if (__DEV__ && this._compute && computeStack.includes(this)) {
     const calls = callStack.map((c) => c.id ?? '?').join(' --> ');
@@ -495,7 +483,7 @@ function read(this: Computation<any>): any {
     else currentObservers.push(this);
   }
 
-  if (this._compute && this[FLAGS] & FLAGS_DIRTY) {
+  if (this._compute && isDirty(this)) {
     let prevObserver = currentObserver,
       prevObservers = currentObservers,
       prevObserversIndex = currentObserversIndex;
@@ -505,7 +493,7 @@ function read(this: Computation<any>): any {
     currentObserversIndex = 0;
 
     try {
-      const scoped = this[FLAGS] & FLAGS_SCOPED;
+      const scoped = isScoped(this);
 
       if (scoped) {
         if (this._nextSibling && this._nextSibling[SCOPE] === this) dispose(this);
@@ -538,18 +526,13 @@ function read(this: Computation<any>): any {
         this._sources.length = currentObserversIndex;
       }
 
-      if (scoped || !(this[FLAGS] & FLAGS_INIT)) {
+      if (scoped || !isInit(this)) {
         this._value = result;
       } else {
         write.call(this, result);
       }
     } catch (error) {
-      if (
-        __DEV__ &&
-        !__TEST__ &&
-        !(this[FLAGS] & FLAGS_INIT) &&
-        typeof this._value === 'undefined'
-      ) {
+      if (__DEV__ && !__TEST__ && !isInit(this) && typeof this._value === 'undefined') {
         console.error(
           `computed \`${this.id}\` threw error during first run, this can be fatal.` +
             '\n\nSolutions:\n\n' +
@@ -568,8 +551,8 @@ function read(this: Computation<any>): any {
     currentObservers = prevObservers;
     currentObserversIndex = prevObserversIndex;
 
-    this[FLAGS] |= FLAGS_INIT;
-    this[FLAGS] &= ~FLAGS_DIRTY;
+    this[FLAGS] |= FLAG_INIT;
+    this[FLAGS] &= ~FLAG_DIRTY;
   }
 
   return this._value;
@@ -578,7 +561,7 @@ function read(this: Computation<any>): any {
 function write(this: Computation<any>, newValue: any): void {
   const value = !isFunction(this._value) && isFunction(newValue) ? newValue(this._value) : newValue;
 
-  if (this[FLAGS] & FLAGS_DISPOSED || !this._changed(this._value, value)) return;
+  if (isDisposed(this) || !this._changed(this._value, value)) return;
 
   this._value = value;
 
@@ -588,8 +571,8 @@ function write(this: Computation<any>, newValue: any): void {
     for (i = 0; i < this._observers!.length; i++) {
       const observer = this._observers![i];
       if (observer._compute) {
-        observer[FLAGS] |= FLAGS_DIRTY;
-        if (observer[FLAGS] & FLAGS_SCOPED) {
+        observer[FLAGS] |= FLAG_DIRTY;
+        if (isScoped(observer)) {
           effects.push(observer);
         } else {
           queue.push(function dirtySignal() {
@@ -623,4 +606,32 @@ function appendScope(node: Computation) {
   } else {
     currentScope!._nextSibling = node;
   }
+}
+
+export function isEqual(a: unknown, b: unknown) {
+  return a === b;
+}
+
+export function isNotEqual(a: unknown, b: unknown) {
+  return a !== b;
+}
+
+export function isFunction(value: unknown): value is Function {
+  return typeof value === 'function';
+}
+
+function isDisposed(node: Computation) {
+  return node[FLAGS] & FLAG_DISPOSED;
+}
+
+function isDirty(node: Computation) {
+  return node[FLAGS] & FLAG_DIRTY;
+}
+
+function isInit(node: Computation) {
+  return node[FLAGS] & FLAG_INIT;
+}
+
+function isScoped(node: Computation) {
+  return node[FLAGS] & FLAG_SCOPED;
 }
