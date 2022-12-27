@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.1.3](https://github.com/maverick-js/signals/compare/v5.1.2...v5.1.3) (2022-12-27)
+
+
+### Bug Fixes
+
+* detect zombie effects ([052b9c7](https://github.com/maverick-js/signals/commit/052b9c7209462798e154a2996fcffe7126b50976))
+
 ### [5.1.2](https://github.com/maverick-js/signals/compare/v5.1.1...v5.1.2) (2022-12-27)
 
 
