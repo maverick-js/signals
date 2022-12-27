@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.1.2](https://github.com/maverick-js/signals/compare/v5.1.1...v5.1.2) (2022-12-27)
+
+
+### Bug Fixes
+
+* simplify setting functional signals ([f276131](https://github.com/maverick-js/signals/commit/f276131bb5c7d50f2ccfca41461b9380a022273a))
+
 ### [5.1.1](https://github.com/maverick-js/signals/compare/v5.1.0...v5.1.1) (2022-12-26)
 
 
