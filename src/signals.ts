@@ -152,15 +152,15 @@ export function computed<T, R = never>(
     const signal = read.bind(node) as ReadSignal<T | R>;
     signal.node = node;
     return signal;
-  } else {
-    return read.bind(
-      createComputation<T | R>(
-        options?.initial as R,
-        compute,
-        options as ComputedSignalOptions<T | R>,
-      ),
-    ) as ReadSignal<T | R>;
   }
+
+  return read.bind(
+    createComputation<T | R>(
+      options?.initial as R,
+      compute,
+      options as ComputedSignalOptions<T | R>,
+    ),
+  ) as ReadSignal<T | R>;
 }
 
 /**
@@ -200,9 +200,9 @@ export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
     const readonly = (() => signal()) as ReadSignal<T>;
     readonly.node = signal.node;
     return readonly;
-  } else {
-    return (() => signal()) as ReadSignal<T>;
   }
+
+  return (() => signal()) as ReadSignal<T>;
 }
 
 /**
@@ -570,7 +570,6 @@ function write(this: Computation<any>, newValue: any): void {
       const observer = this._observers![i];
       if (observer._compute) {
         observer[FLAGS] |= FLAG_DIRTY;
-
         if (isScoped(observer)) {
           effects.push(observer);
         } else {
