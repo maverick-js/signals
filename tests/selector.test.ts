@@ -1,20 +1,16 @@
-import { computed, ReadSignal, root, selector, signal, tick } from '../src';
+import { computed, root, selector, signal, tick } from '../src';
 
 it('should observe key changes', () => {
   root((dispose) => {
     const $source = signal(0),
       $selector = selector($source),
-      effect0 = vi.fn(() => $selector(0)),
-      effect1 = vi.fn(() => $selector(1)),
-      effect2 = vi.fn(() => $selector(2));
+      effect0 = vi.fn($selector(0)),
+      effect1 = vi.fn($selector(1)),
+      effect2 = vi.fn($selector(2));
 
-    let $effect0!: ReadSignal<boolean>,
-      $effect1!: ReadSignal<boolean>,
-      $effect2!: ReadSignal<boolean>;
-
-    $effect0 = computed(effect0);
-    $effect1 = computed(effect1);
-    $effect2 = computed(effect2);
+    let $effect0 = computed(effect0),
+      $effect1 = computed(effect1),
+      $effect2 = computed(effect2);
 
     expect($effect0()).toBe(true);
     expect($effect1()).toBe(false);

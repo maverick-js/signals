@@ -47,7 +47,7 @@ export interface NextValue<T> {
 }
 
 export interface SelectorSignal<T> {
-  (key: T): boolean;
+  (key: T): ReadSignal<Boolean>;
 }
 
 export interface Scope extends Computation<unknown> {}

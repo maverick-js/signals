@@ -392,44 +392,40 @@ function handleError(scope: Computation | null, error: unknown, depth?: number) 
  * observers when entering or exiting a specified key.
  */
 export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
-  let prevKey: T | undefined,
-    observers = new Map<T, Set<Computation<T>>>(),
-    node = createComputation<T | undefined>(undefined, function selectorChange() {
-      const currentKey = source();
+  let currentKey: T | undefined,
+    count = new Map<T, number>(),
+    nodes = new Map<T, Computation<boolean>>();
 
-      SCHEDULER.enqueueBatch((queue) => {
-        for (const [key, nodes] of observers.entries()) {
-          if (isEqual(key, currentKey) !== isEqual(key, prevKey)) {
-            for (const node of nodes.values()) {
-              node[FLAGS] |= FLAG_DIRTY;
-              queue.push(read.bind(node));
-            }
-          }
-        }
-      });
-
-      prevKey = currentKey;
-      return currentKey;
-    });
-
-  read.call(node);
+  read.call(
+    createComputation<T | undefined>(undefined, function selectorChange() {
+      const newKey = source(),
+        prev = nodes.get(currentKey!),
+        next = nodes.get(newKey);
+      prev && write.call(prev, false);
+      next && write.call(next, true);
+      return (currentKey = newKey);
+    }),
+  );
 
   return function observeSelector(key: T) {
-    const observer = currentObserver;
+    if (!nodes.has(key)) {
+      count.set(key, 0);
+      nodes.set(key, createComputation(key === currentKey, null));
+    }
 
-    if (observer) {
-      let nodes: Set<Computation<any>> | undefined;
-
-      if ((nodes = observers.get(key))) nodes.add(observer);
-      else observers.set(key, (nodes = new Set([observer])));
-
-      onDispose(() => {
-        nodes!.delete(observer);
-        !nodes!.size && observers.delete(key);
+    if (currentScope) {
+      if (!currentScope._disposal) currentScope._disposal = [];
+      currentScope._disposal.push(function disposeSelector() {
+        const remaining = count.get(key)! - 1;
+        if (remaining === 0) {
+          count.delete(key);
+          nodes.delete(key);
+        } else count.set(key, remaining);
       });
     }
 
-    return isEqual(key, node._value);
+    count.set(key, count.get(key)! + 1);
+    return read.bind(nodes.get(key)!);
   };
 }
 
@@ -602,10 +598,6 @@ function appendScope(node: Computation) {
   } else {
     currentScope!._nextSibling = node;
   }
-}
-
-export function isEqual(a: unknown, b: unknown) {
-  return a === b;
 }
 
 export function isNotEqual(a: unknown, b: unknown) {
