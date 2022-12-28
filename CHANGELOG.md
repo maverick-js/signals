@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.1.4](https://github.com/maverick-js/signals/compare/v5.1.3...v5.1.4) (2022-12-28)
+
+
+### Bug Fixes
+
+* clean up selector implementation ([7f85df4](https://github.com/maverick-js/signals/commit/7f85df4d3b2e818e9dd384339f9a1a69a0d70745))
+
 ### [5.1.3](https://github.com/maverick-js/signals/compare/v5.1.2...v5.1.3) (2022-12-27)
 
 
