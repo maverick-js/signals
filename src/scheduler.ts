@@ -53,18 +53,15 @@ export function createScheduler(): Scheduler {
     queueMicrotask(flush);
   }
 
-  function performWork() {
-    for (i = 0; i < tasks.length; i++) tasks[i]();
-    for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
-    if (tasks.length > i) performWork();
-  }
-
   function flush() {
     if (flushing) return;
     try {
       flushing = true;
       scheduled = true;
-      performWork();
+      do {
+        for (i = 0; i < tasks.length; i++) tasks[i]();
+        for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
+      } while (tasks.length > i);
     } finally {
       tasks = [];
       flushing = false;

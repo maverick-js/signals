@@ -176,7 +176,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
     null,
     function runEffect() {
       let effectResult = effect();
-      typeof effectResult === 'function' && onDispose(effectResult);
+      isFunction(effectResult) && onDispose(effectResult);
       return null;
     },
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
