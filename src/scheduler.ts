@@ -64,9 +64,10 @@ export function createScheduler(): Scheduler {
     if (flushing) return;
     try {
       flushing = true;
-      performWork();
+      if (tasks.length) performWork();
+      else for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
     } finally {
-      tasks = tasks.slice(i);
+      tasks = [];
       flushing = false;
       scheduled = false;
     }

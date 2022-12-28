@@ -30,6 +30,8 @@ const SCHEDULER = createScheduler(),
   FLAG_DISPOSED = 1 << 3;
 
 SCHEDULER.onFlush(function flushEffects() {
+  if (!effects.length) return;
+
   let effect: Computation;
 
   for (let i = 0; i < effects.length; i++) {
@@ -408,11 +410,6 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
   );
 
   return function observeSelector(key: T) {
-    if (!nodes.has(key)) {
-      count.set(key, 0);
-      nodes.set(key, createComputation(key === currentKey, null));
-    }
-
     if (currentScope) {
       if (!currentScope._disposal) currentScope._disposal = [];
       currentScope._disposal.push(function disposeSelector() {
@@ -424,8 +421,16 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
       });
     }
 
+    let value = nodes.get(key);
+
+    if (!value) {
+      count.set(key, 1);
+      nodes.set(key, (value = createComputation(key === currentKey, null)));
+      return read.bind(value);
+    }
+
     count.set(key, count.get(key)! + 1);
-    return read.bind(nodes.get(key)!);
+    return read.bind(value);
   };
 }
 
