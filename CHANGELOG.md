@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.1.6](https://github.com/maverick-js/signals/compare/v5.1.5...v5.1.6) (2022-12-28)
+
+
+### Bug Fixes
+
+* avoid recursion while performing work ([a8024bb](https://github.com/maverick-js/signals/commit/a8024bb15f3094eb88d2e6537c523ae641528eeb))
+* avoid unnecessary scheduling while flushing ([6c876d6](https://github.com/maverick-js/signals/commit/6c876d61c862c1b5faa3dd17a17a85e73b995358))
+
 ### [5.1.5](https://github.com/maverick-js/signals/compare/v5.1.4...v5.1.5) (2022-12-28)
 
 
