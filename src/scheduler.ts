@@ -48,10 +48,9 @@ export function createScheduler(): Scheduler {
   }
 
   function scheduleFlush() {
-    if (!scheduled) {
-      scheduled = true;
-      queueMicrotask(flush);
-    }
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(flush);
   }
 
   function performWork() {
@@ -64,8 +63,8 @@ export function createScheduler(): Scheduler {
     if (flushing) return;
     try {
       flushing = true;
-      if (tasks.length) performWork();
-      else for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
+      scheduled = true;
+      performWork();
     } finally {
       tasks = [];
       flushing = false;

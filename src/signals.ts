@@ -564,7 +564,7 @@ function write(this: Computation<any>, newValue: any): void {
 
   this._value = value;
 
-  if (!this._observers) return;
+  if (!this._observers || !this._observers.length) return;
 
   SCHEDULER.enqueueBatch((queue) => {
     for (i = 0; i < this._observers!.length; i++) {

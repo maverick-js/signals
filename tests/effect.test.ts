@@ -1,4 +1,4 @@
-import { computed, signal, effect, tick, onDispose, getScope } from '../src';
+import { computed, signal, effect, tick, onDispose } from '../src';
 
 afterEach(() => tick());
 
@@ -277,4 +277,40 @@ it('should handle looped effects', () => {
 
   expect(values).toHaveLength(2);
   expect(values.join(',')).toBe('2,2');
+});
+
+it('should apply changes in effect in same flush', async () => {
+  const $a = signal(0),
+    $b = signal(0),
+    $c = computed(() => {
+      return $a() + 1;
+    }),
+    $d = computed(() => {
+      return $c() + 2;
+    });
+
+  effect(() => {
+    $a.set((n) => n + 1);
+    $b();
+  });
+
+  expect($a()).toBe(1);
+  expect($d()).toBe(4);
+  expect($c()).toBe(2);
+
+  $b.set(1);
+
+  await Promise.resolve();
+
+  expect($a()).toBe(2);
+  expect($d()).toBe(5);
+  expect($c()).toBe(3);
+
+  $b.set(2);
+
+  await Promise.resolve();
+
+  expect($a()).toBe(3);
+  expect($d()).toBe(6);
+  expect($c()).toBe(4);
 });
