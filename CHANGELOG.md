@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.2.0](https://github.com/maverick-js/signals/compare/v5.1.7...v5.2.0) (2022-12-29)
+
+
+### Features
+
+* `set` now returns newly set value ([9c2ad6f](https://github.com/maverick-js/signals/commit/9c2ad6f5785ae4b37b00a4ee29124372796f0058))
+
+
+### Bug Fixes
+
+* only provide dispose function to `root` if needed ([88b550f](https://github.com/maverick-js/signals/commit/88b550f391873edecb992255758932327db7ec17))
+* production node export field blocking dev ([b1e52a8](https://github.com/maverick-js/signals/commit/b1e52a80100e18b67655d8df7cc75ced4de872df))
+* scheduler task index tracking should not start from 0 ([f9e868a](https://github.com/maverick-js/signals/commit/f9e868a6939ee5eba172313266b42e91fb3398ee))
+
 ### [5.1.7](https://github.com/maverick-js/signals/compare/v5.1.6...v5.1.7) (2022-12-29)
 
 
