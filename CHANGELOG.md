@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.1.7](https://github.com/maverick-js/signals/compare/v5.1.6...v5.1.7) (2022-12-29)
+
+
+### Bug Fixes
+
+* `root` should block current observer ([119fcf1](https://github.com/maverick-js/signals/commit/119fcf1bf923569402688952af30fb183b4f3fd4))
+
 ### [5.1.6](https://github.com/maverick-js/signals/compare/v5.1.5...v5.1.6) (2022-12-28)
 
 
