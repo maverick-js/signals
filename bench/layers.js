@@ -9,6 +9,7 @@ import * as Sjs from 's-js';
 import * as solid from './solid-js-baseline.js';
 import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
+import * as xn from '@xania/state';
 import Table from 'cli-table';
 
 const BATCHED = true;
@@ -38,6 +39,7 @@ async function main() {
   report.maverick = { fn: runMaverick, runs: [], avg: [] };
   report.S = { fn: runS, runs: [] };
   report.solid = { fn: runSolid, runs: [] };
+  report.xania = { fn: runXania, runs: [] };
 
   // These libraries are not comparable in terms of features.
   // report['preact/signals'] = { fn: runPreact, runs: [] };
@@ -225,6 +227,46 @@ function runSolid(layers, done) {
     dispose();
     done(isSolution(layers, solution) ? endTime : -1);
   });
+}
+
+/**
+ * @see {@link https://github.com/xania/state}
+ */
+function runXania(layers, done) {
+  var start = {
+    a: new xn.State(1),
+    b: new xn.State(2),
+    c: new xn.State(3),
+    d: new xn.State(4),
+  };
+
+  let layer = start;
+
+  for (let i = layers; i--; ) {
+    layer = ((m) => {
+      const props = {
+        a: m.b,
+        b: xn.combineLatest([m.a, m.c]).map(([a, c]) => a - c),
+        c: xn.combineLatest([m.b, m.d]).map(([b, d]) => b + d),
+        d: m.c,
+      };
+
+      return props;
+    })(layer);
+  }
+
+  const startTime = performance.now();
+
+  start.a.set(4);
+  start.b.set(3);
+  start.c.set(2);
+  start.d.set(1);
+
+  const end = layer;
+  const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
+  const endTime = performance.now() - startTime;
+
+  done(isSolution(layers, solution) ? endTime : -1);
 }
 
 /**
