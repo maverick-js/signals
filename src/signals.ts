@@ -70,7 +70,7 @@ export function root<T>(init: (dispose: Dispose) => T): T {
 
   if (currentScope) appendScope($root);
 
-  return compute($root, () => init(() => dispose($root, true)));
+  return compute($root, () => init(() => dispose($root, true)), null);
 }
 
 /**
@@ -251,7 +251,7 @@ export function getScheduler(): Scheduler {
  */
 export function scoped(run: () => void, scope: Scope | null): void {
   try {
-    compute(scope, run);
+    compute(scope, run, null);
   } catch (error) {
     handleError(scope, error);
   }
@@ -349,17 +349,20 @@ function emptyDisposal(scope: Computation) {
   }
 }
 
-function compute<T>(scope: Computation | null, compute: () => T): T {
-  let prevScope = currentScope;
+function compute<T>(scope: Computation | null, compute: () => T, observer: Computation | null): T {
+  const prevScope = currentScope,
+    prevObserver = currentObserver;
 
   if (__DEV__ && currentObserver) computeStack.push(currentObserver);
   currentScope = scope;
+  currentObserver = observer;
 
   try {
     return compute();
   } finally {
     if (__DEV__ && currentObserver) computeStack.pop();
     currentScope = prevScope;
+    currentObserver = prevObserver;
   }
 }
 
@@ -483,11 +486,9 @@ function read(this: Computation<any>): any {
   }
 
   if (this._compute && isDirty(this)) {
-    let prevObserver = currentObserver,
-      prevObservers = currentObservers,
+    let prevObservers = currentObservers,
       prevObserversIndex = currentObserversIndex;
 
-    currentObserver = this;
     currentObservers = null as Computation[] | null;
     currentObserversIndex = 0;
 
@@ -500,7 +501,7 @@ function read(this: Computation<any>): any {
         if (this._context && this._context[HANDLERS]) (this._context[HANDLERS] as any[]).length = 0;
       }
 
-      const result = compute(scoped ? this : currentScope, this._compute);
+      const result = compute(scoped ? this : currentScope, this._compute, this);
 
       if (currentObservers) {
         if (this._sources) removeSourceObservers(this, currentObserversIndex);
@@ -546,7 +547,6 @@ function read(this: Computation<any>): any {
       return this._value;
     }
 
-    currentObserver = prevObserver;
     currentObservers = prevObservers;
     currentObserversIndex = prevObserversIndex;
 
