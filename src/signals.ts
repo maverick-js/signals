@@ -567,14 +567,14 @@ function read(this: Computation<any>): any {
   return this._value;
 }
 
-function write(this: Computation<any>, newValue: any): void {
+function write(this: Computation<any>, newValue: any): any {
   const value = !isFunction(this._value) && isFunction(newValue) ? newValue(this._value) : newValue;
 
-  if (isDisposed(this) || !this._changed(this._value, value)) return;
+  if (isDisposed(this) || !this._changed(this._value, value)) return this._value;
 
   this._value = value;
 
-  if (!this._observers || !this._observers.length) return;
+  if (!this._observers || !this._observers.length) return this._value;
 
   SCHEDULER.enqueueBatch((queue) => {
     for (i = 0; i < this._observers!.length; i++) {
@@ -589,6 +589,8 @@ function write(this: Computation<any>, newValue: any): void {
       }
     }
   });
+
+  return this._value;
 }
 
 function removeSourceObservers(node: Computation, index: number) {

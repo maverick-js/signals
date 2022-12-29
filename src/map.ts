@@ -1,6 +1,6 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { computed, signal, onDispose, root, readonly, untrack } from './signals';
+import { computed, signal, onDispose, root, untrack } from './signals';
 import type { Dispose, Maybe, ReadSignal } from './types';
 
 /**
@@ -200,14 +200,10 @@ export function computedKeyedMap<Item, MappedItem>(
         disposal[j] = dispose;
 
         if (indicies) {
-          const $i = signal(j);
-
-          indicies[j] = (v) => {
-            $i.set(v);
-            return v;
-          };
-
-          return map(newItems[j], readonly($i));
+          const $signal = signal(j);
+          indicies[j] = $signal.set;
+          ($signal as any).set = undefined;
+          return map(newItems[j], $signal);
         }
 
         return map(newItems[j], () => -1);
