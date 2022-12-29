@@ -8,7 +8,6 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "production": "./dist/prod/index.js",
       "development": "./dist/dev/index.js",
       "test": "./dist/dev/index.js",
       "default": "./dist/prod/index.js"
