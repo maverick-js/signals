@@ -70,7 +70,17 @@ export function root<T>(init: (dispose: Dispose) => T): T {
 
   if (currentScope) appendScope($root);
 
-  return compute($root, () => init(() => dispose($root, true)), null);
+  return compute(
+    $root,
+    !init.length
+      ? (init as () => T)
+      : function createRoot() {
+          return init(function disposeRoot() {
+            dispose($root, true);
+          });
+        },
+    null,
+  );
 }
 
 /**
