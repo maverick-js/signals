@@ -59,10 +59,11 @@ export function createScheduler(): Scheduler {
       flushing = true;
       scheduled = true;
       do {
-        for (i = 0; i < tasks.length; i++) tasks[i]();
+        for (; i < tasks.length; i++) tasks[i]();
         for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
       } while (tasks.length > i);
     } finally {
+      i = 0;
       tasks = [];
       flushing = false;
       scheduled = false;
