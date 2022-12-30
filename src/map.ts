@@ -1,7 +1,7 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { computed, signal, onDispose, root, untrack } from './signals';
-import type { Dispose, Maybe, ReadSignal } from './types';
+import { computed, signal, onDispose, untrack, RootScope, compute } from './signals';
+import type { Dispose, Maybe, ReadSignal, Scope } from './types';
 
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
@@ -24,7 +24,7 @@ export function computedMap<Item, MappedItem>(
     i: number,
     len = 0;
 
-  onDispose(() => runAll(disposal));
+  onDispose(() => emptyDisposal(disposal));
 
   return computed(
     () => {
@@ -32,7 +32,7 @@ export function computedMap<Item, MappedItem>(
       return untrack(() => {
         if (newItems.length === 0) {
           if (len !== 0) {
-            runAll(disposal);
+            emptyDisposal(disposal);
             disposal = [];
             items = [];
             mapped = [];
@@ -47,19 +47,19 @@ export function computedMap<Item, MappedItem>(
           if (i < items.length && items[i] !== newItems[i]) {
             signals[i](newItems[i]);
           } else if (i >= items.length) {
-            mapped[i] = root(mapper);
+            mapped[i] = compute(new RootScope(), mapper, null);
           }
         }
 
-        for (; i < items.length; i++) disposal[i]();
+        for (; i < items.length; i++) disposal[i].call(disposal[i]);
 
         len = signals.length = disposal.length = newItems.length;
         items = newItems.slice(0);
         return (mapped = mapped.slice(0, len));
       });
 
-      function mapper(dispose: () => void) {
-        disposal[i] = dispose;
+      function mapper(this: Scope) {
+        disposal[i] = this;
         const $o = signal(newItems[i]);
         signals[i] = $o.set;
         return map($o, i);
@@ -90,7 +90,7 @@ export function computedKeyedMap<Item, MappedItem>(
     len = 0,
     indicies: ((v: number) => number)[] | null = map.length > 1 ? [] : null;
 
-  onDispose(() => runAll(disposal));
+  onDispose(() => emptyDisposal(disposal));
 
   return computed(
     () => {
@@ -104,7 +104,7 @@ export function computedKeyedMap<Item, MappedItem>(
         // fast path for empty arrays
         if (newLen === 0) {
           if (len !== 0) {
-            runAll(disposal);
+            emptyDisposal(disposal);
             disposal = [];
             items = [];
             mapping = [];
@@ -118,7 +118,7 @@ export function computedKeyedMap<Item, MappedItem>(
 
           for (j = 0; j < newLen; j++) {
             items[j] = newItems[j];
-            mapping[j] = root(mapper);
+            mapping[j] = compute(new RootScope(), mapper, null);
           }
 
           len = newLen;
@@ -130,7 +130,7 @@ export function computedKeyedMap<Item, MappedItem>(
             newIndices: Map<Item, number>,
             newIndicesNext: number[],
             temp: MappedItem[] = new Array(newLen),
-            tempDisposal: (() => void)[] = new Array(newLen),
+            tempDisposal: Dispose[] = new Array(newLen),
             tempIndicies: ((v: number) => number)[] = new Array(newLen);
 
           // skip common prefix
@@ -171,7 +171,7 @@ export function computedKeyedMap<Item, MappedItem>(
               indicies && (tempIndicies![j] = indicies[i]);
               j = newIndicesNext[j];
               newIndices.set(item, j);
-            } else disposal[i]();
+            } else disposal[i].call(disposal[i]);
           }
 
           // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
@@ -183,7 +183,9 @@ export function computedKeyedMap<Item, MappedItem>(
                 indicies[j] = tempIndicies![j];
                 indicies[j](j);
               }
-            } else mapping[j] = root(mapper);
+            } else {
+              mapping[j] = compute(new RootScope(), mapper, null);
+            }
           }
 
           // 3) in case the new set is shorter than the old, set the length of the mapped array
@@ -196,13 +198,12 @@ export function computedKeyedMap<Item, MappedItem>(
         return mapping;
       });
 
-      function mapper(dispose: () => void) {
-        disposal[j] = dispose;
+      function mapper(this: Scope) {
+        disposal[j] = this;
 
         if (indicies) {
           const $signal = signal(j);
           indicies[j] = $signal.set;
-          ($signal as any).set = undefined;
           return map(newItems[j], $signal);
         }
 
@@ -214,6 +215,6 @@ export function computedKeyedMap<Item, MappedItem>(
 }
 
 let i = 0;
-function runAll(fns: (() => void)[]) {
-  for (i = 0; i < fns.length; i++) fns[i]();
+function emptyDisposal(disposal: Dispose[]) {
+  for (i = 0; i < disposal.length; i++) disposal[i].call(disposal[i]);
 }

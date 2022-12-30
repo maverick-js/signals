@@ -1,5 +1,5 @@
 import { createScheduler, type Scheduler } from './scheduler';
-import { FLAGS, HANDLERS, SCOPE } from './symbols';
+import { FLAGS, HANDLERS, SCOPE, TASKS } from './symbols';
 import type {
   ComputedSignalOptions,
   Dispose,
@@ -13,6 +13,7 @@ import type {
   Scope,
   SelectorSignal,
   Computation,
+  ScopeConstructor,
 } from './types';
 
 let i = 0,
@@ -51,7 +52,7 @@ if (__DEV__) {
   callStack = [];
   computeStack = [];
   SCHEDULER.onFlush(() => {
-    callStack.length = 0;
+    callStack = [];
   });
 }
 
@@ -62,23 +63,10 @@ if (__DEV__) {
  * @see {@link https://github.com/maverick-js/signals#root}
  */
 export function root<T>(init: (dispose: Dispose) => T): T {
-  const $root = {
-    [SCOPE]: currentScope,
-    _nextSibling: null,
-    _prevSibling: null,
-  } as Computation;
-
-  if (currentScope) appendScope($root);
-
+  const scope = new RootScope();
   return compute(
-    $root,
-    !init.length
-      ? (init as () => T)
-      : function createRoot() {
-          return init(function disposeRoot() {
-            dispose($root, true);
-          });
-        },
+    scope,
+    !init.length ? (init as () => T) : init.bind(null, dispose.bind(scope)),
     null,
   );
 }
@@ -196,9 +184,13 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
 
   read.call(signal);
 
-  return function stopEffect() {
-    dispose(signal, true);
-  };
+  if (__DEV__) {
+    return function stopEffect() {
+      dispose.call(signal, true);
+    };
+  }
+
+  return dispose.bind(signal, true);
 }
 
 /**
@@ -310,26 +302,36 @@ export function onDispose(dispose: MaybeDispose): Dispose {
   if (!dispose || !currentScope) return dispose || NOOP;
 
   const node = currentScope;
-  if (!node._disposal) node._disposal = [];
-  node._disposal.push(dispose);
+
+  if (!node._disposal) {
+    node._disposal = dispose;
+  } else if (Array.isArray(node._disposal)) {
+    node._disposal.push(dispose);
+  } else {
+    node._disposal = [node._disposal, dispose];
+  }
 
   return function removeDispose() {
     if (isDisposed(node)) return;
-    dispose();
-    node._disposal!.splice(node._disposal!.indexOf(dispose), 1);
+    dispose.call(null);
+    if (isFunction(node._disposal)) {
+      node._disposal = null;
+    } else if (Array.isArray(node._disposal)) {
+      node._disposal.splice(node._disposal.indexOf(dispose), 1);
+    }
   };
 }
 
 const scopes = new Set();
 
-function dispose(scope: Computation, self = false) {
-  if (isDisposed(scope)) return;
+function dispose(this: Computation, self = true) {
+  if (isDisposed(this)) return;
 
-  let current: Computation | null = self ? scope : scope._nextSibling,
-    head = self ? scope._prevSibling : scope;
+  let current: Computation | null = self ? this : this._nextSibling,
+    head = self ? this._prevSibling : this;
 
   if (current) {
-    scopes.add(scope);
+    scopes.add(this);
     do {
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
@@ -352,14 +354,26 @@ function dispose(scope: Computation, self = false) {
 
 function emptyDisposal(scope: Computation) {
   try {
-    for (i = 0; i < scope._disposal!.length; i++) scope._disposal![i]();
-    scope._disposal!.length = 0;
+    if (Array.isArray(scope._disposal)) {
+      for (i = 0; i < (scope._disposal as Dispose[]).length; i++) {
+        const callable = scope._disposal![i];
+        callable.call(callable);
+      }
+    } else {
+      scope._disposal!.call(scope._disposal);
+    }
+
+    scope._disposal = null;
   } catch (error) {
     handleError(scope, error);
   }
 }
 
-function compute<T>(scope: Computation | null, compute: () => T, observer: Computation | null): T {
+export function compute<T extends Scope | null, R>(
+  scope: T,
+  compute: (this: T) => R,
+  observer: Computation | null,
+): R {
   const prevScope = currentScope,
     prevObserver = currentObserver;
 
@@ -368,7 +382,7 @@ function compute<T>(scope: Computation | null, compute: () => T, observer: Compu
   currentObserver = observer;
 
   try {
-    return compute();
+    return compute.call(scope!);
   } finally {
     if (__DEV__ && currentObserver) computeStack.pop();
     currentScope = prevScope;
@@ -408,42 +422,49 @@ function handleError(scope: Computation | null, error: unknown, depth?: number) 
  */
 export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
   let currentKey: T | undefined,
-    count = new Map<T, number>(),
-    nodes = new Map<T, Computation<boolean>>();
+    nodes = new Map<T, SelectorNode>();
 
   read.call(
-    createComputation<T | undefined>(undefined, function selectorChange() {
+    createComputation<T | undefined>(currentKey, function selectorChange() {
       const newKey = source(),
         prev = nodes.get(currentKey!),
         next = nodes.get(newKey);
-      prev && write.call(prev, false);
-      next && write.call(next, true);
+      prev && write.call(prev as unknown as Computation, false);
+      next && write.call(next as unknown as Computation, true);
       return (currentKey = newKey);
     }),
   );
 
+  class SelectorNode {
+    _key: T;
+    _value: boolean;
+    _count = 0;
+
+    constructor(key: T, initialValue: boolean) {
+      this._key = key;
+      this._value = initialValue;
+    }
+
+    call() {
+      this._count -= 1;
+      if (!this._count) nodes.delete(this._key);
+    }
+  }
+
+  const SelectorNodeProto = SelectorNode.prototype as any;
+  SelectorNodeProto[FLAGS] = FLAG_DIRTY;
+  SelectorNodeProto._observers = null;
+  SelectorNodeProto._changed = isNotEqual;
+
   return function observeSelector(key: T) {
-    if (currentScope) {
-      if (!currentScope._disposal) currentScope._disposal = [];
-      currentScope._disposal.push(function disposeSelector() {
-        const remaining = count.get(key)! - 1;
-        if (remaining === 0) {
-          count.delete(key);
-          nodes.delete(key);
-        } else count.set(key, remaining);
-      });
-    }
+    let node = nodes.get(key);
 
-    let value = nodes.get(key);
+    if (!node) nodes.set(key, (node = new SelectorNode(key, key === currentKey)));
 
-    if (!value) {
-      count.set(key, 1);
-      nodes.set(key, (value = createComputation(key === currentKey, null)));
-      return read.bind(value);
-    }
+    node._count += 1;
+    onDispose(node);
 
-    count.set(key, count.get(key)! + 1);
-    return read.bind(value);
+    return read.bind(node as unknown as Computation);
   };
 }
 
@@ -464,12 +485,17 @@ function createComputation<T>(
     _value: initialValue,
     _compute: compute,
     _changed: isNotEqual,
+    call: read,
   } as Computation;
 
   if (__DEV__) node.id = options?.id ?? (node._compute ? 'computed' : 'signal');
+
   if (currentScope) appendScope(node);
-  if (options && options.scoped) node[FLAGS] |= FLAG_SCOPED;
-  if (options && options.dirty) node._changed = options.dirty;
+
+  if (options) {
+    if (options.scoped) node[FLAGS] |= FLAG_SCOPED;
+    if (options.dirty) node._changed = options.dirty;
+  }
 
   return node;
 }
@@ -506,9 +532,9 @@ function read(this: Computation<any>): any {
       const scoped = isScoped(this);
 
       if (scoped) {
-        if (this._nextSibling && this._nextSibling[SCOPE] === this) dispose(this);
+        if (this._nextSibling && this._nextSibling[SCOPE] === this) dispose.call(this, false);
         if (this._disposal) emptyDisposal(this);
-        if (this._context && this._context[HANDLERS]) (this._context[HANDLERS] as any[]).length = 0;
+        if (this._context && this._context[HANDLERS]) (this._context[HANDLERS] as any[]) = [];
       }
 
       const result = compute(scoped ? this : currentScope, this._compute, this);
@@ -576,19 +602,21 @@ function write(this: Computation<any>, newValue: any): any {
 
   if (!this._observers || !this._observers.length) return this._value;
 
-  SCHEDULER.enqueueBatch((queue) => {
-    for (i = 0; i < this._observers!.length; i++) {
-      const observer = this._observers![i];
-      if (observer._compute) {
-        observer[FLAGS] |= FLAG_DIRTY;
-        if (isScoped(observer)) {
-          effects.push(observer);
-        } else {
-          queue.push(read.bind(observer));
-        }
+  const tasks = SCHEDULER[TASKS]();
+
+  for (i = 0; i < this._observers!.length; i++) {
+    const observer = this._observers![i];
+    if (observer._compute) {
+      observer[FLAGS] |= FLAG_DIRTY;
+      if (isScoped(observer)) {
+        effects.push(observer);
+      } else {
+        tasks.push(observer);
       }
     }
-  });
+  }
+
+  SCHEDULER.flush();
 
   return this._value;
 }
@@ -646,3 +674,18 @@ function isZombie(node: Computation) {
   while (scope && !isDirty(scope)) scope = scope[SCOPE];
   return scope !== null;
 }
+
+export const RootScope = class RootScope {
+  constructor() {
+    if (currentScope) {
+      this[SCOPE] = currentScope;
+      appendScope(this as unknown as Computation);
+    }
+  }
+} as ScopeConstructor;
+
+const RootScopeProto = RootScope.prototype as Computation;
+RootScopeProto[SCOPE] = null;
+RootScopeProto._prevSibling = null;
+RootScopeProto._nextSibling = null;
+RootScopeProto.call = dispose;

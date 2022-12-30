@@ -1,6 +1,6 @@
 import type { FLAGS, SCOPE } from './symbols';
 
-export interface Computation<T = any> {
+export interface Computation<T = any> extends Callable<never, T> {
   id?: string | undefined;
 
   [FLAGS]: number;
@@ -9,7 +9,7 @@ export interface Computation<T = any> {
   _nextSibling: Computation | null;
 
   _value: T;
-  _disposal: Dispose[] | null;
+  _disposal: Dispose | Dispose[] | null;
   _context: ContextRecord | null;
   _sources: Computation[] | null;
   _observers: Computation[] | null;
@@ -50,11 +50,17 @@ export interface SelectorSignal<T> {
   (key: T): ReadSignal<Boolean>;
 }
 
+export interface Callable<Args extends any[] = never, Return = void> {
+  call(_this: any, ...args: Args): Return;
+}
+
 export interface Scope extends Computation<unknown> {}
 
-export interface Dispose {
-  (): void;
+export interface ScopeConstructor {
+  new (): Scope;
 }
+
+export interface Dispose extends Callable {}
 
 export interface Effect {
   (): MaybeStopEffect;

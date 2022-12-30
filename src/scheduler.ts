@@ -1,14 +1,19 @@
-export type ScheduledTask = () => void;
-export type BatchTasks = (queue: ScheduledTask[]) => void;
-export type StopFlushUpdates = () => void;
+import { TASKS } from './symbols';
+import { Callable } from './types';
 
-export type Scheduler = {
+export interface ScheduledTask extends Callable {}
+
+export interface StopFlushUpdates {
+  (): void;
+}
+
+export interface Scheduler {
+  [TASKS]: () => ScheduledTask[];
   enqueue: (task: ScheduledTask) => void;
-  enqueueBatch: (batch: BatchTasks) => void;
   flush: () => void;
   flushSync: () => void;
   onFlush: (callback: () => void) => StopFlushUpdates;
-};
+}
 
 /**
  * Creates a scheduler which batches tasks and runs them in the microtask queue.
@@ -42,11 +47,6 @@ export function createScheduler(): Scheduler {
     if (!scheduled) scheduleFlush();
   }
 
-  function enqueueBatch(batch: BatchTasks) {
-    batch(tasks);
-    if (!scheduled) scheduleFlush();
-  }
-
   function scheduleFlush() {
     if (scheduled) return;
     scheduled = true;
@@ -59,7 +59,7 @@ export function createScheduler(): Scheduler {
       flushing = true;
       scheduled = true;
       do {
-        for (; i < tasks.length; i++) tasks[i]();
+        for (; i < tasks.length; i++) tasks[i].call(tasks[i]);
         for (j = 0; j < afterTasks.length; j++) afterTasks[j]();
       } while (tasks.length > i);
     } finally {
@@ -71,8 +71,8 @@ export function createScheduler(): Scheduler {
   }
 
   return {
+    [TASKS]: () => tasks,
     enqueue,
-    enqueueBatch,
     flush: scheduleFlush,
     flushSync: flush,
     onFlush: hook(afterTasks),
