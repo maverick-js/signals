@@ -423,7 +423,7 @@ function handleError(scope: Computation | null, error: unknown, depth?: number) 
  */
 export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
   let currentKey: T | undefined,
-    nodes = new Map<T, SelectorNode>();
+    nodes = new Map<T, Selector<T>>();
 
   read.call(
     createComputation<T | undefined>(currentKey, function selectorChange() {
@@ -436,33 +436,34 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     }),
   );
 
-  class SelectorNode {
+  interface Selector<T = any> {
+    [FLAGS]: number;
     _key: T;
     _value: boolean;
-    _count = 0;
-
-    constructor(key: T, initialValue: boolean) {
-      this._key = key;
-      this._value = initialValue;
-    }
-
-    call() {
-      this._count -= 1;
-      if (!this._count) nodes.delete(this._key);
-    }
+    _count: number;
+    call(): void;
   }
 
-  const SelectorNodeProto = SelectorNode.prototype as any;
-  SelectorNodeProto[FLAGS] = FLAG_DIRTY;
-  SelectorNodeProto._observers = null;
-  SelectorNodeProto._changed = isNotEqual;
+  function Selector<T>(this: Selector<T>, key: T, initialValue: boolean) {
+    this._key = key;
+    this._value = initialValue;
+  }
+
+  const SelectorProto = Selector.prototype;
+  SelectorProto[FLAGS] = FLAG_DIRTY;
+  SelectorProto._observers = null;
+  SelectorProto._changed = isNotEqual;
+  SelectorProto.call = function (this: Selector<T>) {
+    this._count -= 1;
+    if (!this._count) nodes.delete(this._key);
+  };
 
   return function observeSelector(key: T) {
     let node = nodes.get(key);
 
-    if (!node) nodes.set(key, (node = new SelectorNode(key, key === currentKey)));
+    if (!node) nodes.set(key, (node = new Selector(key, key === currentKey)));
 
-    node._count += 1;
+    node!._count += 1;
     onDispose(node);
 
     return read.bind(node as unknown as Computation);
@@ -676,12 +677,10 @@ function isZombie(node: Computation) {
   return scope !== null;
 }
 
-export const RootScope = class RootScope {
-  constructor() {
-    if (currentScope) {
-      this[SCOPE] = currentScope;
-      appendScope(this as unknown as Computation);
-    }
+export const RootScope = function RootScope(this: Computation) {
+  if (currentScope) {
+    this[SCOPE] = currentScope;
+    appendScope(this);
   }
 } as ScopeConstructor;
 

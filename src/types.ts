@@ -55,6 +55,7 @@ export interface Scope extends Computation<unknown> {}
 
 export interface ScopeConstructor {
   new (): Scope;
+  (): void;
 }
 
 export interface Dispose extends Callable {}
