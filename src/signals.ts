@@ -11,6 +11,7 @@ import type {
   ReadSignal,
   Scope,
   ScopeConstructor,
+  DisposeScope,
   SelectorSignal,
   SignalOptions,
   StopEffect,
@@ -63,7 +64,7 @@ if (__DEV__) {
  *
  * @see {@link https://github.com/maverick-js/signals#root}
  */
-export function root<T>(init: (dispose: Dispose) => T): T {
+export function root<T>(init: (dispose: DisposeScope) => T): T {
   const scope = new RootScope();
   return compute<T>(
     scope,

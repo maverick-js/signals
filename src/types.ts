@@ -51,14 +51,18 @@ export interface SelectorSignal<T> {
   (key: T): ReadSignal<Boolean>;
 }
 
-export interface Scope extends Computation<unknown> {}
-
 export interface ScopeConstructor {
   new (): Scope;
   (): void;
 }
 
+export interface Scope extends Computation<unknown> {}
+
 export interface Dispose extends Callable {}
+
+export interface DisposeScope {
+  (): void;
+}
 
 export interface Effect {
   (): MaybeStopEffect;
