@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.4.0](https://github.com/maverick-js/signals/compare/v5.3.0...v5.4.0) (2023-01-01)
+
+
+### Features
+
+* refactor and few micro optimizations ([5f9f206](https://github.com/maverick-js/signals/commit/5f9f206412703e20b40d5e3083406d7e71601a4a))
+
+
+### Bug Fixes
+
+* clean up callable types ([aa01378](https://github.com/maverick-js/signals/commit/aa01378112d034865a7d7c009ff5d321274ca9a9))
+* root dispose type should be function ([da040b3](https://github.com/maverick-js/signals/commit/da040b3237b621bc4b2f26f2b5a3f8643d025681))
+* small perf boost `class` -> prototype functions ([ec6d77c](https://github.com/maverick-js/signals/commit/ec6d77cfbc02b1fe1a518a5f4a956f2e19bcfaf5))
+
 ## [5.3.0](https://github.com/maverick-js/signals/compare/v5.2.0...v5.3.0) (2022-12-30)
 
 
