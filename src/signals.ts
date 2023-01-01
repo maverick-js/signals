@@ -1,19 +1,20 @@
 import { createScheduler, type Scheduler } from './scheduler';
 import { FLAGS, HANDLERS, SCOPE, TASKS } from './symbols';
 import type {
+  Callable,
+  Computation,
   ComputedSignalOptions,
   Dispose,
   Effect,
   MaybeDispose,
   MaybeSignal,
   ReadSignal,
-  SignalOptions,
-  WriteSignal,
-  StopEffect,
   Scope,
-  SelectorSignal,
-  Computation,
   ScopeConstructor,
+  SelectorSignal,
+  SignalOptions,
+  StopEffect,
+  WriteSignal,
 } from './types';
 
 let i = 0,
@@ -64,7 +65,7 @@ if (__DEV__) {
  */
 export function root<T>(init: (dispose: Dispose) => T): T {
   const scope = new RootScope();
-  return compute(
+  return compute<T>(
     scope,
     !init.length ? (init as () => T) : init.bind(null, dispose.bind(scope)),
     null,
@@ -251,7 +252,7 @@ export function getScheduler(): Scheduler {
  *
  * @see {@link https://github.com/maverick-js/signals#scoped}
  */
-export function scoped(run: () => void, scope: Scope | null): void {
+export function scoped(run: Callable, scope: Scope | null): void {
   try {
     compute(scope, run, null);
   } catch (error) {
@@ -369,11 +370,11 @@ function emptyDisposal(scope: Computation) {
   }
 }
 
-export function compute<T extends Scope | null, R>(
-  scope: T,
-  compute: (this: T) => R,
+export function compute<Result>(
+  scope: Scope | null,
+  compute: Callable<Scope | null, Result>,
   observer: Computation | null,
-): R {
+): Result {
   const prevScope = currentScope,
     prevObserver = currentObserver;
 
@@ -382,7 +383,7 @@ export function compute<T extends Scope | null, R>(
   currentObserver = observer;
 
   try {
-    return compute.call(scope!);
+    return compute.call(scope);
   } finally {
     if (__DEV__ && currentObserver) computeStack.pop();
     currentScope = prevScope;
@@ -537,7 +538,7 @@ function read(this: Computation<any>): any {
         if (this._context && this._context[HANDLERS]) (this._context[HANDLERS] as any[]) = [];
       }
 
-      const result = compute(scoped ? this : currentScope, this._compute, this);
+      const result = compute(scoped ? this : currentScope!, this._compute, this);
 
       if (currentObservers) {
         if (this._sources) removeSourceObservers(this, currentObserversIndex);

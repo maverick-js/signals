@@ -47,7 +47,7 @@ export function computedMap<Item, MappedItem>(
           if (i < items.length && items[i] !== newItems[i]) {
             signals[i](newItems[i]);
           } else if (i >= items.length) {
-            mapped[i] = compute(new RootScope(), mapper, null);
+            mapped[i] = compute<MappedItem>(new RootScope(), mapper, null);
           }
         }
 
@@ -118,7 +118,7 @@ export function computedKeyedMap<Item, MappedItem>(
 
           for (j = 0; j < newLen; j++) {
             items[j] = newItems[j];
-            mapping[j] = compute(new RootScope(), mapper, null);
+            mapping[j] = compute<MappedItem>(new RootScope(), mapper, null);
           }
 
           len = newLen;
@@ -184,7 +184,7 @@ export function computedKeyedMap<Item, MappedItem>(
                 indicies[j](j);
               }
             } else {
-              mapping[j] = compute(new RootScope(), mapper, null);
+              mapping[j] = compute<MappedItem>(new RootScope(), mapper, null);
             }
           }
 
