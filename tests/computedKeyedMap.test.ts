@@ -1,19 +1,17 @@
-import { signal, tick, computedKeyedMap } from '../src';
+import { signal, tick, computedKeyedMap, effect } from '../src';
 
 it('should compute keyed map', () => {
-  const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
-
-  const compute = vi.fn();
-
-  const map = computedKeyedMap(source, (value, index) => {
-    compute();
-    return {
-      id: value.id,
-      get index() {
-        return index();
-      },
-    };
-  });
+  const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]),
+    compute = vi.fn(),
+    map = computedKeyedMap(source, (value, index) => {
+      compute();
+      return {
+        id: value.id,
+        get index() {
+          return index();
+        },
+      };
+    });
 
   const [a, b, c] = map();
   expect(a.id).toBe('a');
@@ -69,4 +67,24 @@ it('should compute keyed map', () => {
 
   expect(map().length).toBe(0);
   expect(compute).toHaveBeenCalledTimes(4);
+});
+
+it('should notify observer', () => {
+  const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]),
+    map = computedKeyedMap(
+      source,
+      (value) => {
+        return { id: value.id };
+      },
+      { id: '$computedKeyedMap' },
+    ),
+    $effect = vi.fn(() => {
+      map();
+    });
+
+  effect($effect);
+
+  source.set((prev) => prev.slice(1));
+  tick();
+  expect($effect).toHaveBeenCalledTimes(2);
 });

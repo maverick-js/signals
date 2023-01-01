@@ -1,22 +1,16 @@
 import type { FLAGS, SCOPE } from './symbols';
 
-export interface Computation<T = any> {
+export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
-  [FLAGS]: number;
-  [SCOPE]: Computation | null;
-  _prevSibling: Computation | null;
-  _nextSibling: Computation | null;
-
   _value: T;
-  _disposal: Dispose | Dispose[] | null;
-  _context: ContextRecord | null;
   _sources: Computation[] | null;
   _observers: Computation[] | null;
 
-  call(this: Computation<T>): T;
   _compute: (() => T) | null;
   _changed: (prev: T, next: T) => boolean;
+  /** read */
+  call(this: Computation<T>): T;
 }
 
 export interface ReadSignal<T> {
@@ -51,12 +45,15 @@ export interface SelectorSignal<T> {
   (key: T): ReadSignal<Boolean>;
 }
 
-export interface ScopeConstructor {
-  new (): Scope;
-  (): void;
+export interface Scope {
+  [SCOPE]: Scope | null;
+  [FLAGS]: number;
+  _compute: unknown;
+  _prevSibling: Scope | null;
+  _nextSibling: Scope | null;
+  _context: ContextRecord | null;
+  _disposal: Dispose | Dispose[] | null;
 }
-
-export interface Scope extends Computation<unknown> {}
 
 export interface Dispose extends Callable {}
 

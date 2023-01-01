@@ -1,5 +1,5 @@
 import { TASKS } from './symbols';
-import { Callable } from './types';
+import type { Callable } from './types';
 
 export interface ScheduledTask extends Callable {}
 
