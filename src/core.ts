@@ -420,60 +420,57 @@ export function write(this: Computation, newValue: any): any {
   return this._value;
 }
 
+const ScopeNode = function Scope(this: Scope) {
+  this[SCOPE] = currentScope;
+  this[FLAGS] = FLAG_SCOPED;
+  this._nextSibling = null;
+  this._prevSibling = currentScope;
+  if (currentScope) appendScope(this);
+};
+
+const ScopeProto = ScopeNode.prototype;
+ScopeProto._context = null;
+ScopeProto._compute = null;
+ScopeProto._disposal = null;
+
 export function createScope(): Scope {
-  const scope: Scope = {
-    [SCOPE]: currentScope,
-    [FLAGS]: FLAG_SCOPED,
-    _nextSibling: null,
-    _prevSibling: currentScope,
-    _context: null,
-    _compute: null,
-    _disposal: null,
-  };
-
-  if (currentScope) {
-    if (currentScope._nextSibling) currentScope._nextSibling._prevSibling = scope;
-    scope._nextSibling = currentScope!._nextSibling;
-    currentScope!._nextSibling = scope;
-  }
-
-  return scope;
+  return new ScopeNode();
 }
+
+const ComputeNode = function Computation(
+  this: Computation,
+  initialValue,
+  compute,
+  options?: ComputedSignalOptions<any, any>,
+) {
+  ScopeNode.call(this);
+
+  this[FLAGS] = FLAG_DIRTY;
+  this._sources = null;
+  this._observers = null;
+  this._value = initialValue;
+
+  if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
+
+  if (compute) this._compute = compute;
+
+  if (options) {
+    if (options.scoped) this[FLAGS] |= FLAG_SCOPED;
+    if (options.dirty) this._changed = options.dirty;
+  }
+};
+
+const ComputeProto: Computation = ComputeNode.prototype;
+Object.setPrototypeOf(ComputeProto, ScopeProto);
+ComputeProto._changed = isNotEqual;
+ComputeProto.call = read;
 
 export function createComputation<T>(
   initialValue: T,
   compute: (() => T) | null,
   options?: ComputedSignalOptions<T>,
 ) {
-  const node: Computation<T> = {
-    [FLAGS]: FLAG_DIRTY,
-    [SCOPE]: currentScope,
-    _prevSibling: currentScope,
-    _nextSibling: null,
-    _sources: null,
-    _observers: null,
-    _context: null,
-    _disposal: null,
-    _value: initialValue,
-    _compute: compute,
-    _changed: isNotEqual,
-    call: read,
-  };
-
-  if (__DEV__) node.id = options?.id ?? (node._compute ? 'computed' : 'signal');
-
-  if (currentScope) {
-    if (currentScope._nextSibling) currentScope._nextSibling._prevSibling = node;
-    node._nextSibling = currentScope._nextSibling;
-    currentScope._nextSibling = node;
-  }
-
-  if (options) {
-    if (options.scoped) node[FLAGS] |= FLAG_SCOPED;
-    if (options.dirty) node._changed = options.dirty;
-  }
-
-  return node;
+  return new ComputeNode(initialValue, compute, options);
 }
 
 function removeSourceObservers(node: Computation, index: number) {
@@ -522,4 +519,10 @@ export function isZombie(node: Scope) {
   }
 
   return false;
+}
+
+function appendScope(scope: Scope) {
+  if (currentScope!._nextSibling) currentScope!._nextSibling._prevSibling = scope;
+  scope._nextSibling = currentScope!._nextSibling;
+  currentScope!._nextSibling = scope;
 }
