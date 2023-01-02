@@ -5,9 +5,8 @@ import type {
   Computation,
   ComputedSignalOptions,
   Dispose,
-  MaybeDispose,
+  MaybeDisposable,
   Scope,
-  DisposeScope,
 } from './types';
 
 let i = 0,
@@ -57,7 +56,7 @@ if (__DEV__) {
  *
  * @see {@link https://github.com/maverick-js/signals#root}
  */
-export function root<T>(init: (dispose: DisposeScope) => T): T {
+export function root<T>(init: (dispose: Dispose) => T): T {
   const scope = createScope();
   return compute<T>(
     scope,
@@ -181,26 +180,26 @@ export function onError<T = Error>(handler: (error: T) => void): void {
  *
  * @see {@link https://github.com/maverick-js/signals#ondispose}
  */
-export function onDispose(dispose: MaybeDispose): Dispose {
-  if (!dispose || !currentScope) return dispose || NOOP;
+export function onDispose(disposable: MaybeDisposable): Dispose {
+  if (!disposable || !currentScope) return (disposable as Dispose) || NOOP;
 
   const node = currentScope;
 
   if (!node._disposal) {
-    node._disposal = dispose;
+    node._disposal = disposable;
   } else if (Array.isArray(node._disposal)) {
-    node._disposal.push(dispose);
+    node._disposal.push(disposable);
   } else {
-    node._disposal = [node._disposal, dispose];
+    node._disposal = [node._disposal, disposable];
   }
 
   return function removeDispose() {
     if (isDisposed(node)) return;
-    dispose.call(null);
+    disposable.call(null);
     if (isFunction(node._disposal)) {
       node._disposal = null;
     } else if (Array.isArray(node._disposal)) {
-      node._disposal.splice(node._disposal.indexOf(dispose), 1);
+      node._disposal.splice(node._disposal.indexOf(disposable), 1);
     }
   };
 }
@@ -238,7 +237,7 @@ export function dispose(this: Scope, self = true) {
 function emptyDisposal(scope: Computation) {
   try {
     if (Array.isArray(scope._disposal)) {
-      for (i = 0; i < (scope._disposal as Dispose[]).length; i++) {
+      for (i = 0; i < scope._disposal.length; i++) {
         const callable = scope._disposal![i];
         callable.call(callable);
       }

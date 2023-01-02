@@ -6,6 +6,7 @@ import {
   tick,
   getScope,
   SCOPE,
+  type Computation,
   type ReadSignal,
   type WriteSignal,
 } from '../src';
@@ -107,7 +108,8 @@ it('should not observe', () => {
   const $a = signal(0);
   root(() => {
     $a();
-    expect(getScope()!._sources).toBeUndefined();
-    expect(getScope()!._observers).toBeUndefined();
+    const scope = getScope() as Computation;
+    expect(scope._sources).toBeUndefined();
+    expect(scope._observers).toBeUndefined();
   });
 });

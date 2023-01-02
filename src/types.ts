@@ -52,14 +52,14 @@ export interface Scope {
   _prevSibling: Scope | null;
   _nextSibling: Scope | null;
   _context: ContextRecord | null;
-  _disposal: Dispose | Dispose[] | null;
+  _disposal: Disposable | Disposable[] | null;
 }
 
-export interface Dispose extends Callable {}
-
-export interface DisposeScope {
+export interface Dispose {
   (): void;
 }
+
+export interface Disposable extends Callable {}
 
 export interface Effect {
   (): MaybeStopEffect;
@@ -75,7 +75,7 @@ export interface Callable<This = unknown, Return = void> {
 
 export type Maybe<T> = T | void | null | undefined | false;
 export type MaybeFunction = Maybe<(...args: any) => any>;
-export type MaybeDispose = Maybe<Dispose>;
+export type MaybeDisposable = Maybe<Disposable>;
 export type MaybeStopEffect = Maybe<StopEffect>;
 export type MaybeSignal<T> = MaybeFunction | ReadSignal<T>;
 export type ContextRecord = Record<string | symbol, unknown>;
