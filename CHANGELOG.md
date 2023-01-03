@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.5.0](https://github.com/maverick-js/signals/compare/v5.4.2...v5.5.0) (2023-01-03)
+
+
+### Features
+
+* export map functions separately from `@maverick-js/signals/map` ([f4fd01a](https://github.com/maverick-js/signals/commit/f4fd01ab1a5fdaca586721fe900b7c47acaceddd))
+
+
+### Bug Fixes
+
+* dont treat setting functional signal values differently ([3b4b9d2](https://github.com/maverick-js/signals/commit/3b4b9d2f1cf00768eba06e981c382be32542dd52))
+
 ### [5.4.2](https://github.com/maverick-js/signals/compare/v5.4.1...v5.4.2) (2023-01-02)
 
 
