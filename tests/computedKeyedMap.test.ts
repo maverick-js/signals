@@ -1,4 +1,5 @@
-import { signal, tick, computedKeyedMap, effect } from '../src';
+import { signal, tick, effect } from '../src';
+import { computedKeyedMap } from '../src/map';
 
 it('should compute keyed map', () => {
   const source = signal([{ id: 'a' }, { id: 'b' }, { id: 'c' }]),

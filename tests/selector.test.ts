@@ -1,4 +1,5 @@
-import { computed, root, selector, signal, tick } from '../src';
+import { computed, root, signal, tick } from '../src';
+import { selector } from '../src/map';
 
 it('should observe key changes', () => {
   root((dispose) => {

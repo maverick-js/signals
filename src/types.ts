@@ -34,7 +34,7 @@ export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 export interface WriteSignal<T> extends ReadSignal<T> {
   /** only available during dev. */
   node?: Computation;
-  set: (value: NextValue<T>) => T;
+  set: (value: T | NextValue<T>) => T;
 }
 
 export interface NextValue<T> {

@@ -1,4 +1,5 @@
-import { signal, tick, computedMap } from '../src';
+import { signal, tick } from '../src';
+import { computedMap } from '../src/map';
 
 it('should compute map', () => {
   const source = signal([1, 2, 3]);

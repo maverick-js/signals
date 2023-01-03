@@ -329,7 +329,8 @@ It only runs the mapping function once per item and adds/removes as needed. In a
 this the index is fixed but value can change (opposite of a keyed map).
 
 ```js
-import { signal, tick, computedMap } from '@maverick-js/signals';
+import { signal, tick } from '@maverick-js/signals';
+import { computedMap } from '@maverick-js/signals/map';
 
 const source = signal([1, 2, 3]);
 
@@ -362,7 +363,8 @@ updates. It only runs the mapping function once per item and then moves or remov
 a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
 
 ```js
-import { signal, tick, computedKeyedMap } from '@maverick-js/signals';
+import { signal, tick } from '@maverick-js/signals';
+import { computedKeyedMap } from '@maverick-js/signals/map';
 
 const source = signal([{ id: 0 }, { id: 1 }, { id: 2 }]);
 

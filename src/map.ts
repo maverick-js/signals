@@ -3,6 +3,8 @@
 import { compute, createComputation, createScope, dispose, read, scoped, write } from './core';
 import type { Computation, Maybe, ReadSignal, Scope } from './types';
 
+export * from './selector';
+
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
  * It only runs the mapping function once per item and adds/removes as needed. In a non-keyed map

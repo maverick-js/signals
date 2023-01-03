@@ -1,6 +1,5 @@
 dist/
 types/
-index.d.ts
 .tsbuildinfo
 
 *~
