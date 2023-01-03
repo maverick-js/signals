@@ -42,6 +42,6 @@ it('should accept dirty option', () => {
 it('should update signal with functional value', () => {
   const $a = signal<() => number>(() => 10);
   expect($a()()).toBe(10);
-  $a.set(() => 20);
+  $a.set(() => () => 20);
   expect($a()()).toBe(20);
 });

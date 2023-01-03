@@ -392,7 +392,7 @@ export function read(this: Computation): any {
 }
 
 export function write(this: Computation, newValue: any): any {
-  const value = !isFunction(this._value) && isFunction(newValue) ? newValue(this._value) : newValue;
+  const value = isFunction(newValue) ? newValue(this._value) : newValue;
 
   if (isDisposed(this) || !this._changed(this._value, value)) return this._value;
 
