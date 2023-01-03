@@ -424,7 +424,12 @@ const ScopeNode = function Scope(this: Scope) {
   this[FLAGS] = FLAG_SCOPED;
   this._nextSibling = null;
   this._prevSibling = currentScope;
-  if (currentScope) appendScope(this);
+  if (currentScope) {
+    const next = currentScope._nextSibling;
+    if (next) next._prevSibling = this;
+    this._nextSibling = next;
+    currentScope._nextSibling = this;
+  }
 };
 
 const ScopeProto = ScopeNode.prototype;
@@ -468,7 +473,7 @@ export function createComputation<T>(
   initialValue: T,
   compute: (() => T) | null,
   options?: ComputedSignalOptions<T>,
-) {
+): Computation<T> {
   return new ComputeNode(initialValue, compute, options);
 }
 
@@ -518,10 +523,4 @@ export function isZombie(node: Scope) {
   }
 
   return false;
-}
-
-function appendScope(scope: Scope) {
-  if (currentScope!._nextSibling) currentScope!._nextSibling._prevSibling = scope;
-  scope._nextSibling = currentScope!._nextSibling;
-  currentScope!._nextSibling = scope;
 }
