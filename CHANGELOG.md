@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.5.1](https://github.com/maverick-js/signals/compare/v5.5.0...v5.5.1) (2023-01-05)
+
+
+### Bug Fixes
+
+* more faithful port of reactively for stability ([f7d78f9](https://github.com/maverick-js/signals/commit/f7d78f9d72c6cde4ef30dc1188c15e7f3bae7a6c))
+
 ## [5.5.0](https://github.com/maverick-js/signals/compare/v5.4.2...v5.5.0) (2023-01-03)
 
 
