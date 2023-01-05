@@ -1,5 +1,6 @@
-import { createComputation, FLAG_DIRTY, isNotEqual, onDispose, read, write } from './core';
-import { FLAGS } from './symbols';
+import { createComputation, isNotEqual, onDispose, read, write } from './core';
+import { effect } from './signals';
+import { STATE } from './symbols';
 import { Computation, ReadSignal, SelectorSignal } from './types';
 
 /**
@@ -10,16 +11,14 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
   let currentKey: T | undefined,
     nodes = new Map<T, Selector<T>>();
 
-  read.call(
-    createComputation(currentKey, function selectorChange() {
-      const newKey = source(),
-        prev = nodes.get(currentKey!),
-        next = nodes.get(newKey);
-      prev && write.call(prev, false);
-      next && write.call(next, true);
-      return (currentKey = newKey);
-    }),
-  );
+  effect(() => {
+    const newKey = source(),
+      prev = nodes.get(currentKey!),
+      next = nodes.get(newKey);
+    prev && write.call(prev, false);
+    next && write.call(next, true);
+    currentKey = newKey;
+  });
 
   return function observeSelector(key: T) {
     let node = nodes.get(key);
@@ -34,7 +33,6 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
 }
 
 interface Selector<T = any> extends Computation {
-  [FLAGS]: number;
   _key: T;
   _value: boolean;
   _nodes: Map<T, Selector> | null;
@@ -43,7 +41,7 @@ interface Selector<T = any> extends Computation {
 }
 
 function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Map<T, Selector>) {
-  this[FLAGS] = FLAG_DIRTY;
+  this[STATE] = /** CLEAN */ 0;
   this._key = key;
   this._value = initialValue;
   this._refs = 0;

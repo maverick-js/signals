@@ -2,6 +2,18 @@ import { computed, signal, effect, tick, onDispose } from '../src';
 
 afterEach(() => tick());
 
+it('should run effect', () => {
+  const $a = signal(0),
+    $effect = vi.fn(() => void $a());
+
+  effect($effect);
+  expect($effect).toHaveBeenCalledTimes(1);
+
+  $a.set(1);
+  tick();
+  expect($effect).toHaveBeenCalledTimes(2);
+});
+
 it('should run effect on change', () => {
   const effectA = vi.fn();
 

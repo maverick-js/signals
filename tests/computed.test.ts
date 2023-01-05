@@ -118,14 +118,6 @@ it('should only re-compute whats needed', () => {
   expect($e()).toBe(40);
 });
 
-it('should throw on cyclic computation', () => {
-  expect(() => {
-    const $a = computed(() => $b());
-    const $b = computed(() => $a());
-    $b();
-  }).toThrow(/cyclic dependency detected/);
-});
-
 it('should discover new dependencies', () => {
   const $a = signal(1);
   const $b = signal(0);

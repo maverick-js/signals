@@ -19,7 +19,6 @@ to updates as its value changes.
 - 😴 Lazy by default - efficiently re-computes only what's needed
 - 🔬 Computations via `computed`
 - 📞 Effect subscriptions via `effect`
-- ♻️ Detects cyclic dependencies
 - 🐛 Debugging identifiers
 - 💪 Strongly typed - built with TypeScript
 
@@ -56,7 +55,7 @@ root((dispose) => {
   $m.set(10); // logs `10` inside effect
 
   // Flush queue synchronously so effect is run.
-  // Otherwise, computations will be batched and run on the microtask queue.
+  // Otherwise, effects will be batched and run on the microtask queue.
   tick();
 
   $b.set((prev) => prev + 5); // logs `15` inside effect
@@ -106,7 +105,6 @@ $: yarn add @maverick-js/signals
 - [`scoped`](#scoped)
 - [`getContext`](#getcontext)
 - [`setContext`](#setcontext)
-- [`getScheduler`](#getscheduler)
 
 ### `root`
 
@@ -552,44 +550,15 @@ root(() => {
 });
 ```
 
-### `getScheduler`
-
-Returns the global scheduler which can be used to queue additional tasks or synchronously flush
-the queue.
-
-```js
-const scheduler = getScheduler();
-
-// Queue task
-scheduler.enqueue(() => {
-  // ...
-});
-
-// Flush queue synchronously
-scheduler.syncFlush();
-```
-
-> **Note**
-> See our [Scheduler][maverick-scheduler] repo for more information.
-
 ## Debugging
 
 The `signal`, `computed`, and `effect` functions accept a debugging ID (string) as part
-of their options. This can be helpful when logging a cyclic dependency chain to understand
-where it's occurring.
+of their options.
 
 ```js
 import { signal, computed } from '@maverick-js/signals';
 
-const $a = signal(10, { id: 'a' });
-
-// Cyclic dependency chain.
-const $b = computed(() => $a() + $c(), { id: 'b' });
-const $c = computed(() => $a() + $b(), { id: 'c' });
-
-// This will throw an error in the form:
-// $: Error: cyclic dependency detected
-// $: a -> b -> c -> b
+const $foo = signal(10, { id: 'foo' });
 ```
 
 > **Note**

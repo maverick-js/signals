@@ -1,7 +1,10 @@
-import type { FLAGS, SCOPE } from './symbols';
+import type { SCOPE, STATE } from './symbols';
 
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
+
+  _scoped: boolean;
+  _init: boolean;
 
   _value: T;
   _sources: Computation[] | null;
@@ -47,7 +50,7 @@ export interface SelectorSignal<T> {
 
 export interface Scope {
   [SCOPE]: Scope | null;
-  [FLAGS]: number;
+  [STATE]: number;
   _compute: unknown;
   _prevSibling: Scope | null;
   _nextSibling: Scope | null;

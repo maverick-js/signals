@@ -18,6 +18,7 @@
     "test:watch": "vitest watch",
     "test:gc": "node --expose-gc ./vitest.js",
     "test:gc:watch": "node --expose-gc ./vitest.js --watch",
+    "bench:layers": "pnpm build && node bench/layers.js",
     "validate": "pnpm test && pnpm test:gc && pnpm build",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish"
   },
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@preact/signals-core": "^1.2.0",
+    "@reactively/core": "^0.0.6",
     "@types/node": "^18.0.0",
     "cellx": "^1.10.26",
     "cli-table": "^0.3.11",

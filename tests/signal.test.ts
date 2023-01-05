@@ -1,4 +1,4 @@
-import { signal, tick } from '../src';
+import { computed, signal, tick } from '../src';
 
 afterEach(() => tick());
 

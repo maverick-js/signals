@@ -1,19 +1,9 @@
-import {
-  createComputation,
-  dispose,
-  FLAG_SCOPED,
-  isFunction,
-  onDispose,
-  read,
-  write,
-} from './core';
-import { FLAGS } from './symbols';
+import { createComputation, dispose, isFunction, onDispose, read, write } from './core';
 import type {
   ComputedSignalOptions,
   Effect,
   MaybeSignal,
   ReadSignal,
-  SelectorSignal,
   SignalOptions,
   StopEffect,
   WriteSignal,
@@ -93,8 +83,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
-  signal[FLAGS] |= FLAG_SCOPED;
-
+  signal._scoped = true;
   read.call(signal);
 
   if (__DEV__) {

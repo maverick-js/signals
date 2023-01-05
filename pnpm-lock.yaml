@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@preact/signals-core': ^1.2.0
+  '@reactively/core': ^0.0.6
   '@types/node': ^18.0.0
   cellx: ^1.10.26
   cli-table: ^0.3.11
@@ -18,6 +19,7 @@ specifiers:
 
 devDependencies:
   '@preact/signals-core': 1.2.2
+  '@reactively/core': 0.0.6
   '@types/node': 18.6.4
   cellx: 1.10.29
   cli-table: 0.3.11
@@ -110,6 +112,10 @@ packages:
 
   /@preact/signals-core/1.2.2:
     resolution: {integrity: sha512-z3/bCj7rRA21RJb4FeJ4guCrD1CQbaURHkCTunUWQpxUMAFOPXCD8tSFqERyGrrcSb4T3Hrmdc1OAl0LXBHwiw==}
+    dev: true
+
+  /@reactively/core/0.0.6:
+    resolution: {integrity: sha512-jOfk7XDJgf3+aH038SMOtR1xdGLhn+FzGVMg8Q81DOSZhIr9I0mNsg8ZHdZkb+6zcOnDnHPfvPk/Iu2P6PIrPQ==}
     dev: true
 
   /@riim/next-tick/1.2.6:

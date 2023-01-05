@@ -1,5 +1,4 @@
-import { createScheduler, type Scheduler } from './scheduler';
-import { FLAGS, HANDLERS, SCOPE, TASKS } from './symbols';
+import { HANDLERS, SCOPE, STATE } from './symbols';
 import type {
   Callable,
   Computation,
@@ -9,45 +8,38 @@ import type {
   Scope,
 } from './types';
 
-let i = 0,
+let scheduledEffects = false,
+  runningEffects = false,
   currentScope: Scope | null = null,
   currentObserver: Computation | null = null,
   currentObservers: Computation[] | null = null,
   currentObserversIndex = 0,
   effects: Computation[] = [];
 
-const SCHEDULER = createScheduler(),
-  NOOP = () => {};
+const NOOP = () => {},
+  // For more information about this graph tracking scheme see Reactively:
+  // https://github.com/modderme123/reactively/blob/main/packages/core/src/core.ts#L21
+  STATE_CLEAN = 0,
+  STATE_CHECK = 1,
+  STATE_DIRTY = 2,
+  STATE_DISPOSED = 3;
 
-export const FLAG_DIRTY = 1 << 0;
-export const FLAG_SCOPED = 1 << 1;
-export const FLAG_INIT = 1 << 2;
-export const FLAG_DISPOSED = 1 << 3;
+function flushEffects() {
+  scheduledEffects = true;
+  queueMicrotask(runEffects);
+}
 
-SCHEDULER.onFlush(function flushEffects() {
-  if (!effects.length) return;
-
-  let effect: Computation;
+function runEffects() {
+  runningEffects = true;
 
   for (let i = 0; i < effects.length; i++) {
-    effect = effects[i];
     // If parent scope is dirty it means that this effect will be disposed of so we skip.
-    if (!isZombie(effect)) read.call(effect);
+    if (!isZombie(effects[i])) read.call(effects[i]);
   }
 
   effects = [];
-});
-
-// These are used only for debugging to determine how a cycle occurred.
-let callStack: Computation[];
-let computeStack: Computation[];
-
-if (__DEV__) {
-  callStack = [];
-  computeStack = [];
-  SCHEDULER.onFlush(() => {
-    callStack = [];
-  });
+  scheduledEffects = false;
+  runningEffects = false;
 }
 
 /**
@@ -58,11 +50,7 @@ if (__DEV__) {
  */
 export function root<T>(init: (dispose: Dispose) => T): T {
   const scope = createScope();
-  return compute<T>(
-    scope,
-    !init.length ? (init as () => T) : init.bind(null, dispose.bind(scope)),
-    null,
-  );
+  return compute(scope, !init.length ? init : init.bind(null, dispose.bind(scope)), null) as T;
 }
 
 /**
@@ -72,12 +60,10 @@ export function root<T>(init: (dispose: Dispose) => T): T {
  * @see {@link https://github.com/maverick-js/signals#peek}
  */
 export function peek<T>(compute: () => T): T {
-  const prevObserver = currentObserver;
-
+  const prev = currentObserver;
   currentObserver = null;
   const result = compute();
-  currentObserver = prevObserver;
-
+  currentObserver = prev;
   return result;
 }
 
@@ -88,15 +74,10 @@ export function peek<T>(compute: () => T): T {
  * @see {@link https://github.com/maverick-js/signals#untrack}
  */
 export function untrack<T>(compute: () => T): T {
-  const prevScope = currentScope,
-    prevObserver = currentObserver;
-
+  const prev = currentScope;
   currentScope = null;
-  currentObserver = null;
-  const result = compute();
-  currentScope = prevScope;
-  currentObserver = prevObserver;
-
+  const result = peek(compute);
+  currentScope = prev;
   return result;
 }
 
@@ -107,7 +88,7 @@ export function untrack<T>(compute: () => T): T {
  * @see {@link https://github.com/maverick-js/signals#tick}
  */
 export function tick(): void {
-  SCHEDULER.flushSync();
+  if (!runningEffects) runEffects();
 }
 
 /**
@@ -117,15 +98,6 @@ export function tick(): void {
  */
 export function getScope(): Scope | null {
   return currentScope;
-}
-
-/**
- * Returns the global scheduler.
- *
- * @see {@link https://github.com/maverick-js/signals#getscheduler}
- */
-export function getScheduler(): Scheduler {
-  return SCHEDULER;
 }
 
 /**
@@ -171,8 +143,8 @@ export function setContext<T>(key: string | symbol, value: T) {
 export function onError<T = Error>(handler: (error: T) => void): void {
   if (!currentScope) return;
   const context = (currentScope._context ??= {});
-  if (!context[HANDLERS]) context[HANDLERS] = [];
-  (context[HANDLERS] as any[]).push(handler);
+  if (!context[HANDLERS]) context[HANDLERS] = [handler];
+  else (context[HANDLERS] as any[]).push(handler);
 }
 
 /**
@@ -194,7 +166,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
   }
 
   return function removeDispose() {
-    if (isDisposed(node)) return;
+    if (node[STATE] === STATE_DISPOSED) return;
     disposable.call(null);
     if (isFunction(node._disposal)) {
       node._disposal = null;
@@ -204,16 +176,16 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
   };
 }
 
-const scopes = new Set();
+let scopes: Scope[] = [];
 
 export function dispose(this: Scope, self = true) {
-  if (isDisposed(this)) return;
+  if (this[STATE] === STATE_DISPOSED) return;
 
   let current = (self ? this : this._nextSibling) as Computation | null,
     head = self ? this._prevSibling : this;
 
   if (current) {
-    scopes.add(this);
+    scopes.push(this);
     do {
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
@@ -222,22 +194,22 @@ export function dispose(this: Scope, self = true) {
       current._observers = null;
       current._prevSibling = null;
       current._context = null;
-      current[FLAGS] |= FLAG_DISPOSED;
-      scopes.add(current);
+      current[STATE] = STATE_DISPOSED;
+      scopes.push(current);
       current = current._nextSibling as Computation | null;
       if (current) current._prevSibling!._nextSibling = null;
-    } while (current && scopes.has(current[SCOPE]));
+    } while (current && scopes.includes(current[SCOPE]!));
   }
 
   if (head) head._nextSibling = current;
   if (current) current._prevSibling = head;
-  scopes.clear();
+  scopes = [];
 }
 
 function emptyDisposal(scope: Computation) {
   try {
     if (Array.isArray(scope._disposal)) {
-      for (i = 0; i < scope._disposal.length; i++) {
+      for (let i = 0; i < scope._disposal.length; i++) {
         const callable = scope._disposal![i];
         callable.call(callable);
       }
@@ -259,14 +231,12 @@ export function compute<Result>(
   const prevScope = currentScope,
     prevObserver = currentObserver;
 
-  if (__DEV__ && currentObserver) computeStack.push(currentObserver);
   currentScope = scope;
   currentObserver = observer;
 
   try {
     return compute.call(scope);
   } finally {
-    if (__DEV__ && currentObserver) computeStack.pop();
     currentScope = prevScope;
     currentObserver = prevObserver;
   }
@@ -299,14 +269,7 @@ function handleError(scope: Scope | null, error: unknown, depth?: number) {
 }
 
 export function read(this: Computation): any {
-  if (isDisposed(this)) return this._value;
-
-  if (__DEV__ && this._compute && computeStack.includes(this)) {
-    const calls = callStack.map((c) => c.id ?? '?').join(' --> ');
-    throw Error(`cyclic dependency detected\n\n${calls}\n`);
-  }
-
-  if (__DEV__) callStack.push(this);
+  if (this[STATE] === STATE_DISPOSED) return this._value;
 
   if (currentObserver) {
     if (
@@ -319,74 +282,7 @@ export function read(this: Computation): any {
     else currentObservers.push(this);
   }
 
-  if (this._compute && isDirty(this)) {
-    let prevObservers = currentObservers,
-      prevObserversIndex = currentObserversIndex;
-
-    currentObservers = null as Computation[] | null;
-    currentObserversIndex = 0;
-
-    try {
-      const scoped = isScoped(this);
-
-      if (scoped) {
-        if (this._nextSibling && this._nextSibling[SCOPE] === this) dispose.call(this, false);
-        if (this._disposal) emptyDisposal(this);
-        if (this._context && this._context[HANDLERS]) (this._context[HANDLERS] as any[]) = [];
-      }
-
-      const result = compute(scoped ? this : currentScope, this._compute, this);
-
-      if (currentObservers) {
-        if (this._sources) removeSourceObservers(this, currentObserversIndex);
-
-        if (this._sources && currentObserversIndex > 0) {
-          this._sources.length = currentObserversIndex + currentObservers.length;
-          for (i = 0; i < currentObservers.length; i++) {
-            this._sources[currentObserversIndex + i] = currentObservers[i];
-          }
-        } else {
-          this._sources = currentObservers;
-        }
-
-        let source: Computation;
-        for (i = currentObserversIndex; i < this._sources.length; i++) {
-          source = this._sources[i];
-          if (!source._observers) source._observers = [this];
-          else source._observers.push(this);
-        }
-      } else if (this._sources && currentObserversIndex < this._sources.length) {
-        removeSourceObservers(this, currentObserversIndex);
-        this._sources.length = currentObserversIndex;
-      }
-
-      if (!scoped && isInit(this)) {
-        write.call(this, result);
-      } else {
-        this._value = result;
-      }
-    } catch (error) {
-      if (__DEV__ && !__TEST__ && !isInit(this) && typeof this._value === 'undefined') {
-        console.error(
-          `computed \`${this.id}\` threw error during first run, this can be fatal.` +
-            '\n\nSolutions:\n\n' +
-            '1. Set the `initial` option to silence this error',
-          '\n2. Or, use an `effect` if the return value is not being used',
-          '\n\n',
-          error,
-        );
-      }
-
-      handleError(this, error);
-      return this._value;
-    }
-
-    currentObservers = prevObservers;
-    currentObserversIndex = prevObserversIndex;
-
-    this[FLAGS] |= FLAG_INIT;
-    this[FLAGS] &= ~FLAG_DIRTY;
-  }
+  if (this._compute) check(this);
 
   return this._value;
 }
@@ -394,34 +290,21 @@ export function read(this: Computation): any {
 export function write(this: Computation, newValue: any): any {
   const value = isFunction(newValue) ? newValue(this._value) : newValue;
 
-  if (isDisposed(this) || !this._changed(this._value, value)) return this._value;
-
-  this._value = value;
-
-  if (!this._observers || !this._observers.length) return this._value;
-
-  const tasks = SCHEDULER[TASKS]();
-
-  for (i = 0; i < this._observers!.length; i++) {
-    const observer = this._observers![i];
-    if (observer._compute) {
-      observer[FLAGS] |= FLAG_DIRTY;
-      if (isScoped(observer)) {
-        effects.push(observer);
-      } else {
-        tasks.push(observer);
+  if (this._changed(this._value, value)) {
+    this._value = value;
+    if (this._observers) {
+      for (let i = 0; i < this._observers.length; i++) {
+        notify(this._observers[i], STATE_DIRTY);
       }
     }
   }
-
-  SCHEDULER.flush();
 
   return this._value;
 }
 
 const ScopeNode = function Scope(this: Scope) {
   this[SCOPE] = currentScope;
-  this[FLAGS] = FLAG_SCOPED;
+  this[STATE] = STATE_CLEAN;
   this._nextSibling = null;
   this._prevSibling = currentScope;
   if (currentScope) {
@@ -449,7 +332,9 @@ const ComputeNode = function Computation(
 ) {
   ScopeNode.call(this);
 
-  this[FLAGS] = FLAG_DIRTY;
+  this[STATE] = compute ? STATE_DIRTY : STATE_CLEAN;
+  this._scoped = false;
+  this._init = false;
   this._sources = null;
   this._observers = null;
   this._value = initialValue;
@@ -459,7 +344,7 @@ const ComputeNode = function Computation(
   if (compute) this._compute = compute;
 
   if (options) {
-    if (options.scoped) this[FLAGS] |= FLAG_SCOPED;
+    if (options.scoped) this._scoped = true;
     if (options.dirty) this._changed = options.dirty;
   }
 };
@@ -477,6 +362,126 @@ export function createComputation<T>(
   return new ComputeNode(initialValue, compute, options);
 }
 
+export function isNotEqual(a: unknown, b: unknown) {
+  return a !== b;
+}
+
+export function isFunction(value: unknown): value is Function {
+  return typeof value === 'function';
+}
+
+export function isZombie(node: Scope) {
+  let scope = node[SCOPE];
+
+  while (scope) {
+    // We're looking for a dirty parent effect scope.
+    if (scope._compute && scope[STATE] === STATE_DIRTY) return true;
+    scope = scope[SCOPE];
+  }
+
+  return false;
+}
+
+function check(node: Computation) {
+  if (node[STATE] === STATE_CHECK) {
+    for (let i = 0; i < node._sources!.length; i++) {
+      check(node._sources![i]);
+      if ((node[STATE] as number) === STATE_DIRTY) {
+        // Stop the loop here so we won't trigger updates on other parents unnecessarily
+        // If our computation changes to no longer use some sources, we don't
+        // want to update() a source we used last time, but now don't use.
+        break;
+      }
+    }
+  }
+
+  if (node[STATE] === STATE_DIRTY) update(node);
+  else node[STATE] = STATE_CLEAN;
+}
+
+function update(node: Computation) {
+  let prevObservers = currentObservers,
+    prevObserversIndex = currentObserversIndex;
+
+  currentObservers = null as Computation[] | null;
+  currentObserversIndex = 0;
+
+  try {
+    if (node._scoped) {
+      if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
+      if (node._disposal) emptyDisposal(node);
+      if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
+    }
+
+    const result = compute(node._scoped ? node : currentScope, node._compute!, node);
+
+    if (currentObservers) {
+      if (node._sources) removeSourceObservers(node, currentObserversIndex);
+
+      if (node._sources && currentObserversIndex > 0) {
+        node._sources.length = currentObserversIndex + currentObservers.length;
+        for (let i = 0; i < currentObservers.length; i++) {
+          node._sources[currentObserversIndex + i] = currentObservers[i];
+        }
+      } else {
+        node._sources = currentObservers;
+      }
+
+      let source: Computation;
+      for (let i = currentObserversIndex; i < node._sources.length; i++) {
+        source = node._sources[i];
+        if (!source._observers) source._observers = [node];
+        else source._observers.push(node);
+      }
+    } else if (node._sources && currentObserversIndex < node._sources.length) {
+      removeSourceObservers(node, currentObserversIndex);
+      node._sources.length = currentObserversIndex;
+    }
+
+    if (!node._scoped && node._init) {
+      write.call(node, result);
+    } else {
+      node._value = result;
+      node._init = true;
+    }
+  } catch (error) {
+    if (__DEV__ && !__TEST__ && !node._init && typeof node._value === 'undefined') {
+      console.error(
+        `computed \`${node.id}\` threw error during first run, this can be fatal.` +
+          '\n\nSolutions:\n\n' +
+          '1. Set the `initial` option to silence this error',
+        '\n2. Or, use an `effect` if the return value is not being used',
+        '\n\n',
+        error,
+      );
+    }
+
+    handleError(node, error);
+    return;
+  }
+
+  currentObservers = prevObservers;
+  currentObserversIndex = prevObserversIndex;
+
+  node[STATE] = STATE_CLEAN;
+}
+
+function notify(node: Computation, state: number) {
+  if (node[STATE] >= state) return;
+
+  if (node._scoped && node[STATE] === STATE_CLEAN) {
+    effects.push(node);
+    if (!scheduledEffects) flushEffects();
+  }
+
+  node[STATE] = state;
+  if (node._observers) {
+    for (let i = 0; i < node._observers.length; i++) {
+      notify(node._observers[i], STATE_CHECK);
+    }
+  }
+}
+
 function removeSourceObservers(node: Computation, index: number) {
   let source: Computation, swap: number;
   for (let i = index; i < node._sources!.length; i++) {
@@ -487,40 +492,4 @@ function removeSourceObservers(node: Computation, index: number) {
       source._observers.pop();
     }
   }
-}
-
-export function isNotEqual(a: unknown, b: unknown) {
-  return a !== b;
-}
-
-export function isFunction(value: unknown): value is Function {
-  return typeof value === 'function';
-}
-
-export function isDisposed(node: Scope) {
-  return node[FLAGS] & FLAG_DISPOSED;
-}
-
-export function isDirty(node: Scope) {
-  return node[FLAGS] & FLAG_DIRTY;
-}
-
-export function isInit(node: Scope) {
-  return node[FLAGS] & FLAG_INIT;
-}
-
-export function isScoped(node: Scope) {
-  return node[FLAGS] & FLAG_SCOPED;
-}
-
-export function isZombie(node: Scope) {
-  let scope = node[SCOPE];
-
-  while (scope) {
-    // We're looking for a dirty parent effect scope.
-    if (scope._compute && isDirty(scope)) return true;
-    scope = scope[SCOPE];
-  }
-
-  return false;
 }

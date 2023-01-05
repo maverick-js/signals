@@ -1,6 +1,5 @@
 export {
   getContext,
-  getScheduler,
   getScope,
   onDispose,
   onError,
@@ -15,5 +14,4 @@ export {
 } from './core';
 export * from './signals';
 export * from './types';
-export * from './scheduler';
 export * from './symbols';

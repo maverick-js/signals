@@ -4,6 +4,7 @@
 
 import kleur from 'kleur';
 
+import * as reactively from '@reactively/core';
 import * as cellx from 'cellx';
 import * as Sjs from 's-js';
 import * as solid from './solid-js-baseline.js';
@@ -38,6 +39,9 @@ async function main() {
   report.maverick = { fn: runMaverick, runs: [], avg: [] };
   report.S = { fn: runS, runs: [] };
   report.solid = { fn: runSolid, runs: [] };
+
+  // Has no way to dispose so can't consider it feature comparable.
+  // report.reactively = { fn: runReactively, runs: [], avg: [] };
 
   // These libraries are not comparable in terms of features.
   // report['preact/signals'] = { fn: runPreact, runs: [] };
@@ -102,6 +106,41 @@ async function start(runner, layers) {
   return new Promise((done) => {
     runner(layers, done);
   }).catch(() => -1);
+}
+
+/**
+ * @see {@link https://github.com/modderme123/reactively}
+ */
+function runReactively(layers, done) {
+  const start = {
+    a: new reactively.Reactive(1),
+    b: new reactively.Reactive(2),
+    c: new reactively.Reactive(3),
+    d: new reactively.Reactive(4),
+  };
+
+  let layer = start;
+
+  for (let i = layers; i--; ) {
+    layer = ((m) => {
+      return {
+        a: new reactively.Reactive(() => m.b.get()),
+        b: new reactively.Reactive(() => m.a.get() - m.c.get()),
+        c: new reactively.Reactive(() => m.b.get() + m.d.get()),
+        d: new reactively.Reactive(() => m.c.get()),
+      };
+    })(layer);
+  }
+
+  const startTime = performance.now();
+
+  start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1);
+
+  const end = layer;
+  const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
+  const endTime = performance.now() - startTime;
+
+  done(isSolution(layers, solution) ? endTime : -1);
 }
 
 /**
