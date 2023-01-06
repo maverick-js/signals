@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.6.0](https://github.com/maverick-js/signals/compare/v5.5.1...v5.6.0) (2023-01-06)
+
+
+### Features
+
+* add server bundle ([49742aa](https://github.com/maverick-js/signals/commit/49742aac0d5495126f57547aeadbd6c76bf29cd2))
+
 ### [5.5.1](https://github.com/maverick-js/signals/compare/v5.5.0...v5.5.1) (2023-01-05)
 
 
