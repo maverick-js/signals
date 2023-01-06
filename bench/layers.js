@@ -50,7 +50,6 @@ async function main() {
     let total = 0;
 
     for (let i = 0; i < LAYER_TIERS.length; i += 1) {
-      // for (let i = LAYER_TIERS.length - 1; i >= 0; i--) {
       let layers = LAYER_TIERS[i];
       const runs = [];
 
@@ -270,8 +269,7 @@ function runXania(layers, done) {
   const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
   const endTime = performance.now() - startTime;
 
-  // done(isSolution(layers, solution) ? endTime : -1);
-  done(endTime);
+  done(isSolution(layers, solution) ? endTime : -1);
 }
 
 /**
