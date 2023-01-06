@@ -1,22 +1,24 @@
 import { defineConfig, type Options } from 'tsup';
 
-function options(dev = false): Options {
+function options({ dev = false, server = false } = {}): Options {
   return {
     entry: {
       index: 'src/index.ts',
       map: 'src/map.ts',
     },
-    outDir: `dist/${dev ? 'dev' : 'prod'}`,
+    outDir: `dist/${server ? 'server' : dev ? 'dev' : 'prod'}`,
     treeshake: true,
-    format: 'esm',
     bundle: true,
-    dts: !dev,
+    splitting: true,
+    dts: !dev && !server,
+    format: server ? ['esm', 'cjs'] : 'esm',
     // minify: true,
-    platform: 'browser',
-    target: 'esnext',
+    platform: server ? 'node' : 'browser',
+    target: server ? 'node16' : 'esnext',
     define: {
       __DEV__: dev ? 'true' : 'false',
       __TEST__: 'false',
+      __SERVER__: server ? 'true' : 'false',
     },
     esbuildOptions(opts) {
       opts.mangleProps = !dev ? /^_/ : undefined;
@@ -25,4 +27,8 @@ function options(dev = false): Options {
   };
 }
 
-export default defineConfig([options(true), options(false)]);
+export default defineConfig([
+  options({ dev: true }),
+  options({ dev: false }),
+  options({ dev: false, server: true }),
+]);

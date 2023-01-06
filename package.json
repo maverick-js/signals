@@ -56,11 +56,17 @@
     ".": {
       "development": "./dist/dev/index.js",
       "test": "./dist/dev/index.js",
+      "require": "./dist/server/index.cjs",
+      "node": "./dist/server/index.js",
+      "deno": "./dist/server/index.js",
       "default": "./dist/prod/index.js"
     },
     "./map": {
       "development": "./dist/dev/map.js",
       "test": "./dist/dev/map.js",
+      "require": "./dist/server/map.cjs",
+      "node": "./dist/server/map.js",
+      "deno": "./dist/server/map.js",
       "default": "./dist/prod/map.js"
     },
     "./package.json": "./package.json"

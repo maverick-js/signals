@@ -73,6 +73,8 @@ export function computed<T, R = never>(
  * @see {@link https://github.com/maverick-js/signals#effect}
  */
 export function effect(effect: Effect, options?: { id?: string }): StopEffect {
+  if (__SERVER__) return () => {};
+
   const signal = createComputation<null>(
     null,
     function runEffect() {
