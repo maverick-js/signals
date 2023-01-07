@@ -1,4 +1,3 @@
-import { HANDLERS, SCOPE, STATE } from './symbols';
 import type {
   Callable,
   Computation,
@@ -17,6 +16,7 @@ let scheduledEffects = false,
   effects: Computation[] = [];
 
 const NOOP = () => {},
+  HANDLERS = Symbol(__DEV__ ? 'ERROR_HANDLERS' : 0),
   // For more information about this graph tracking scheme see Reactively:
   // https://github.com/modderme123/reactively/blob/main/packages/core/src/core.ts#L21
   STATE_CLEAN = 0,
@@ -30,6 +30,11 @@ function flushEffects() {
 }
 
 function runEffects() {
+  if (!effects.length) {
+    scheduledEffects = false;
+    return;
+  }
+
   runningEffects = true;
 
   for (let i = 0; i < effects.length; i++) {
@@ -166,7 +171,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
   }
 
   return function removeDispose() {
-    if (node[STATE] === STATE_DISPOSED) return;
+    if (node._state === STATE_DISPOSED) return;
     disposable.call(null);
     if (isFunction(node._disposal)) {
       node._disposal = null;
@@ -179,7 +184,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 let scopes: Scope[] = [];
 
 export function dispose(this: Scope, self = true) {
-  if (this[STATE] === STATE_DISPOSED) return;
+  if (this._state === STATE_DISPOSED) return;
 
   let current = (self ? this : this._nextSibling) as Computation | null,
     head = self ? this._prevSibling : this;
@@ -189,16 +194,16 @@ export function dispose(this: Scope, self = true) {
     do {
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
-      current[SCOPE] = null;
+      current._scope = null;
       current._sources = null;
       current._observers = null;
       current._prevSibling = null;
       current._context = null;
-      current[STATE] = STATE_DISPOSED;
+      current._state = STATE_DISPOSED;
       scopes.push(current);
       current = current._nextSibling as Computation | null;
       if (current) current._prevSibling!._nextSibling = null;
-    } while (current && scopes.includes(current[SCOPE]!));
+    } while (current && scopes.includes(current._scope!));
   }
 
   if (head) head._nextSibling = current;
@@ -251,7 +256,7 @@ function lookup(scope: Scope | null, key: string | symbol): any {
   while (current) {
     value = current._context?.[key];
     if (value !== undefined) return value;
-    current = current[SCOPE];
+    current = current._scope;
   }
 }
 
@@ -264,12 +269,12 @@ function handleError(scope: Scope | null, error: unknown, depth?: number) {
     const coercedError = error instanceof Error ? error : Error(JSON.stringify(error));
     for (const handler of handlers) handler(coercedError);
   } catch (error) {
-    handleError(scope![SCOPE], error);
+    handleError(scope!._scope, error);
   }
 }
 
 export function read(this: Computation): any {
-  if (this[STATE] === STATE_DISPOSED) return this._value;
+  if (this._state === STATE_DISPOSED) return this._value;
 
   if (currentObserver) {
     if (
@@ -282,7 +287,7 @@ export function read(this: Computation): any {
     else currentObservers.push(this);
   }
 
-  if (this._compute) check(this);
+  if (this._compute) shouldUpdate(this);
 
   return this._value;
 }
@@ -303,8 +308,8 @@ export function write(this: Computation, newValue: any): any {
 }
 
 const ScopeNode = function Scope(this: Scope) {
-  this[SCOPE] = currentScope;
-  this[STATE] = STATE_CLEAN;
+  this._scope = currentScope;
+  this._state = STATE_CLEAN;
   this._nextSibling = null;
   this._prevSibling = currentScope;
   if (currentScope) {
@@ -332,7 +337,7 @@ const ComputeNode = function Computation(
 ) {
   ScopeNode.call(this);
 
-  this[STATE] = compute ? STATE_DIRTY : STATE_CLEAN;
+  this._state = compute ? STATE_DIRTY : STATE_CLEAN;
   this._scoped = false;
   this._init = false;
   this._sources = null;
@@ -371,22 +376,22 @@ export function isFunction(value: unknown): value is Function {
 }
 
 export function isZombie(node: Scope) {
-  let scope = node[SCOPE];
+  let scope = node._scope;
 
   while (scope) {
     // We're looking for a dirty parent effect scope.
-    if (scope._compute && scope[STATE] === STATE_DIRTY) return true;
-    scope = scope[SCOPE];
+    if (scope._compute && scope._state === STATE_DIRTY) return true;
+    scope = scope._scope;
   }
 
   return false;
 }
 
-function check(node: Computation) {
-  if (node[STATE] === STATE_CHECK) {
+function shouldUpdate(node: Computation) {
+  if (node._state === STATE_CHECK) {
     for (let i = 0; i < node._sources!.length; i++) {
-      check(node._sources![i]);
-      if ((node[STATE] as number) === STATE_DIRTY) {
+      shouldUpdate(node._sources![i]);
+      if ((node._state as number) === STATE_DIRTY) {
         // Stop the loop here so we won't trigger updates on other parents unnecessarily
         // If our computation changes to no longer use some sources, we don't
         // want to update() a source we used last time, but now don't use.
@@ -395,8 +400,8 @@ function check(node: Computation) {
     }
   }
 
-  if (node[STATE] === STATE_DIRTY) update(node);
-  else node[STATE] = STATE_CLEAN;
+  if (node._state === STATE_DIRTY) update(node);
+  else node._state = STATE_CLEAN;
 }
 
 function update(node: Computation) {
@@ -408,7 +413,7 @@ function update(node: Computation) {
 
   try {
     if (node._scoped) {
-      if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
+      if (node._nextSibling && node._nextSibling._scope === node) dispose.call(node, false);
       if (node._disposal) emptyDisposal(node);
       if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
     }
@@ -463,18 +468,18 @@ function update(node: Computation) {
   currentObservers = prevObservers;
   currentObserversIndex = prevObserversIndex;
 
-  node[STATE] = STATE_CLEAN;
+  node._state = STATE_CLEAN;
 }
 
 function notify(node: Computation, state: number) {
-  if (node[STATE] >= state) return;
+  if (node._state >= state) return;
 
-  if (node._scoped && node[STATE] === STATE_CLEAN) {
+  if (node._scoped && node._state === STATE_CLEAN) {
     effects.push(node);
     if (!scheduledEffects) flushEffects();
   }
 
-  node[STATE] = state;
+  node._state = state;
   if (node._observers) {
     for (let i = 0; i < node._observers.length; i++) {
       notify(node._observers[i], STATE_CHECK);

@@ -1,5 +1,3 @@
-import type { SCOPE, STATE } from './symbols';
-
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
@@ -44,13 +42,9 @@ export interface NextValue<T> {
   (prevValue: T): T;
 }
 
-export interface SelectorSignal<T> {
-  (key: T): ReadSignal<Boolean>;
-}
-
 export interface Scope {
-  [SCOPE]: Scope | null;
-  [STATE]: number;
+  _scope: Scope | null;
+  _state: number;
   _compute: unknown;
   _prevSibling: Scope | null;
   _nextSibling: Scope | null;

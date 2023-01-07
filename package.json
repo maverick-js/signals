@@ -4,6 +4,7 @@
   "license": "MIT",
   "version": "5.6.0",
   "type": "module",
+  "types": "dist/types/index.d.ts",
   "module": "dist/prod/index.js",
   "sideEffects": false,
   "files": [
@@ -13,13 +14,14 @@
   ],
   "scripts": {
     "build": "rimraf dist && tsup",
+    "types": "tsc -p tsconfig.build.json",
     "format": "prettier src --write --loglevel warn",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:gc": "node --expose-gc ./vitest.js",
     "test:gc:watch": "node --expose-gc ./vitest.js --watch",
     "bench:layers": "pnpm build && node bench/layers.js",
-    "validate": "pnpm test && pnpm test:gc && pnpm build",
+    "validate": "pnpm test && pnpm test:gc && pnpm build && pnpm types",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish"
   },
   "contributors": [
@@ -54,6 +56,7 @@
   },
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "development": "./dist/dev/index.js",
       "test": "./dist/dev/index.js",
       "require": "./dist/server/index.cjs",
@@ -62,6 +65,7 @@
       "default": "./dist/prod/index.js"
     },
     "./map": {
+      "types": "./map.d.ts",
       "development": "./dist/dev/map.js",
       "test": "./dist/dev/map.js",
       "require": "./dist/server/map.cjs",

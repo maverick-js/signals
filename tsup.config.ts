@@ -10,7 +10,6 @@ function options({ dev = false, server = false } = {}): Options {
     treeshake: true,
     bundle: true,
     splitting: true,
-    dts: !dev && !server,
     format: server ? ['esm', 'cjs'] : 'esm',
     // minify: true,
     platform: server ? 'node' : 'browser',

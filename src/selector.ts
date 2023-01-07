@@ -1,7 +1,10 @@
-import { createComputation, isNotEqual, onDispose, read, write } from './core';
+import { isNotEqual, onDispose, read, write } from './core';
 import { effect } from './signals';
-import { STATE } from './symbols';
-import { Computation, ReadSignal, SelectorSignal } from './types';
+import { Computation, ReadSignal } from './types';
+
+export interface SelectorSignal<T> {
+  (key: T): ReadSignal<Boolean>;
+}
 
 /**
  * Creates a signal that observes the given `source` and returns a new signal who only notifies
@@ -41,7 +44,7 @@ interface Selector<T = any> extends Computation {
 }
 
 function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Map<T, Selector>) {
-  this[STATE] = /** CLEAN */ 0;
+  this._state = /** CLEAN */ 0;
   this._key = key;
   this._value = initialValue;
   this._refs = 0;

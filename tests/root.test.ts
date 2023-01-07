@@ -5,7 +5,6 @@ import {
   effect,
   tick,
   getScope,
-  SCOPE,
   type Computation,
   type ReadSignal,
   type WriteSignal,
@@ -99,7 +98,7 @@ it('should hold parent tracking', () => {
   root(() => {
     const parent = getScope();
     root(() => {
-      expect(getScope()![SCOPE]).toBe(parent);
+      expect(getScope()!._scope).toBe(parent);
     });
   });
 });

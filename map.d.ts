@@ -1,1 +1,1 @@
-export * from './dist/prod/map.js';
+export * from './dist/types/map.js';
