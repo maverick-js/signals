@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.6.3](https://github.com/maverick-js/signals/compare/v5.6.2...v5.6.3) (2023-01-08)
+
+
+### Bug Fixes
+
+* remove redundant types exports ([06e5f26](https://github.com/maverick-js/signals/commit/06e5f26d32f24d0d7f3f0225262ada87584a101f))
+
 ### [5.6.2](https://github.com/maverick-js/signals/compare/v5.6.1...v5.6.2) (2023-01-08)
 
 
