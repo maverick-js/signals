@@ -1,4 +1,5 @@
 import {
+  SCOPE,
   root,
   signal,
   computed,
@@ -98,7 +99,7 @@ it('should hold parent tracking', () => {
   root(() => {
     const parent = getScope();
     root(() => {
-      expect(getScope()!._scope).toBe(parent);
+      expect(getScope()![SCOPE]).toBe(parent);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { SCOPE } from './symbols';
 import type {
   Callable,
   Computation,
@@ -194,7 +195,7 @@ export function dispose(this: Scope, self = true) {
     do {
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
-      current._scope = null;
+      current[SCOPE] = null;
       current._sources = null;
       current._observers = null;
       current._prevSibling = null;
@@ -203,7 +204,7 @@ export function dispose(this: Scope, self = true) {
       scopes.push(current);
       current = current._nextSibling as Computation | null;
       if (current) current._prevSibling!._nextSibling = null;
-    } while (current && scopes.includes(current._scope!));
+    } while (current && scopes.includes(current[SCOPE]!));
   }
 
   if (head) head._nextSibling = current;
@@ -256,7 +257,7 @@ function lookup(scope: Scope | null, key: string | symbol): any {
   while (current) {
     value = current._context?.[key];
     if (value !== undefined) return value;
-    current = current._scope;
+    current = current[SCOPE];
   }
 }
 
@@ -269,7 +270,7 @@ function handleError(scope: Scope | null, error: unknown, depth?: number) {
     const coercedError = error instanceof Error ? error : Error(JSON.stringify(error));
     for (const handler of handlers) handler(coercedError);
   } catch (error) {
-    handleError(scope!._scope, error);
+    handleError(scope![SCOPE], error);
   }
 }
 
@@ -308,7 +309,7 @@ export function write(this: Computation, newValue: any): any {
 }
 
 const ScopeNode = function Scope(this: Scope) {
-  this._scope = currentScope;
+  this[SCOPE] = currentScope;
   this._state = STATE_CLEAN;
   this._nextSibling = null;
   this._prevSibling = currentScope;
@@ -376,12 +377,12 @@ export function isFunction(value: unknown): value is Function {
 }
 
 export function isZombie(node: Scope) {
-  let scope = node._scope;
+  let scope = node[SCOPE];
 
   while (scope) {
     // We're looking for a dirty parent effect scope.
     if (scope._compute && scope._state === STATE_DIRTY) return true;
-    scope = scope._scope;
+    scope = scope[SCOPE];
   }
 
   return false;
@@ -413,7 +414,7 @@ function update(node: Computation) {
 
   try {
     if (node._scoped) {
-      if (node._nextSibling && node._nextSibling._scope === node) dispose.call(node, false);
+      if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
       if (node._disposal) emptyDisposal(node);
       if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
     }
