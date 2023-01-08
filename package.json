@@ -56,7 +56,6 @@
   },
   "exports": {
     ".": {
-      "types": "./index.d.ts",
       "development": "./dist/dev/index.js",
       "test": "./dist/dev/index.js",
       "require": "./dist/server/index.cjs",
@@ -65,7 +64,6 @@
       "default": "./dist/prod/index.js"
     },
     "./map": {
-      "types": "./map.d.ts",
       "development": "./dist/dev/map.js",
       "test": "./dist/dev/map.js",
       "require": "./dist/server/map.cjs",
