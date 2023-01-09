@@ -5,6 +5,7 @@
   "version": "5.6.4",
   "type": "module",
   "types": "dist/types/index.d.ts",
+  "main": "dist/server/index.cjs",
   "module": "dist/prod/index.js",
   "sideEffects": false,
   "files": [
@@ -57,6 +58,7 @@
   "exports": {
     ".": {
       "import": {
+        "test": "./dist/dev/index.js",
         "node": "./dist/server/index.js",
         "deno": "./dist/server/index.js",
         "bun": "./dist/server/index.js",
@@ -67,6 +69,7 @@
     },
     "./map": {
       "import": {
+        "test": "./dist/dev/map.js",
         "node": "./dist/server/map.js",
         "deno": "./dist/server/map.js",
         "bun": "./dist/server/index.js",
