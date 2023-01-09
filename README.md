@@ -251,8 +251,8 @@ effect(() => {
 
 ### `peek`
 
-Returns the current value stored inside the given compute function without triggering any
-dependencies. Use [`untrack`](#untrack) if you want to also disable scope tracking.
+Returns the current value stored inside the given compute function whilst disabling observer tracking, i.e.
+without triggering any dependencies. Use [`untrack`](#untrack) if you want to also disable scope tracking.
 
 ```js
 import { signal, computed, peek } from '@maverick-js/signals';
@@ -467,6 +467,7 @@ Whether the given value is a readonly signal.
 // True
 isReadSignal(10);
 isReadSignal(() => {});
+isReadSignal(signal(10));
 isReadSignal(computed(() => 10));
 isReadSignal(readonly(signal(10)));
 
