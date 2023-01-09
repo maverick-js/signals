@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.6.5](https://github.com/maverick-js/signals/compare/v5.6.4...v5.6.5) (2023-01-09)
+
+
+### Bug Fixes
+
+* add `test` package export field ([1f6ea85](https://github.com/maverick-js/signals/commit/1f6ea85f76b1a8bf6ceaa8174f958d11aeb2d660))
+
 ### [5.6.4](https://github.com/maverick-js/signals/compare/v5.6.3...v5.6.4) (2023-01-09)
 
 
