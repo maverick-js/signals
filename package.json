@@ -43,6 +43,7 @@
     "@microsoft/api-extractor": "^7.25.3",
     "@preact/signals-core": "^1.2.0",
     "@types/node": "^18.0.0",
+    "@xania/state": "0.1.14",
     "cellx": "^1.10.26",
     "cli-table": "^0.3.11",
     "esbuild": "^0.14.47",
@@ -54,8 +55,7 @@
     "standard-version": "^9.5.0",
     "typescript": "^4.7.4",
     "vite": "^2.9.12",
-    "vitest": "^0.15.2",
-    "@xania/state": "^0.1.8"
+    "vitest": "^0.15.2"
   },
   "publishConfig": {
     "access": "public"
