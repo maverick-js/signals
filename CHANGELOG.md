@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.7.1](https://github.com/maverick-js/signals/compare/v5.7.0...v5.7.1) (2023-01-17)
+
+
+### Bug Fixes
+
+* check prev sibling exists during dispose ([46ee520](https://github.com/maverick-js/signals/commit/46ee5200994e1a04d38c7054464d2778aa9ae1be))
+* clean up computation if error is thrown ([eba7b9a](https://github.com/maverick-js/signals/commit/eba7b9a417fe86d65b3d49442494fa32630355bb))
+* it should not throw on dispose call during active disposal ([09eb2a7](https://github.com/maverick-js/signals/commit/09eb2a7a2b0b74e5bccb804e1234c5f8aa4ae379))
+
 ## [5.7.0](https://github.com/maverick-js/signals/compare/v5.6.5...v5.7.0) (2023-01-17)
 
 
