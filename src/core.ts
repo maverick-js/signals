@@ -203,7 +203,7 @@ export function dispose(this: Scope, self = true) {
       current._state = STATE_DISPOSED;
       scopes.push(current);
       current = current._nextSibling as Computation | null;
-      if (current) current._prevSibling!._nextSibling = null;
+      if (current && current._prevSibling) current._prevSibling._nextSibling = null;
     } while (current && scopes.includes(current[SCOPE]!));
   }
 
