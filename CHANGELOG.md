@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.7.0](https://github.com/maverick-js/signals/compare/v5.6.5...v5.7.0) (2023-01-17)
+
+
+### Features
+
+* new `append` method on scopes ([ab2fcd4](https://github.com/maverick-js/signals/commit/ab2fcd48e5ac00d5ac3e0d669b0900b07d727f8a))
+
 ### [5.6.5](https://github.com/maverick-js/signals/compare/v5.6.4...v5.6.5) (2023-01-09)
 
 
