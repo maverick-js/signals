@@ -3,14 +3,21 @@ import type { SCOPE } from './symbols';
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
+  /** @internal */
   _scoped: boolean;
+  /** @internal */
   _init: boolean;
 
+  /** @internal */
   _value: T;
+  /** @internal */
   _sources: Computation[] | null;
+  /** @internal */
   _observers: Computation[] | null;
 
+  /** @internal */
   _compute: (() => T) | null;
+  /** @internal */
   _changed: (prev: T, next: T) => boolean;
   /** read */
   call(this: Computation<T>): T;
@@ -46,12 +53,19 @@ export interface NextValue<T> {
 
 export interface Scope {
   [SCOPE]: Scope | null;
+  /** @internal */
   _state: number;
+  /** @internal */
   _compute: unknown;
+  /** @internal */
   _prevSibling: Scope | null;
+  /** @internal */
   _nextSibling: Scope | null;
+  /** @internal */
   _context: ContextRecord | null;
+  /** @internal */
   _disposal: Disposable | Disposable[] | null;
+  append(scope: Scope): void;
 }
 
 export interface Dispose {

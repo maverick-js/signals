@@ -313,18 +313,19 @@ const ScopeNode = function Scope(this: Scope) {
   this._state = STATE_CLEAN;
   this._nextSibling = null;
   this._prevSibling = currentScope;
-  if (currentScope) {
-    const next = currentScope._nextSibling;
-    if (next) next._prevSibling = this;
-    this._nextSibling = next;
-    currentScope._nextSibling = this;
-  }
+  if (currentScope) currentScope.append(this);
 };
 
 const ScopeProto = ScopeNode.prototype;
 ScopeProto._context = null;
 ScopeProto._compute = null;
 ScopeProto._disposal = null;
+
+ScopeProto.append = function appendScope(scope: Scope) {
+  if (this._nextSibling) this._nextSibling._prevSibling = scope;
+  scope._nextSibling = this._nextSibling;
+  this._nextSibling = scope;
+};
 
 export function createScope(): Scope {
   return new ScopeNode();
