@@ -193,6 +193,7 @@ export function dispose(this: Scope, self = true) {
   if (current) {
     scopes.push(this);
     do {
+      current._state = STATE_DISPOSED;
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
       current[SCOPE] = null;
@@ -200,7 +201,6 @@ export function dispose(this: Scope, self = true) {
       current._observers = null;
       current._prevSibling = null;
       current._context = null;
-      current._state = STATE_DISPOSED;
       scopes.push(current);
       current = current._nextSibling as Computation | null;
       if (current && current._prevSibling) current._prevSibling._nextSibling = null;

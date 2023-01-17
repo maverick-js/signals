@@ -9,6 +9,7 @@ import {
   type Computation,
   type ReadSignal,
   type WriteSignal,
+  onDispose,
 } from '../src';
 
 afterEach(() => tick());
@@ -111,5 +112,15 @@ it('should not observe', () => {
     const scope = getScope() as Computation;
     expect(scope._sources).toBeUndefined();
     expect(scope._observers).toBeUndefined();
+  });
+});
+
+it('should not throw if dispose called during active disposal process', () => {
+  root((dispose) => {
+    onDispose(() => {
+      dispose();
+    });
+
+    dispose();
   });
 });
