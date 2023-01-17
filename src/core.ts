@@ -196,6 +196,7 @@ export function dispose(this: Scope, self = true) {
       current._state = STATE_DISPOSED;
       if (current._disposal) emptyDisposal(current);
       if (current._sources) removeSourceObservers(current, 0);
+      if (current._prevSibling) current._prevSibling._nextSibling = null;
       current[SCOPE] = null;
       current._sources = null;
       current._observers = null;
@@ -203,7 +204,6 @@ export function dispose(this: Scope, self = true) {
       current._context = null;
       scopes.push(current);
       current = current._nextSibling as Computation | null;
-      if (current && current._prevSibling) current._prevSibling._nextSibling = null;
     } while (current && scopes.includes(current[SCOPE]!));
   }
 
@@ -309,10 +309,9 @@ export function write(this: Computation, newValue: any): any {
 }
 
 const ScopeNode = function Scope(this: Scope) {
-  this[SCOPE] = currentScope;
-  this._state = STATE_CLEAN;
+  this[SCOPE] = null;
   this._nextSibling = null;
-  this._prevSibling = currentScope;
+  this._prevSibling = null;
   if (currentScope) currentScope.append(this);
 };
 
@@ -322,6 +321,8 @@ ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
 ScopeProto.append = function appendScope(scope: Scope) {
+  scope[SCOPE] = this;
+  scope._prevSibling = this;
   if (this._nextSibling) this._nextSibling._prevSibling = scope;
   scope._nextSibling = this._nextSibling;
   this._nextSibling = scope;
