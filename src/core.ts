@@ -406,6 +406,12 @@ function shouldUpdate(node: Computation) {
   else node._state = STATE_CLEAN;
 }
 
+function cleanup(node: Computation) {
+  if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
+  if (node._disposal) emptyDisposal(node);
+  if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
+}
+
 function update(node: Computation) {
   let prevObservers = currentObservers,
     prevObserversIndex = currentObserversIndex;
@@ -414,11 +420,7 @@ function update(node: Computation) {
   currentObserversIndex = 0;
 
   try {
-    if (node._scoped) {
-      if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
-      if (node._disposal) emptyDisposal(node);
-      if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
-    }
+    if (node._scoped) cleanup(node);
 
     const result = compute(node._scoped ? node : currentScope, node._compute!, node);
 
@@ -464,6 +466,10 @@ function update(node: Computation) {
     }
 
     handleError(node, error);
+
+    if (node._scoped) cleanup(node);
+    if (node._sources) removeSourceObservers(node, 0);
+
     return;
   }
 
