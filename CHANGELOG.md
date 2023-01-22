@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.8.0](https://github.com/maverick-js/signals/compare/v5.7.4...v5.8.0) (2023-01-22)
+
+
+### Features
+
+* `getContext` and `setContext` accept scope arg ([980ed91](https://github.com/maverick-js/signals/commit/980ed9128dafca2649c178d8eba68cf10627da6c))
+
 ### [5.7.4](https://github.com/maverick-js/signals/compare/v5.7.3...v5.7.4) (2023-01-22)
 
 
