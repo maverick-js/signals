@@ -468,8 +468,10 @@ function update(node: Computation) {
 
     handleError(node, error);
 
-    if (node._scoped) cleanup(node);
-    if (node._sources) removeSourceObservers(node, 0);
+    if (node._state === STATE_DIRTY) {
+      if (node._scoped) cleanup(node);
+      if (node._sources) removeSourceObservers(node, 0);
+    }
 
     return;
   }
