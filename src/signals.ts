@@ -85,7 +85,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
-  signal._scoped = true;
+  signal._effect = true;
   read.call(signal);
 
   if (__DEV__) {

@@ -341,20 +341,15 @@ const ComputeNode = function Computation(
   ScopeNode.call(this);
 
   this._state = compute ? STATE_DIRTY : STATE_CLEAN;
-  this._scoped = false;
   this._init = false;
+  this._effect = false;
   this._sources = null;
   this._observers = null;
   this._value = initialValue;
 
   if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
-
   if (compute) this._compute = compute;
-
-  if (options) {
-    if (options.scoped) this._scoped = true;
-    if (options.dirty) this._changed = options.dirty;
-  }
+  if (options && options.dirty) this._changed = options.dirty;
 };
 
 const ComputeProto: Computation = ComputeNode.prototype;
@@ -421,9 +416,9 @@ function update(node: Computation) {
   currentObserversIndex = 0;
 
   try {
-    if (node._scoped) cleanup(node);
+    cleanup(node);
 
-    const result = compute(node._scoped ? node : currentScope, node._compute!, node);
+    const result = compute(node, node._compute!, node);
 
     if (currentObservers) {
       if (node._sources) removeSourceObservers(node, currentObserversIndex);
@@ -448,7 +443,7 @@ function update(node: Computation) {
       node._sources.length = currentObserversIndex;
     }
 
-    if (!node._scoped && node._init) {
+    if (!node._effect && node._init) {
       write.call(node, result);
     } else {
       node._value = result;
@@ -469,7 +464,7 @@ function update(node: Computation) {
     handleError(node, error);
 
     if (node._state === STATE_DIRTY) {
-      if (node._scoped) cleanup(node);
+      cleanup(node);
       if (node._sources) removeSourceObservers(node, 0);
     }
 
@@ -485,7 +480,7 @@ function update(node: Computation) {
 function notify(node: Computation, state: number) {
   if (node._state >= state) return;
 
-  if (node._scoped && node._state === STATE_CLEAN) {
+  if (node._effect && node._state === STATE_CLEAN) {
     effects.push(node);
     if (!scheduledEffects) flushEffects();
   }

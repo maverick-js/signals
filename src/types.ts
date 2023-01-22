@@ -4,7 +4,7 @@ export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
   /** @internal */
-  _scoped: boolean;
+  _effect: boolean;
   /** @internal */
   _init: boolean;
 
@@ -36,7 +36,6 @@ export interface SignalOptions<T> {
 
 export interface ComputedSignalOptions<T, R = never> extends SignalOptions<T> {
   initial?: R;
-  scoped?: boolean;
 }
 
 export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
