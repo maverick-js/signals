@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.9.0](https://github.com/maverick-js/signals/compare/v5.8.0...v5.9.0) (2023-01-22)
+
+
+### Features
+
+* export `createComputation` primitive ([8ba9f84](https://github.com/maverick-js/signals/commit/8ba9f84c85e97295543465aa917f603b9f5229d0))
+* export `createScope` primitive ([7d568b4](https://github.com/maverick-js/signals/commit/7d568b47ae4c97942f6faf957c9679563453abde))
+
 ## [5.8.0](https://github.com/maverick-js/signals/compare/v5.7.4...v5.8.0) (2023-01-22)
 
 
