@@ -12,6 +12,7 @@ export {
   isFunction,
   isNotEqual,
   createScope,
+  createComputation,
 } from './core';
 export * from './signals';
 export * from './types';
