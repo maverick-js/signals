@@ -126,8 +126,11 @@ export function scoped(run: Callable, scope: Scope | null): void {
  *
  * @see {@link https://github.com/maverick-js/signals#getcontext}
  */
-export function getContext<T>(key: string | symbol): T | undefined {
-  return lookup(currentScope, key);
+export function getContext<T>(
+  key: string | symbol,
+  scope: Scope | null = currentScope,
+): T | undefined {
+  return lookup(scope, key);
 }
 
 /**
@@ -136,8 +139,8 @@ export function getContext<T>(key: string | symbol): T | undefined {
  *
  * @see {@link https://github.com/maverick-js/signals#setcontext}
  */
-export function setContext<T>(key: string | symbol, value: T) {
-  if (currentScope) (currentScope._context ??= {})[key] = value;
+export function setContext<T>(key: string | symbol, value: T, scope: Scope | null = currentScope) {
+  if (scope) (scope._context ??= {})[key] = value;
 }
 
 /**

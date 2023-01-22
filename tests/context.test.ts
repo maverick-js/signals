@@ -1,4 +1,4 @@
-import { effect, getContext, root, setContext } from '../src';
+import { effect, getContext, getScope, root, Scope, setContext } from '../src';
 
 it('should get context value', () => {
   const key = Symbol();
@@ -24,5 +24,24 @@ it('should not throw if no context value is found', () => {
         expect(getContext(key)).toBe(undefined);
       });
     });
+  });
+});
+
+it('should use provided scope', () => {
+  let scope!: Scope,
+    key = Symbol();
+
+  root(() => {
+    scope = getScope()!;
+    root(() => {
+      effect(() => {
+        setContext(key, 200, scope);
+      });
+    });
+  });
+
+  root(() => {
+    expect(getContext(key)).toBeUndefined();
+    expect(getContext(key, scope)).toBe(200);
   });
 });
