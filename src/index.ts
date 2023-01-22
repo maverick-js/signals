@@ -11,6 +11,7 @@ export {
   untrack,
   isFunction,
   isNotEqual,
+  createScope,
 } from './core';
 export * from './signals';
 export * from './types';
