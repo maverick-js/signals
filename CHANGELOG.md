@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.7.3](https://github.com/maverick-js/signals/compare/v5.7.2...v5.7.3) (2023-01-22)
+
+
+### Bug Fixes
+
+* only clean computation on throw if still dirty after handling ([d465f02](https://github.com/maverick-js/signals/commit/d465f02a28726eb90a68c7a67337f680aaeae1d6))
+
 ### [5.7.2](https://github.com/maverick-js/signals/compare/v5.7.1...v5.7.2) (2023-01-17)
 
 
