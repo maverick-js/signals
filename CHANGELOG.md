@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.9.1](https://github.com/maverick-js/signals/compare/v5.9.0...v5.9.1) (2023-01-23)
+
+
+### Bug Fixes
+
+* `scoped` should return value if no error is thrown ([703a6db](https://github.com/maverick-js/signals/commit/703a6db0a7dfdc6fcf8ad502ebde2d0adf1bcc24))
+
 ## [5.9.0](https://github.com/maverick-js/signals/compare/v5.8.0...v5.9.0) (2023-01-22)
 
 
