@@ -10,6 +10,10 @@ it('should scope function to current scope', () => {
   scoped(() => expect(getContext('id')).toBe(10), scope);
 });
 
+it('should return value', () => {
+  expect(scoped(() => 100, null)).toBe(100);
+});
+
 it('should handle errors', () => {
   const error = new Error(),
     handler = vi.fn();

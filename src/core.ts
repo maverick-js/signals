@@ -111,11 +111,12 @@ export function getScope(): Scope | null {
  *
  * @see {@link https://github.com/maverick-js/signals#scoped}
  */
-export function scoped(run: Callable, scope: Scope | null): void {
+export function scoped<T>(run: () => T, scope: Scope | null): T | undefined {
   try {
-    compute(scope, run, null);
+    return compute<T>(scope, run, null);
   } catch (error) {
     handleError(scope, error);
+    return; // TS -_-
   }
 }
 
