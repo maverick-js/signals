@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.9.2](https://github.com/maverick-js/signals/compare/v5.9.1...v5.9.2) (2023-04-12)
+
+
+### Bug Fixes
+
+* port over `runTop` fix from x-reactivity ([ec66f8c](https://github.com/maverick-js/signals/commit/ec66f8c9e2e7491ec2bdb2041489e1ccad0a38ac))
+
 ### [5.9.1](https://github.com/maverick-js/signals/compare/v5.9.0...v5.9.1) (2023-01-23)
 
 
