@@ -39,13 +39,24 @@ function runEffects() {
   runningEffects = true;
 
   for (let i = 0; i < effects.length; i++) {
-    // If parent scope is dirty it means that this effect will be disposed of so we skip.
-    if (!isZombie(effects[i])) read.call(effects[i]);
+    if (effects[i]._state !== STATE_CLEAN) runTop(effects[i]);
   }
 
   effects = [];
   scheduledEffects = false;
   runningEffects = false;
+}
+
+function runTop(node: Computation<any>) {
+  let ancestors = [node];
+
+  while ((node = node[SCOPE] as Computation<any>)) {
+    if (node._state !== STATE_CLEAN) ancestors.push(node);
+  }
+
+  for (let i = ancestors.length - 1; i >= 0; i--) {
+    updateCheck(ancestors[i]);
+  }
 }
 
 /**
@@ -281,7 +292,7 @@ function handleError(scope: Scope | null, error: unknown, depth?: number) {
 export function read(this: Computation): any {
   if (this._state === STATE_DISPOSED) return this._value;
 
-  if (currentObserver) {
+  if (currentObserver && !this._effect) {
     if (
       !currentObservers &&
       currentObserver._sources &&
@@ -292,7 +303,7 @@ export function read(this: Computation): any {
     else currentObservers.push(this);
   }
 
-  if (this._compute) shouldUpdate(this);
+  if (this._compute) updateCheck(this);
 
   return this._value;
 }
@@ -377,22 +388,10 @@ export function isFunction(value: unknown): value is Function {
   return typeof value === 'function';
 }
 
-export function isZombie(node: Scope) {
-  let scope = node[SCOPE];
-
-  while (scope) {
-    // We're looking for a dirty parent effect scope.
-    if (scope._compute && scope._state === STATE_DIRTY) return true;
-    scope = scope[SCOPE];
-  }
-
-  return false;
-}
-
-function shouldUpdate(node: Computation) {
+function updateCheck(node: Computation) {
   if (node._state === STATE_CHECK) {
     for (let i = 0; i < node._sources!.length; i++) {
-      shouldUpdate(node._sources![i]);
+      updateCheck(node._sources![i]);
       if ((node._state as number) === STATE_DIRTY) {
         // Stop the loop here so we won't trigger updates on other parents unnecessarily
         // If our computation changes to no longer use some sources, we don't
@@ -412,7 +411,7 @@ function cleanup(node: Computation) {
   if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
 }
 
-function update(node: Computation) {
+export function update(node: Computation) {
   let prevObservers = currentObservers,
     prevObserversIndex = currentObserversIndex;
 

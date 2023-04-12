@@ -326,3 +326,22 @@ it('should apply changes in effect in same flush', async () => {
   expect($d()).toBe(6);
   expect($c()).toBe(4);
 });
+
+it('runs parent effects before child effects', () => {
+  const $a = signal(0);
+  const $b = computed(() => $a());
+
+  let calls = 0;
+  effect(() => {
+    effect(() => {
+      void $a();
+      calls++;
+    });
+
+    $b();
+  });
+
+  $a.set(1);
+  tick();
+  expect(calls).toBe(2);
+});

@@ -1,4 +1,4 @@
-import { createComputation, dispose, isFunction, onDispose, read, write } from './core';
+import { createComputation, dispose, isFunction, onDispose, read, update, write } from './core';
 import type {
   ComputedSignalOptions,
   Effect,
@@ -86,7 +86,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
   );
 
   signal._effect = true;
-  read.call(signal);
+  update(signal);
 
   if (__DEV__) {
     return function stopEffect() {
