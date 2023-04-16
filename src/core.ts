@@ -76,12 +76,8 @@ export function root<T>(init: (dispose: Dispose) => T): T {
  *
  * @see {@link https://github.com/maverick-js/signals#peek}
  */
-export function peek<T>(compute: () => T): T {
-  const prev = currentObserver;
-  currentObserver = null;
-  const result = compute();
-  currentObserver = prev;
-  return result;
+export function peek<T>(fn: () => T): T {
+  return compute<T>(currentScope, fn, null);
 }
 
 /**
@@ -90,12 +86,8 @@ export function peek<T>(compute: () => T): T {
  *
  * @see {@link https://github.com/maverick-js/signals#untrack}
  */
-export function untrack<T>(compute: () => T): T {
-  const prev = currentScope;
-  currentScope = null;
-  const result = peek(compute);
-  currentScope = prev;
-  return result;
+export function untrack<T>(fn: () => T): T {
+  return compute<T>(null, fn, null);
 }
 
 /**
