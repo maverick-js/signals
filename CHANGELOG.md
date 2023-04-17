@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.9.3](https://github.com/maverick-js/signals/compare/v5.9.2...v5.9.3) (2023-04-17)
+
+
+### Bug Fixes
+
+* only run `runTop` on effects ([d5342fe](https://github.com/maverick-js/signals/commit/d5342fe777d4ea8a56271ef3e2d0283e7aae8634))
+* simplify `peek` and `untrack` ([383f717](https://github.com/maverick-js/signals/commit/383f7179154028b8aa35df204a88194898abf9df))
+
 ### [5.9.2](https://github.com/maverick-js/signals/compare/v5.9.1...v5.9.2) (2023-04-12)
 
 
