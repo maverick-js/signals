@@ -51,7 +51,7 @@ function runTop(node: Computation<any>) {
   let ancestors = [node];
 
   while ((node = node[SCOPE] as Computation<any>)) {
-    if (node._state !== STATE_CLEAN) ancestors.push(node);
+    if (node._effect && node._state !== STATE_CLEAN) ancestors.push(node);
   }
 
   for (let i = ancestors.length - 1; i >= 0; i--) {
