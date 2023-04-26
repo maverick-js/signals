@@ -52,3 +52,30 @@ it('should not trigger wrong onDispose', () => {
     expect(dispose).toHaveBeenCalledTimes(0);
   });
 });
+
+it('should dispose in-reverse-order', () => {
+  let a, b, c;
+
+  const dispose = root((dispose) => {
+    onDispose(() => {
+      a = performance.now();
+    });
+
+    effect(() => {
+      onDispose(() => {
+        b = performance.now();
+      });
+
+      effect(() => {
+        onDispose(() => {
+          c = performance.now();
+        });
+      });
+    });
+
+    return dispose;
+  });
+
+  dispose();
+  expect(c < b < a).toBe(true);
+});

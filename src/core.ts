@@ -189,34 +189,33 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
   };
 }
 
-let scopes: Scope[] = [];
-
 export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
-  let current = (self ? this : this._nextSibling) as Computation | null,
-    head = self ? this._prevSibling : this;
+  let head = self ? this._prevSibling : this,
+    current = this._nextSibling as Computation | null;
 
-  if (current) {
-    scopes.push(this);
-    do {
-      current._state = STATE_DISPOSED;
-      if (current._disposal) emptyDisposal(current);
-      if (current._sources) removeSourceObservers(current, 0);
-      if (current._prevSibling) current._prevSibling._nextSibling = null;
-      current[SCOPE] = null;
-      current._sources = null;
-      current._observers = null;
-      current._prevSibling = null;
-      current._context = null;
-      scopes.push(current);
-      current = current._nextSibling as Computation | null;
-    } while (current && scopes.includes(current[SCOPE]!));
+  while (current && current[SCOPE] === this) {
+    dispose.call(current, true);
+    disposeNode(current);
+    current = current._nextSibling as Computation;
   }
 
+  if (self) disposeNode(this as Computation);
+  if (current) current._prevSibling = !self ? this : this._prevSibling;
   if (head) head._nextSibling = current;
-  if (current) current._prevSibling = head;
-  scopes = [];
+}
+
+function disposeNode(node: Computation) {
+  node._state = STATE_DISPOSED;
+  if (node._disposal) emptyDisposal(node);
+  if (node._sources) removeSourceObservers(node, 0);
+  if (node._prevSibling) node._prevSibling._nextSibling = null;
+  node[SCOPE] = null;
+  node._sources = null;
+  node._observers = null;
+  node._prevSibling = null;
+  node._context = null;
 }
 
 function emptyDisposal(scope: Computation) {
