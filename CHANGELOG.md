@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.9.4](https://github.com/maverick-js/signals/compare/v5.9.3...v5.9.4) (2023-04-26)
+
+
+### Bug Fixes
+
+* port over deep deterministic disposal ([66974e5](https://github.com/maverick-js/signals/commit/66974e53b4ac888e24d0313888a5fd2ecbabbe72))
+
 ### [5.9.3](https://github.com/maverick-js/signals/compare/v5.9.2...v5.9.3) (2023-04-17)
 
 
