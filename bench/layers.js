@@ -10,6 +10,7 @@ import * as Sjs from 's-js';
 import * as solid from './solid-js-baseline.js';
 import * as preact from '@preact/signals-core';
 import * as maverick from '../dist/prod/index.js';
+import oby from 'oby';
 import Table from 'cli-table';
 
 const BATCHED = true;
@@ -39,6 +40,7 @@ async function main() {
   report.maverick = { fn: runMaverick, runs: [], avg: [] };
   report.S = { fn: runS, runs: [] };
   report.solid = { fn: runSolid, runs: [] };
+  report.oby = { fn: runOby, runs: [] };
 
   // Has no way to dispose so can't consider it feature comparable.
   // report.reactively = { fn: runReactively, runs: [], avg: [] };
@@ -352,6 +354,46 @@ function runCellx(layers, done) {
   start.b.dispose();
   start.c.dispose();
   start.d.dispose();
+
+  done(isSolution(layers, solution) ? endTime : -1);
+}
+
+/**
+ * @see {@link https://github.com/vobyjs/oby}
+ */
+function runOby(layers, done) {
+  const a = oby(1);
+  const b = oby(2);
+  const c = oby(3);
+  const d = oby(4);
+
+  const start = { a, b, c, d };
+
+  let layer = start;
+
+  for (let i = layers; i--; ) {
+    layer = ((m) => {
+      const props = {
+        a: oby.memo(() => m.b()),
+        b: oby.memo(() => m.a() - m.c()),
+        c: oby.memo(() => m.b() + m.d()),
+        d: oby.memo(() => m.c()),
+      };
+
+      return props;
+    })(layer);
+  }
+
+  const startTime = performance.now();
+
+  const run = BATCHED ? oby.batch : (fn) => fn();
+  run(() => {
+    a(4), b(3), c(2), d(1);
+  });
+
+  const end = layer;
+  const solution = [end.a(), end.b(), end.c(), end.d()];
+  const endTime = performance.now() - startTime;
 
   done(isSolution(layers, solution) ? endTime : -1);
 }
