@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.10.0](https://github.com/maverick-js/signals/compare/v5.9.4...v5.10.0) (2023-05-08)
+
+
+### Features
+
+* O(1) context and error handling ([efebd08](https://github.com/maverick-js/signals/commit/efebd08e757119d0be69a445bdac8c6f0e56aefe))
+
 ### [5.9.4](https://github.com/maverick-js/signals/compare/v5.9.3...v5.9.4) (2023-04-26)
 
 
