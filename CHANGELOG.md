@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.10.1](https://github.com/maverick-js/signals/compare/v5.10.0...v5.10.1) (2023-05-08)
+
+
+### Bug Fixes
+
+* attach context/handlers in `scope.append` ([26f1f09](https://github.com/maverick-js/signals/commit/26f1f09990b59387667952e745f5e003044df5ea))
+
 ## [5.10.0](https://github.com/maverick-js/signals/compare/v5.9.4...v5.10.0) (2023-05-08)
 
 
