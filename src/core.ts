@@ -308,11 +308,7 @@ const ScopeNode = function Scope(this: Scope) {
   this[SCOPE] = null;
   this._nextSibling = null;
   this._prevSibling = null;
-  if (currentScope) {
-    this._context = currentScope._context;
-    this._handlers = currentScope._handlers;
-    currentScope.append(this);
-  } else this._context = {};
+  if (currentScope) currentScope.append(this);
 };
 
 const ScopeProto = ScopeNode.prototype;
@@ -324,6 +320,8 @@ ScopeProto._disposal = null;
 ScopeProto.append = function appendScope(scope: Scope) {
   scope[SCOPE] = this;
   scope._prevSibling = this;
+  scope._context = this._context;
+  scope._handlers = this._handlers;
   if (this._nextSibling) this._nextSibling._prevSibling = scope;
   scope._nextSibling = this._nextSibling;
   this._nextSibling = scope;
