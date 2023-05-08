@@ -254,16 +254,23 @@ export function compute<Result>(
 }
 
 function handleError(scope: Scope | null, error: unknown) {
-  if (!scope || !scope._handlers!.length) throw error;
+  if (!scope) throw error;
 
-  let coercedError = coerceError(error);
-  for (const handler of scope._handlers!) {
+  let i = 0,
+    len = scope._handlers!.length,
+    coercedError = coerceError(error);
+
+  for (i = 0; i < len; i++) {
     try {
-      handler(coercedError);
+      scope._handlers![i](coercedError);
+      break; // error was handled.
     } catch (error) {
       coercedError = coerceError(error);
     }
   }
+
+  // Error was not handled.
+  if (i === len) throw coercedError;
 }
 
 function coerceError(error: unknown): Error {
