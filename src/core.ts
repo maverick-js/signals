@@ -4,6 +4,7 @@ import type {
   Computation,
   ComputedSignalOptions,
   Dispose,
+  ErrorHandler,
   MaybeDisposable,
   Scope,
 } from './types';
@@ -17,7 +18,6 @@ let scheduledEffects = false,
   effects: Computation[] = [];
 
 const NOOP = () => {},
-  HANDLERS = Symbol(__DEV__ ? 'ERROR_HANDLERS' : 0),
   // For more information about this graph tracking scheme see Reactively:
   // https://github.com/modderme123/reactively/blob/main/packages/core/src/core.ts#L21
   STATE_CLEAN = 0,
@@ -134,7 +134,7 @@ export function getContext<T>(
   key: string | symbol,
   scope: Scope | null = currentScope,
 ): T | undefined {
-  return lookup(scope, key);
+  return scope?._context![key] as T | undefined;
 }
 
 /**
@@ -144,7 +144,7 @@ export function getContext<T>(
  * @see {@link https://github.com/maverick-js/signals#setcontext}
  */
 export function setContext<T>(key: string | symbol, value: T, scope: Scope | null = currentScope) {
-  if (scope) (scope._context ??= {})[key] = value;
+  if (scope) scope._context = { ...scope._context, [key]: value };
 }
 
 /**
@@ -155,9 +155,7 @@ export function setContext<T>(key: string | symbol, value: T, scope: Scope | nul
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
   if (!currentScope) return;
-  const context = (currentScope._context ??= {});
-  if (!context[HANDLERS]) context[HANDLERS] = [handler];
-  else (context[HANDLERS] as any[]).push(handler);
+  currentScope._handlers = [handler, ...currentScope._handlers!];
 }
 
 /**
@@ -216,6 +214,7 @@ function disposeNode(node: Computation) {
   node._observers = null;
   node._prevSibling = null;
   node._context = null;
+  node._handlers = null;
 }
 
 function emptyDisposal(scope: Computation) {
@@ -254,30 +253,21 @@ export function compute<Result>(
   }
 }
 
-function lookup(scope: Scope | null, key: string | symbol): any {
-  if (!scope) return;
+function handleError(scope: Scope | null, error: unknown) {
+  if (!scope || !scope._handlers!.length) throw error;
 
-  let current: Scope | null = scope,
-    value;
-
-  while (current) {
-    value = current._context?.[key];
-    if (value !== undefined) return value;
-    current = current[SCOPE];
+  let coercedError = coerceError(error);
+  for (const handler of scope._handlers!) {
+    try {
+      handler(coercedError);
+    } catch (error) {
+      coercedError = coerceError(error);
+    }
   }
 }
 
-function handleError(scope: Scope | null, error: unknown, depth?: number) {
-  const handlers = lookup(scope, HANDLERS);
-
-  if (!handlers) throw error;
-
-  try {
-    const coercedError = error instanceof Error ? error : Error(JSON.stringify(error));
-    for (const handler of handlers) handler(coercedError);
-  } catch (error) {
-    handleError(scope![SCOPE], error);
-  }
+function coerceError(error: unknown): Error {
+  return error instanceof Error ? error : Error(JSON.stringify(error));
 }
 
 export function read(this: Computation): any {
@@ -318,11 +308,16 @@ const ScopeNode = function Scope(this: Scope) {
   this[SCOPE] = null;
   this._nextSibling = null;
   this._prevSibling = null;
-  if (currentScope) currentScope.append(this);
+  if (currentScope) {
+    this._context = currentScope._context;
+    this._handlers = currentScope._handlers;
+    currentScope.append(this);
+  } else this._context = {};
 };
 
 const ScopeProto = ScopeNode.prototype;
-ScopeProto._context = null;
+ScopeProto._context = {};
+ScopeProto._handlers = [];
 ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
@@ -399,7 +394,7 @@ function updateCheck(node: Computation) {
 function cleanup(node: Computation) {
   if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
   if (node._disposal) emptyDisposal(node);
-  if (node._context && node._context[HANDLERS]) (node._context[HANDLERS] as any[]) = [];
+  node._handlers = node[SCOPE]?._handlers || [];
 }
 
 export function update(node: Computation) {

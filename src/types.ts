@@ -63,6 +63,8 @@ export interface Scope {
   /** @internal */
   _context: ContextRecord | null;
   /** @internal */
+  _handlers: ErrorHandler<any>[] | null;
+  /** @internal */
   _disposal: Disposable | Disposable[] | null;
   append(scope: Scope): void;
 }
@@ -91,3 +93,7 @@ export type MaybeDisposable = Maybe<Disposable>;
 export type MaybeStopEffect = Maybe<StopEffect>;
 export type MaybeSignal<T> = MaybeFunction | ReadSignal<T>;
 export type ContextRecord = Record<string | symbol, unknown>;
+
+export interface ErrorHandler<T = Error> {
+  (error: T): void;
+}

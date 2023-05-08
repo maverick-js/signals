@@ -48,6 +48,7 @@ it('should forward error to another handler', () => {
   });
 
   expect(handler).toHaveBeenCalledWith(error);
+  expect(handler).toHaveBeenCalledTimes(1);
 
   $a.set(1);
   tick();
