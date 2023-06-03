@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.10.3](https://github.com/maverick-js/signals/compare/v5.10.2...v5.10.3) (2023-06-03)
+
+
+### Bug Fixes
+
+* allow effects to run server-side ([e50a1d6](https://github.com/maverick-js/signals/commit/e50a1d6d6bcdb9ea1742500cf0b86132765a0449)), closes [#20](https://github.com/maverick-js/signals/issues/20)
+* mem leak during disposal ([09ebc3c](https://github.com/maverick-js/signals/commit/09ebc3cb4fe50034ad29e3636bdcadcf193d5e04))
+
 ### [5.10.2](https://github.com/maverick-js/signals/compare/v5.10.1...v5.10.2) (2023-05-08)
 
 
