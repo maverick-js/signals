@@ -190,7 +190,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
-  let head = self ? this._prevSibling : this,
+  let head = self ? this._prevSibling ?? this[SCOPE] : this,
     current = this._nextSibling as Computation | null;
 
   while (current && current[SCOPE] === this) {
