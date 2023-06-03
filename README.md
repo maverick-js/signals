@@ -85,21 +85,6 @@ $: pnpm i @maverick-js/signals
 $: yarn add @maverick-js/signals
 ```
 
-## Testing
-
-Effects are currently disabled server-side. In order to run effects during tests you'll need to
-configure your bundler's `conditions` field. The following example is for
-[Vitest](https://vitest.dev):
-
-```ts
-// vite.config.ts
-{
-  resolve: {
-    conditions: process.env.VITEST ? ['test'] : undefined,
-  }
-}
-```
-
 ## API
 
 - [`root`](#root)
