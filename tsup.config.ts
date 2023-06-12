@@ -17,7 +17,6 @@ function options({ dev = false, server = false } = {}): Options {
     define: {
       __DEV__: dev ? 'true' : 'false',
       __TEST__: 'false',
-      __SERVER__: server ? 'true' : 'false',
     },
     esbuildOptions(opts) {
       opts.mangleProps = !dev ? /^_/ : undefined;

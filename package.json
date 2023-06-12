@@ -5,16 +5,14 @@
   "version": "5.10.3",
   "type": "module",
   "types": "dist/types/index.d.ts",
-  "main": "dist/server/index.cjs",
   "module": "dist/prod/index.js",
   "sideEffects": false,
   "files": [
     "dist/",
-    "index.d.ts",
-    "map.d.ts"
+    "*.d.ts"
   ],
   "scripts": {
-    "build": "rimraf dist && tsup",
+    "build": "rimraf dist && rollup -c && pnpm types",
     "types": "tsc -p tsconfig.build.json",
     "format": "prettier src --write --loglevel warn",
     "test": "vitest run",
@@ -22,7 +20,7 @@
     "test:gc": "node --expose-gc ./vitest.js",
     "test:gc:watch": "node --expose-gc ./vitest.js --watch",
     "bench:layers": "pnpm build && node bench/layers.js",
-    "validate": "pnpm test && pnpm test:gc && pnpm build && pnpm types",
+    "validate": "pnpm test && pnpm test:gc && pnpm build",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish"
   },
   "contributors": [
@@ -41,13 +39,15 @@
     "@types/node": "^18.0.0",
     "cellx": "^1.10.26",
     "cli-table": "^0.3.11",
+    "esbuild": "^0.18.1",
     "kleur": "^4.1.5",
     "prettier": "^2.8.0",
     "rimraf": "^3.0.2",
+    "rollup": "^3.25.1",
+    "rollup-plugin-esbuild": "^5.0.0",
     "s-js": "^0.4.9",
     "solid-js": "^1.7.0",
     "standard-version": "^9.5.0",
-    "tsup": "^6.7.0",
     "typescript": "^5.0.0",
     "vite": "^4.0.0",
     "vitest": "^0.30.0"
@@ -57,26 +57,16 @@
   },
   "exports": {
     ".": {
-      "import": {
-        "test": "./dist/dev/index.js",
-        "node": "./dist/server/index.js",
-        "deno": "./dist/server/index.js",
-        "bun": "./dist/server/index.js",
-        "development": "./dist/dev/index.js",
-        "default": "./dist/prod/index.js"
-      },
-      "require": "./dist/server/index.cjs"
+      "types": "./dist/types/index.d.ts",
+      "test": "./dist/dev/index.js",
+      "development": "./dist/dev/index.js",
+      "default": "./dist/prod/index.js"
     },
     "./map": {
-      "import": {
-        "test": "./dist/dev/map.js",
-        "node": "./dist/server/map.js",
-        "deno": "./dist/server/map.js",
-        "bun": "./dist/server/index.js",
-        "development": "./dist/dev/map.js",
-        "default": "./dist/prod/map.js"
-      },
-      "require": "./dist/server/map.cjs"
+      "types": "./dist/types/map.d.ts",
+      "test": "./dist/dev/map.js",
+      "development": "./dist/dev/map.js",
+      "default": "./dist/prod/map.js"
     },
     "./package.json": "./package.json"
   }
