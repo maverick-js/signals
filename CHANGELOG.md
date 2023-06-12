@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.10.4](https://github.com/maverick-js/signals/compare/v5.10.3...v5.10.4) (2023-06-12)
+
+
+### Bug Fixes
+
+* use rollup for cleaner build output ([8f232fb](https://github.com/maverick-js/signals/commit/8f232fb29246c7cd3159bdf552bbfc57ec096cde))
+
 ### [5.10.3](https://github.com/maverick-js/signals/compare/v5.10.2...v5.10.3) (2023-06-03)
 
 
