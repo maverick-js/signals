@@ -1,6 +1,26 @@
 import { defineConfig } from 'rollup';
 import esbuild from 'rollup-plugin-esbuild';
 
+/** @type {Record<string, string>} */
+const mangleCache = {
+  _key: '$k',
+  _effect: '$e',
+  _nodes: '$n',
+  _refs: '$r',
+  _init: '$i',
+  _value: '$v',
+  _sources: '$s',
+  _observers: '$o',
+  _compute: '$c',
+  _changed: '$ch',
+  _state: '$st',
+  _prevSibling: '$ps',
+  _nextSibling: '$ns',
+  _context: '$cx',
+  _handlers: '$eh',
+  _disposal: '$d',
+};
+
 export default defineConfig([
   // dev
   define({ dev: true }),
@@ -28,6 +48,7 @@ function define({ dev = false }) {
           __TEST__: 'false',
         },
         mangleProps: !dev ? /^_/ : undefined,
+        mangleCache,
       }),
     ],
   };
