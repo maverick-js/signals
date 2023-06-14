@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.10.5](https://github.com/maverick-js/signals/compare/v5.10.4...v5.10.5) (2023-06-14)
+
+
+### Bug Fixes
+
+* use mangle cache ([f0995cf](https://github.com/maverick-js/signals/commit/f0995cf8a2222599651f749149013f46bfd83553))
+
 ### [5.10.4](https://github.com/maverick-js/signals/compare/v5.10.3...v5.10.4) (2023-06-12)
 
 
