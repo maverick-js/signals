@@ -14,7 +14,8 @@ let scheduledEffects = false,
   currentObserver: Computation | null = null,
   currentObservers: Computation[] | null = null,
   currentObserversIndex = 0,
-  effects: Computation[] = [];
+  effects: Computation[] = [],
+  defaultContext = {};
 
 const NOOP = () => {},
   // For more information about this graph tracking scheme see Reactively:
@@ -154,7 +155,9 @@ export function setContext<T>(key: string | symbol, value: T, scope: Scope | nul
  */
 export function onError<T = Error>(handler: (error: T) => void): void {
   if (!currentScope) return;
-  currentScope._handlers = [handler, ...currentScope._handlers!];
+  currentScope._handlers = currentScope._handlers
+    ? [handler, ...currentScope._handlers]
+    : [handler];
 }
 
 /**
@@ -212,7 +215,7 @@ function disposeNode(node: Computation) {
   node._sources = null;
   node._observers = null;
   node._prevSibling = null;
-  node._context = null;
+  node._context = defaultContext;
   node._handlers = null;
 }
 
@@ -261,7 +264,7 @@ function handleError(scope: Scope | null, error: unknown) {
 
   for (i = 0; i < len; i++) {
     try {
-      scope._handlers![i](coercedError);
+      scope._handlers[i](coercedError);
       break; // error was handled.
     } catch (error) {
       coercedError = coerceError(error);
@@ -318,22 +321,29 @@ const ScopeNode = function Scope(this: Scope) {
 };
 
 const ScopeProto = ScopeNode.prototype;
-ScopeProto._context = {};
-ScopeProto._handlers = [];
+ScopeProto._context = defaultContext;
+ScopeProto._handlers = null;
 ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
-ScopeProto.append = function (scope: Scope) {
+ScopeProto.append = function (this: Scope, scope: Scope) {
   scope[SCOPE] = this;
+
   scope._prevSibling = this;
-  scope._context = this._context;
-  scope._handlers = this._handlers;
+
   if (this._nextSibling) this._nextSibling._prevSibling = scope;
   scope._nextSibling = this._nextSibling;
   this._nextSibling = scope;
+
+  scope._context =
+    scope._context === defaultContext ? this._context : { ...this._context, ...scope._context };
+
+  if (this._handlers) {
+    scope._handlers = !scope._handlers ? this._handlers : [...scope._handlers, ...this._handlers];
+  }
 };
 
-ScopeProto.dispose = function () {
+ScopeProto.dispose = function (this: Scope) {
   dispose.call(this);
 };
 
@@ -402,7 +412,7 @@ function updateCheck(node: Computation) {
 function cleanup(node: Computation) {
   if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
   if (node._disposal) emptyDisposal(node);
-  node._handlers = node[SCOPE]?._handlers || [];
+  node._handlers = node[SCOPE] ? node[SCOPE]._handlers : null;
 }
 
 export function update(node: Computation) {
