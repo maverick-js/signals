@@ -4,7 +4,6 @@ import type {
   Computation,
   ComputedSignalOptions,
   Dispose,
-  ErrorHandler,
   MaybeDisposable,
   Scope,
 } from './types';
@@ -324,7 +323,7 @@ ScopeProto._handlers = [];
 ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
-ScopeProto.append = function appendScope(scope: Scope) {
+ScopeProto.append = function (scope: Scope) {
   scope[SCOPE] = this;
   scope._prevSibling = this;
   scope._context = this._context;
@@ -332,6 +331,10 @@ ScopeProto.append = function appendScope(scope: Scope) {
   if (this._nextSibling) this._nextSibling._prevSibling = scope;
   scope._nextSibling = this._nextSibling;
   this._nextSibling = scope;
+};
+
+ScopeProto.dispose = function () {
+  dispose.call(this);
 };
 
 export function createScope(): Scope {

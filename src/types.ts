@@ -67,6 +67,7 @@ export interface Scope {
   /** @internal */
   _disposal: Disposable | Disposable[] | null;
   append(scope: Scope): void;
+  dispose(): void;
 }
 
 export interface Dispose {
