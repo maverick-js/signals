@@ -253,10 +253,10 @@ export function compute<Result>(
 }
 
 function handleError(scope: Scope | null, error: unknown) {
-  if (!scope) throw error;
+  if (!scope || !scope._handlers) throw error;
 
   let i = 0,
-    len = scope._handlers!.length,
+    len = scope._handlers.length,
     coercedError = coerceError(error);
 
   for (i = 0; i < len; i++) {
