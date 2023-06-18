@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.11.0](https://github.com/maverick-js/signals/compare/v5.10.5...v5.11.0) (2023-06-18)
+
+
+### Features
+
+* expose `dispose` method on scopes ([58b0f89](https://github.com/maverick-js/signals/commit/58b0f89ef3065ecf954fb61e37b3f62d7b2fa290))
+
+
+### Bug Fixes
+
+* extend context/handlers on late scope append ([905ba92](https://github.com/maverick-js/signals/commit/905ba92b1d5c6442c140e1e86049f94aab51cd57))
+* throw error up if no handler is defined ([a0a1f1a](https://github.com/maverick-js/signals/commit/a0a1f1a4877e7e5dc041e81bfe2099e234091734))
+
 ### [5.10.5](https://github.com/maverick-js/signals/compare/v5.10.4...v5.10.5) (2023-06-14)
 
 
