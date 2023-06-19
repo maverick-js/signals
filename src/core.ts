@@ -222,7 +222,7 @@ function disposeNode(node: Computation) {
 function emptyDisposal(scope: Computation) {
   try {
     if (Array.isArray(scope._disposal)) {
-      for (let i = 0; i < scope._disposal.length; i++) {
+      for (let i = scope._disposal.length - 1; i >= 0; i--) {
         const callable = scope._disposal![i];
         callable.call(callable);
       }
