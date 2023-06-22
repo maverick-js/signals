@@ -7,7 +7,15 @@ it('should return true given subject', () => {
 });
 
 it('should return false if given non-subject', () => {
-  ([false, () => {}, computed(() => 10), readonly(signal(10)), effect(() => {})] as const).forEach(
-    (type) => expect(isWriteSignal(type)).toBe(false),
-  );
+  (
+    [
+      false,
+      null,
+      undefined,
+      () => {},
+      computed(() => 10),
+      readonly(signal(10)),
+      effect(() => {}),
+    ] as const
+  ).forEach((type) => expect(isWriteSignal(type)).toBe(false));
 });
