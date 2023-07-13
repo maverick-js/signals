@@ -246,7 +246,7 @@ const $a = signal(10);
 
 const $b = computed(() => {
   // `$a` will not trigger updates on `$b`.
-  const value = peek($a);
+  const value = peek(() => $a);
 });
 ```
 
