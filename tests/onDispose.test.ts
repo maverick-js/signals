@@ -1,4 +1,4 @@
-import { effect, tick, onDispose, root } from '../src';
+import { effect, tick, onDispose, root, createScope, scoped, getScope } from '../src';
 
 afterEach(() => tick());
 
@@ -84,21 +84,22 @@ it('should dispose all roots', () => {
   const disposals: string[] = [];
 
   const dispose = root((dispose) => {
+    onDispose(() => disposals.push('root'));
+    onDispose(() => disposals.push('root_2'));
+
     root(() => {
-      onDispose(() => disposals.push('SUBTREE 1'));
-      effect(() => onDispose(() => disposals.push('+A1')));
-      effect(() => onDispose(() => disposals.push('+B1')));
-      effect(() => onDispose(() => disposals.push('+C1')));
+      onDispose(() => disposals.push('s1'));
+      effect(() => onDispose(() => disposals.push('s1_effect_1')));
+      effect(() => onDispose(() => disposals.push('s1_effect_2')));
+      effect(() => onDispose(() => disposals.push('s1_effect_3')));
     });
 
     root(() => {
-      onDispose(() => disposals.push('SUBTREE 2'));
-      effect(() => onDispose(() => disposals.push('+A2')));
-      effect(() => onDispose(() => disposals.push('+B2')));
-      effect(() => onDispose(() => disposals.push('+C2')));
+      onDispose(() => disposals.push('s2'));
+      effect(() => onDispose(() => disposals.push('s2_effect_1')));
+      effect(() => onDispose(() => disposals.push('s2_effect_2')));
+      effect(() => onDispose(() => disposals.push('s2_effect_3')));
     });
-
-    onDispose(() => disposals.push('ROOT'));
 
     return dispose;
   });
@@ -106,15 +107,73 @@ it('should dispose all roots', () => {
   dispose();
   expect(disposals).toMatchInlineSnapshot(`
     [
-      "+C2",
-      "+B2",
-      "+A2",
-      "SUBTREE 2",
-      "+C1",
-      "+B1",
-      "+A1",
-      "SUBTREE 1",
-      "ROOT",
+      "s2_effect_3",
+      "s2_effect_2",
+      "s2_effect_1",
+      "s2",
+      "s1_effect_3",
+      "s1_effect_2",
+      "s1_effect_1",
+      "s1",
+      "root_2",
+      "root",
+    ]
+  `);
+});
+
+it('should dispose correctly on appended scopes', () => {
+  const disposals: string[] = [];
+
+  const scopeA = createScope(),
+    scopeB = createScope();
+
+  scoped(() => {
+    onDispose(() => disposals.push('scope_a'));
+    effect(() => {
+      effect(() => {
+        return () => {
+          disposals.push('a_effect_two');
+        };
+      });
+      return () => {
+        disposals.push('a_effect_one');
+      };
+    });
+  }, scopeA);
+
+  scoped(() => {
+    onDispose(() => disposals.push('scope_b'));
+    effect(() => {
+      effect(() => {
+        return () => {
+          disposals.push('b_effect_two');
+        };
+      });
+      return () => {
+        disposals.push('b_effect_one');
+      };
+    });
+  }, scopeB);
+
+  scopeA.append(scopeB);
+  scopeB.dispose();
+  expect(disposals).toMatchInlineSnapshot(`
+    [
+      "b_effect_two",
+      "b_effect_one",
+      "scope_b",
+    ]
+  `);
+
+  scopeA.dispose();
+  expect(disposals).toMatchInlineSnapshot(`
+    [
+      "b_effect_two",
+      "b_effect_one",
+      "scope_b",
+      "a_effect_two",
+      "a_effect_one",
+      "scope_a",
     ]
   `);
 });

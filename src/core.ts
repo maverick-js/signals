@@ -192,7 +192,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
-  let head = self ? this._prevSibling ?? this[SCOPE] : this,
+  let head = self ? this._prevSibling || this[SCOPE] : this,
     current = this._nextSibling as Computation | null;
 
   while (current && current[SCOPE] === this) {
@@ -326,20 +326,29 @@ ScopeProto._handlers = null;
 ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
-ScopeProto.append = function (this: Scope, scope: Scope) {
-  scope[SCOPE] = this;
+ScopeProto.append = function (this: Scope, child: Scope) {
+  child[SCOPE] = this;
+  child._prevSibling = this;
 
-  scope._prevSibling = this;
+  if (this._nextSibling) {
+    if (child._nextSibling) {
+      let tail = child._nextSibling;
+      while (tail._nextSibling) tail = tail._nextSibling;
+      tail._nextSibling = this._nextSibling;
+      this._nextSibling._prevSibling = tail;
+    } else {
+      child._nextSibling = this._nextSibling;
+      this._nextSibling._prevSibling = child;
+    }
+  }
 
-  if (this._nextSibling) this._nextSibling._prevSibling = scope;
-  scope._nextSibling = this._nextSibling;
-  this._nextSibling = scope;
+  this._nextSibling = child;
 
-  scope._context =
-    scope._context === defaultContext ? this._context : { ...this._context, ...scope._context };
+  child._context =
+    child._context === defaultContext ? this._context : { ...this._context, ...child._context };
 
   if (this._handlers) {
-    scope._handlers = !scope._handlers ? this._handlers : [...scope._handlers, ...this._handlers];
+    child._handlers = !child._handlers ? this._handlers : [...child._handlers, ...this._handlers];
   }
 };
 
