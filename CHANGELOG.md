@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.11.4](https://github.com/maverick-js/signals/compare/v5.11.3...v5.11.4) (2023-09-13)
+
+
+### Bug Fixes
+
+* completely remove next sibling reference on dispose ([f675a14](https://github.com/maverick-js/signals/commit/f675a14b1069824b387935cfdcbbc63258b6db3d))
+
 ### [5.11.3](https://github.com/maverick-js/signals/compare/v5.11.2...v5.11.3) (2023-09-13)
 
 
