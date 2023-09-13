@@ -193,12 +193,15 @@ export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
   let head = self ? this._prevSibling || this[SCOPE] : this,
-    current = this._nextSibling as Computation | null;
+    current = this._nextSibling as Computation | null,
+    next: Computation | null = null;
 
   while (current && current[SCOPE] === this) {
     dispose.call(current, true);
     disposeNode(current);
-    current = current._nextSibling as Computation;
+    next = current._nextSibling as Computation | null;
+    current._nextSibling = null;
+    current = next;
   }
 
   if (self) disposeNode(this as Computation);
