@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.11.3](https://github.com/maverick-js/signals/compare/v5.11.2...v5.11.3) (2023-09-13)
+
+
+### Bug Fixes
+
+* dispose appended scopes correctly ([7c80b49](https://github.com/maverick-js/signals/commit/7c80b49875bb1dd525b765667b1757fb21cf9a6f))
+
 ### [5.11.2](https://github.com/maverick-js/signals/compare/v5.11.1...v5.11.2) (2023-06-22)
 
 
