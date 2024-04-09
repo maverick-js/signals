@@ -3,22 +3,21 @@ import esbuild from 'rollup-plugin-esbuild';
 
 /** @type {Record<string, string>} */
 const mangleCache = {
-  _key: '$k',
-  _effect: '$e',
-  _nodes: '$n',
-  _refs: '$r',
-  _init: '$i',
-  _value: '$v',
-  _sources: '$s',
-  _observers: '$o',
-  _compute: '$c',
   _changed: '$ch',
-  _state: '$st',
-  _prevSibling: '$ps',
-  _nextSibling: '$ns',
+  _children: '$h',
+  _compute: '$c',
   _context: '$cx',
-  _handlers: '$eh',
   _disposal: '$d',
+  _effect: '$e',
+  _handlers: '$eh',
+  _init: '$i',
+  _key: '$k',
+  _nodes: '$n',
+  _observers: '$o',
+  _refs: '$r',
+  _sources: '$s',
+  _state: '$st',
+  _value: '$v',
 };
 
 export default defineConfig([

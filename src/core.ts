@@ -192,32 +192,39 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
-  let head = self ? this._prevSibling || this[SCOPE] : this,
-    current = this._nextSibling as Computation | null,
-    next: Computation | null = null;
-
-  while (current && current[SCOPE] === this) {
-    dispose.call(current, true);
-    disposeNode(current);
-    next = current._nextSibling as Computation | null;
-    current._nextSibling = null;
-    current = next;
+  if (this._children) {
+    if (Array.isArray(this._children)) {
+      for (let i = this._children.length - 1; i >= 0; i--) {
+        dispose.call(this._children[i]);
+      }
+    } else {
+      dispose.call(this._children);
+    }
   }
 
-  if (self) disposeNode(this as Computation);
-  if (current) current._prevSibling = !self ? this : this._prevSibling;
-  if (head) head._nextSibling = current;
+  if (self) {
+    const parent = this[SCOPE];
+
+    if (parent) {
+      if (Array.isArray(parent._children)) {
+        parent._children.splice(parent._children.indexOf(this), 1);
+      } else {
+        parent._children = null;
+      }
+    }
+
+    disposeNode(this as Computation);
+  }
 }
 
 function disposeNode(node: Computation) {
   node._state = STATE_DISPOSED;
   if (node._disposal) emptyDisposal(node);
   if (node._sources) removeSourceObservers(node, 0);
-  if (node._prevSibling) node._prevSibling._nextSibling = null;
   node[SCOPE] = null;
   node._sources = null;
   node._observers = null;
-  node._prevSibling = null;
+  node._children = null;
   node._context = defaultContext;
   node._handlers = null;
 }
@@ -318,8 +325,7 @@ export function write(this: Computation, newValue: any): any {
 
 const ScopeNode = function Scope(this: Scope) {
   this[SCOPE] = null;
-  this._nextSibling = null;
-  this._prevSibling = null;
+  this._children = null;
   if (currentScope) currentScope.append(this);
 };
 
@@ -331,21 +337,14 @@ ScopeProto._disposal = null;
 
 ScopeProto.append = function (this: Scope, child: Scope) {
   child[SCOPE] = this;
-  child._prevSibling = this;
 
-  if (this._nextSibling) {
-    if (child._nextSibling) {
-      let tail = child._nextSibling;
-      while (tail._nextSibling) tail = tail._nextSibling;
-      tail._nextSibling = this._nextSibling;
-      this._nextSibling._prevSibling = tail;
-    } else {
-      child._nextSibling = this._nextSibling;
-      this._nextSibling._prevSibling = child;
-    }
+  if (!this._children) {
+    this._children = child;
+  } else if (Array.isArray(this._children)) {
+    this._children.push(child);
+  } else {
+    this._children = [this._children, child];
   }
-
-  this._nextSibling = child;
 
   child._context =
     child._context === defaultContext ? this._context : { ...this._context, ...child._context };
@@ -422,7 +421,7 @@ function updateCheck(node: Computation) {
 }
 
 function cleanup(node: Computation) {
-  if (node._nextSibling && node._nextSibling[SCOPE] === node) dispose.call(node, false);
+  if (node._children) dispose.call(node, false);
   if (node._disposal) emptyDisposal(node);
   node._handlers = node[SCOPE] ? node[SCOPE]._handlers : null;
 }
