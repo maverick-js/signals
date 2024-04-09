@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.11.5](https://github.com/maverick-js/signals/compare/v5.11.4...v5.11.5) (2024-04-09)
+
+
+### Bug Fixes
+
+* use array scope disposal ([c9c740c](https://github.com/maverick-js/signals/commit/c9c740ccedc5cf2785cbd81d9a61b8e09b0849c0))
+
 ### [5.11.4](https://github.com/maverick-js/signals/compare/v5.11.3...v5.11.4) (2023-09-13)
 
 
