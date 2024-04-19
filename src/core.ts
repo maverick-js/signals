@@ -267,26 +267,20 @@ export function compute<Result>(
 
 function handleError(scope: Scope | null, error: unknown) {
   if (!scope || !scope._handlers) throw error;
-
-  let i = 0,
-    len = scope._handlers.length,
-    coercedError = coerceError(error);
-
-  for (i = 0; i < len; i++) {
+  let handled = false;
+  // Handler function should receive the error value as argument,
+  // and it should re-throw it so that it can be handled by the next handler.
+  for (let i = 0, len = scope._handlers.length; i < len; i++) {
     try {
-      scope._handlers[i](coercedError);
-      break; // error was handled.
-    } catch (error) {
-      coercedError = coerceError(error);
+      scope._handlers[i](error);
+      handled = true;
+      break; // Error is handled.
+    } catch (rethrown: any) {
+      error = rethrown;
     }
   }
-
   // Error was not handled.
-  if (i === len) throw coercedError;
-}
-
-function coerceError(error: unknown): Error {
-  return error instanceof Error ? error : Error(JSON.stringify(error));
+  if (!handled) throw error;
 }
 
 export function read(this: Computation): any {
