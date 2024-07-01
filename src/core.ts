@@ -486,6 +486,9 @@ export function update(node: Computation) {
       if (node._sources) removeSourceObservers(node, 0);
     }
 
+    currentObservers = prevObservers;
+    currentObserversIndex = prevObserversIndex;
+
     return;
   }
 
