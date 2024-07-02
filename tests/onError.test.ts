@@ -123,3 +123,17 @@ it('should not trigger wrong handler', () => {
   expect(rootHandler).toHaveBeenCalledWith(error);
   expect(handler).not.toHaveBeenCalledWith(error);
 });
+
+it('should not coerce error', () => {
+  const error = 10,
+    handler = vi.fn();
+
+  root(() => {
+    effect(() => {
+      onError(handler);
+      throw error;
+    });
+  });
+
+  expect(handler).toHaveBeenCalledWith(error);
+});

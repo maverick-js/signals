@@ -270,23 +270,19 @@ function handleError(scope: Scope | null, error: unknown) {
 
   let i = 0,
     len = scope._handlers.length,
-    coercedError = coerceError(error);
+    currentError = error;
 
   for (i = 0; i < len; i++) {
     try {
-      scope._handlers[i](coercedError);
+      scope._handlers[i](currentError);
       break; // error was handled.
     } catch (error) {
-      coercedError = coerceError(error);
+      currentError = error;
     }
   }
 
   // Error was not handled.
-  if (i === len) throw coercedError;
-}
-
-function coerceError(error: unknown): Error {
-  return error instanceof Error ? error : Error(JSON.stringify(error));
+  if (i === len) throw currentError;
 }
 
 export function read(this: Computation): any {
