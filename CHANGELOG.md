@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [6.0.0](https://github.com/maverick-js/signals/compare/v5.11.5...v6.0.0) (2024-07-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* errors are no longer coerced to an `Error` when thrown
+* errors thrown in effects will now update tracked observers and mark the effect as clean rather than dirty
+
+### Bug Fixes
+
+* do not coerce errors ([059e054](https://github.com/maverick-js/signals/commit/059e054282fe372aeed68fb1a37d286c28c9599d)), closes [#28](https://github.com/maverick-js/signals/issues/28)
+* update observers when error occurs ([#33](https://github.com/maverick-js/signals/issues/33)) ([1d9d1dd](https://github.com/maverick-js/signals/commit/1d9d1dd59343881bd386746fc17aebd6b7b03d8b))
+
 ### [5.11.5](https://github.com/maverick-js/signals/compare/v5.11.4...v5.11.5) (2024-04-09)
 
 
