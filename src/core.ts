@@ -438,28 +438,7 @@ export function update(node: Computation) {
 
     const result = compute(node, node._compute!, node);
 
-    if (currentObservers) {
-      if (node._sources) removeSourceObservers(node, currentObserversIndex);
-
-      if (node._sources && currentObserversIndex > 0) {
-        node._sources.length = currentObserversIndex + currentObservers.length;
-        for (let i = 0; i < currentObservers.length; i++) {
-          node._sources[currentObserversIndex + i] = currentObservers[i];
-        }
-      } else {
-        node._sources = currentObservers;
-      }
-
-      let source: Computation;
-      for (let i = currentObserversIndex; i < node._sources.length; i++) {
-        source = node._sources[i];
-        if (!source._observers) source._observers = [node];
-        else source._observers.push(node);
-      }
-    } else if (node._sources && currentObserversIndex < node._sources.length) {
-      removeSourceObservers(node, currentObserversIndex);
-      node._sources.length = currentObserversIndex;
-    }
+    updateObservers(node);
 
     if (!node._effect && node._init) {
       write.call(node, result);
@@ -479,20 +458,38 @@ export function update(node: Computation) {
       );
     }
 
+    updateObservers(node);
     handleError(node, error);
+  } finally {
+    currentObservers = prevObservers;
+    currentObserversIndex = prevObserversIndex;
+    node._state = STATE_CLEAN;
+  }
+}
 
-    if (node._state === STATE_DIRTY) {
-      cleanup(node);
-      if (node._sources) removeSourceObservers(node, 0);
+function updateObservers(node: Computation) {
+  if (currentObservers) {
+    if (node._sources) removeSourceObservers(node, currentObserversIndex);
+
+    if (node._sources && currentObserversIndex > 0) {
+      node._sources.length = currentObserversIndex + currentObservers.length;
+      for (let i = 0; i < currentObservers.length; i++) {
+        node._sources[currentObserversIndex + i] = currentObservers[i];
+      }
+    } else {
+      node._sources = currentObservers;
     }
 
-    return;
+    let source: Computation;
+    for (let i = currentObserversIndex; i < node._sources.length; i++) {
+      source = node._sources[i];
+      if (!source._observers) source._observers = [node];
+      else source._observers.push(node);
+    }
+  } else if (node._sources && currentObserversIndex < node._sources.length) {
+    removeSourceObservers(node, currentObserversIndex);
+    node._sources.length = currentObserversIndex;
   }
-
-  currentObservers = prevObservers;
-  currentObserversIndex = prevObserversIndex;
-
-  node._state = STATE_CLEAN;
 }
 
 function notify(node: Computation, state: number) {
