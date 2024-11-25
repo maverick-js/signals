@@ -33,7 +33,7 @@ Here's a simple demo to see how it works:
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)][stackblitz-demo]
 
 ```js
-import { root, signal, computed, effect, tick } from '@maverick-js/signals';
+import { root, signal, computed, effect, flushSync } from '@maverick-js/signals';
 
 root((dispose) => {
   // Create - all types supported (string, array, object, etc.)
@@ -56,11 +56,11 @@ root((dispose) => {
 
   // Flush queue synchronously so effect is run.
   // Otherwise, effects will be batched and run on the microtask queue.
-  tick();
+  flushSync();
 
   $b.set((prev) => prev + 5); // logs `15` inside effect
 
-  tick();
+  flushSync();
 
   // Nothing has changed - no re-compute.
   $y();
@@ -94,7 +94,7 @@ $: yarn add @maverick-js/signals
 - [`peek`](#peek)
 - [`untrack`](#untrack)
 - [`readonly`](#readonly)
-- [`tick`](#tick)
+- [`flushSync`](#flushSync)
 - [`computedMap`](#computedmap)
 - [`computedKeyedMap`](#computedkeyedmap)
 - [`onError`](#onerror)
@@ -163,7 +163,7 @@ $a.set((prev) => prev + 10); // write (2)
 ```
 
 > **Warning**
-> Read the [`tick`](#tick) section below to understand batched updates.
+> Read the [`flushSync`](#flushSync) section below to understand batched updates.
 
 ### `computed`
 
@@ -172,7 +172,7 @@ compute function is _only_ re-run when one of it's dependencies are updated. Dep
 are all signals that are read during execution.
 
 ```js
-import { signal, computed, tick } from '@maverick-js/signals';
+import { signal, computed, flushSync } from '@maverick-js/signals';
 
 const $a = signal(10);
 const $b = signal(10);
@@ -181,11 +181,11 @@ const $c = computed(() => $a() + $b());
 console.log($c()); // logs 20
 
 $a.set(20);
-tick();
+flushSync();
 console.log($c()); // logs 30
 
 $b.set(20);
-tick();
+flushSync();
 console.log($c()); // logs 40
 
 // Nothing changed - no re-compute.
@@ -285,10 +285,10 @@ $a.set(20);
 console.log($b()); // logs 20
 ```
 
-### `tick`
+### `flushSync`
 
 By default, signal updates are batched on the microtask queue which is an async process. You can
-flush the queue synchronously to get the latest updates by calling `tick()`.
+flush the queue synchronously to get the latest updates by calling this function.
 
 > **Note**
 > You can read more about microtasks on [MDN][mdn-microtasks].
@@ -304,15 +304,15 @@ $a.set(30); // only this write is applied
 ```
 
 ```js
-import { signal, tick } from '@maverick-js/signals';
+import { signal, flushSync } from '@maverick-js/signals';
 
 const $a = signal(10);
 
 // All writes are applied.
 $a.set(10);
-tick();
+flushSync();
 $a.set(20);
-tick();
+flushSync();
 $a.set(30);
 ```
 
@@ -327,7 +327,7 @@ It only runs the mapping function once per item and adds/removes as needed. In a
 this the index is fixed but value can change (opposite of a keyed map).
 
 ```js
-import { signal, tick } from '@maverick-js/signals';
+import { signal, flushSync } from '@maverick-js/signals';
 import { computedMap } from '@maverick-js/signals/map';
 
 const source = signal([1, 2, 3]);
@@ -344,7 +344,7 @@ const map = computedMap(source, (value, index) => {
 console.log(map()); // logs `[{ i: 0, id: $2 }, { i: 1, id: $4 }, { i: 2, id: $6 }]`
 
 source.set([3, 2, 1]);
-tick();
+flushSync();
 
 // Notice the index `i` remains fixed but `id` has updated.
 console.log(map()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2 }]`
@@ -361,7 +361,7 @@ updates. It only runs the mapping function once per item and then moves or remov
 a keyed map like this the value is fixed but the index changes (opposite of non-keyed map).
 
 ```js
-import { signal, tick } from '@maverick-js/signals';
+import { signal, flushSync } from '@maverick-js/signals';
 import { computedKeyedMap } from '@maverick-js/signals/map';
 
 const source = signal([{ id: 0 }, { id: 1 }, { id: 2 }]);
@@ -389,7 +389,7 @@ source.set((prev) => {
   return [...prev]; // new array
 });
 
-tick();
+flushSync();
 
 // No nodes were created/destroyed, simply nodes at index 0 and 1 switched.
 console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];

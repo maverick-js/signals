@@ -91,14 +91,17 @@ export function untrack<T>(fn: () => T): T {
 }
 
 /**
- * By default, signal updates are batched on the microtask queue which is an async process. You can
- * flush the queue synchronously to get the latest updates by calling `tick()`.
+ * By default, updates are batched on the microtask queue which is an async process. You can
+ * flush the queue synchronously to get the latest updates by calling this function.
  *
- * @see {@link https://github.com/maverick-js/signals#tick}
+ * @see {@link https://github.com/maverick-js/signals#flushSync}
  */
-export function tick(): void {
+export function flushSync(): void {
   if (!runningEffects) runEffects();
 }
+
+/** @deprecated use flushSync */
+export const tick = flushSync;
 
 /**
  * Returns the currently executing parent scope.

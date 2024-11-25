@@ -1,6 +1,6 @@
-import { signal, tick, readonly } from '../src';
+import { signal, flushSync, readonly } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should create readonly proxy', () => {
   const $a = signal(10);
@@ -16,10 +16,10 @@ it('should create readonly proxy', () => {
     $b.set((n) => n + 10);
   }).toThrow();
 
-  tick();
+  flushSync();
   expect($b()).toBe(10);
 
   $a.set(20);
-  tick();
+  flushSync();
   expect($b()).toBe(20);
 });

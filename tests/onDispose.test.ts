@@ -1,6 +1,6 @@
-import { effect, tick, onDispose, root, createScope, scoped, getScope } from '../src';
+import { effect, flushSync, onDispose, root, createScope, scoped, getScope } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should be invoked when computation is disposed', () => {
   const callback1 = vi.fn();
@@ -31,7 +31,7 @@ it('should clear disposal early', () => {
   expect(dispose).toHaveBeenCalledTimes(1);
 
   stop();
-  tick();
+  flushSync();
 
   expect(dispose).toHaveBeenCalledTimes(1);
 });
@@ -47,7 +47,7 @@ it('should not trigger wrong onDispose', () => {
     const stop = effect(() => {});
 
     stop();
-    tick();
+    flushSync();
 
     expect(dispose).toHaveBeenCalledTimes(0);
   });

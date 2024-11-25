@@ -1,4 +1,4 @@
-import { signal, root, untrack, effect, tick } from '../src';
+import { signal, root, untrack, effect, flushSync } from '../src';
 
 it('should not track scope', () => {
   root((dispose) => {
@@ -19,7 +19,7 @@ it('should not track scope', () => {
 
     dispose();
     update();
-    tick();
+    flushSync();
     expect(innerEffect).toHaveBeenCalledWith(10);
   });
 });

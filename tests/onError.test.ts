@@ -1,4 +1,4 @@
-import { root, effect, onError, signal, tick, getContext } from '../src';
+import { root, effect, onError, signal, flushSync, getContext } from '../src';
 
 it('should let errors should bubble up when not handled', () => {
   const error = new Error();
@@ -67,7 +67,7 @@ it('should forward error to another handler', () => {
   expect(handler).toHaveBeenCalledTimes(1);
 
   $a.set(1);
-  tick();
+  flushSync();
   expect(handler).toHaveBeenCalledTimes(2);
 });
 
@@ -87,11 +87,11 @@ it('should not duplicate error handler', () => {
   });
 
   $a.set(1);
-  tick();
+  flushSync();
 
   shouldThrow = true;
   $a.set(2);
-  tick();
+  flushSync();
   expect(handler).toHaveBeenCalledTimes(1);
 });
 
@@ -118,7 +118,7 @@ it('should not trigger wrong handler', () => {
 
   shouldThrow = true;
   $a.set(1);
-  tick();
+  flushSync();
 
   expect(rootHandler).toHaveBeenCalledWith(error);
   expect(handler).not.toHaveBeenCalledWith(error);

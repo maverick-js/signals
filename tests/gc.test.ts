@@ -1,9 +1,9 @@
-import { computed, effect, getScope, root, signal, tick } from '../src';
+import { computed, effect, getScope, root, signal, flushSync } from '../src';
 
 function gc() {
   return new Promise((resolve) =>
     setTimeout(async () => {
-      tick(); // flush call stack (holds a reference)
+      flushSync(); // flush call stack (holds a reference)
       global.gc!();
       resolve(void 0);
     }, 0),

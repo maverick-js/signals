@@ -1,6 +1,6 @@
-import { computed, signal, peek, effect, tick, onDispose, root, getScope } from '../src';
+import { computed, signal, peek, effect, flushSync, onDispose, root, getScope } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should not create dependency', () => {
   const effectA = vi.fn();
@@ -24,7 +24,7 @@ it('should not create dependency', () => {
   expect(computeC).toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  tick();
+  flushSync();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeC).toHaveBeenCalledTimes(1);
 });
@@ -52,19 +52,19 @@ it('should not affect deep dependency being created', () => {
   expect(computeD).toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  tick();
+  flushSync();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
 
   $b.set(20);
-  tick();
+  flushSync();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
 
   $c.set(20);
-  tick();
+  flushSync();
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
@@ -90,7 +90,7 @@ it('should track parent across peeks', () => {
   });
 
   $a.set(1);
-  tick();
+  flushSync();
   expect(childCompute).toHaveBeenCalledWith(2);
   expect(childDispose).toHaveBeenCalledTimes(1);
 
@@ -98,7 +98,7 @@ it('should track parent across peeks', () => {
   expect(childDispose).toHaveBeenCalledTimes(2);
 
   $a.set(2);
-  tick();
+  flushSync();
   expect(childCompute).not.toHaveBeenCalledWith(4);
   expect(childDispose).toHaveBeenCalledTimes(2);
 });

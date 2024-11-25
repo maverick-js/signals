@@ -1,6 +1,6 @@
-import { computed, signal, tick } from '../src';
+import { computed, signal, flushSync } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should store and return value on read', () => {
   const $a = signal(10);
@@ -27,15 +27,15 @@ it('should accept dirty option', () => {
   });
 
   $a.set(11);
-  tick();
+  flushSync();
   expect($a()).toBe(10);
 
   $a.set(12);
-  tick();
+  flushSync();
   expect($a()).toBe(12);
 
   $a.set(13);
-  tick();
+  flushSync();
   expect($a()).toBe(12);
 });
 

@@ -8,6 +8,7 @@ export {
   scoped,
   setContext,
   tick,
+  flushSync,
   untrack,
   isFunction,
   isNotEqual,

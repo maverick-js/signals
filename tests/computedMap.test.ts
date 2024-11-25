@@ -1,4 +1,4 @@
-import { signal, tick } from '../src';
+import { signal, flushSync } from '../src';
 import { computedMap } from '../src/map';
 
 it('should compute map', () => {
@@ -26,7 +26,7 @@ it('should compute map', () => {
 
   // Move values around
   source.set([3, 2, 1]);
-  tick();
+  flushSync();
 
   const [a2, b2, c2] = map();
   expect(a2.i).toBe(0);
@@ -42,7 +42,7 @@ it('should compute map', () => {
 
   // Add new value
   source.set([3, 2, 1, 4]);
-  tick();
+  flushSync();
 
   expect(map().length).toBe(4);
   expect(map()[map().length - 1].i).toBe(3);
@@ -51,14 +51,14 @@ it('should compute map', () => {
 
   // Remove value
   source.set([2, 1, 4]);
-  tick();
+  flushSync();
 
   expect(map().length).toBe(3);
   expect(map()[0].id).toBe(4);
 
   // Empty
   source.set([]);
-  tick();
+  flushSync();
 
   expect(map().length).toBe(0);
   expect(compute).toHaveBeenCalledTimes(4);

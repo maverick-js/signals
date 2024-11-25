@@ -1,4 +1,4 @@
-import { signal, tick, effect } from '../src';
+import { signal, flushSync, effect } from '../src';
 import { computedKeyedMap } from '../src/map';
 
 it('should compute keyed map', () => {
@@ -30,7 +30,7 @@ it('should compute keyed map', () => {
     p[0] = tmp;
     return [...p];
   });
-  tick();
+  flushSync();
 
   const [a2, b2, c2] = map();
   expect(a2.id).toBe('b');
@@ -46,7 +46,7 @@ it('should compute keyed map', () => {
 
   // Add new value
   source.set((p) => [...p, { id: 'd' }]);
-  tick();
+  flushSync();
 
   expect(map().length).toBe(4);
   expect(map()[map().length - 1].id).toBe('d');
@@ -55,7 +55,7 @@ it('should compute keyed map', () => {
 
   // Remove value
   source.set((p) => p.slice(1));
-  tick();
+  flushSync();
 
   expect(map().length).toBe(3);
   expect(map()[0].id).toBe('a');
@@ -64,7 +64,7 @@ it('should compute keyed map', () => {
 
   // Empty
   source.set([]);
-  tick();
+  flushSync();
 
   expect(map().length).toBe(0);
   expect(compute).toHaveBeenCalledTimes(4);
@@ -86,6 +86,6 @@ it('should notify observer', () => {
   effect($effect);
 
   source.set((prev) => prev.slice(1));
-  tick();
+  flushSync();
   expect($effect).toHaveBeenCalledTimes(2);
 });

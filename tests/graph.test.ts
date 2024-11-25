@@ -1,6 +1,6 @@
 // https://github.com/preactjs/signals/blob/main/packages/core/test/signal.test.tsx#L1249
 
-import { computed, signal, tick } from '../src';
+import { computed, signal, flushSync } from '../src';
 
 it('should drop A->B->A updates', () => {
   //     A
@@ -24,7 +24,7 @@ it('should drop A->B->A updates', () => {
 
   $a.set(4);
   $d();
-  tick();
+  flushSync();
   expect(compute).toHaveBeenCalledTimes(1);
 });
 
@@ -48,7 +48,7 @@ it('should only update every signal once (diamond graph)', () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  tick();
+  flushSync();
   expect($d()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
@@ -75,7 +75,7 @@ it('should only update every signal once (diamond graph + tail)', () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  tick();
+  flushSync();
   expect($e()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
@@ -98,7 +98,7 @@ it('should bail out if result is the same', () => {
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
-  tick();
+  flushSync();
   expect($c()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 });
@@ -135,7 +135,7 @@ it('should only update every signal once (jagged diamond graph + tails)', () => 
   expect(gSpy).toHaveBeenCalledTimes(1);
 
   $a.set('b');
-  tick();
+  flushSync();
 
   expect($e()).toBe('b b');
   expect(eSpy).toHaveBeenCalledTimes(2);
@@ -147,7 +147,7 @@ it('should only update every signal once (jagged diamond graph + tails)', () => 
   expect(gSpy).toHaveBeenCalledTimes(2);
 
   $a.set('c');
-  tick();
+  flushSync();
 
   expect($e()).toBe('c c');
   expect(eSpy).toHaveBeenCalledTimes(3);
@@ -174,7 +174,7 @@ it('should only subscribe to signals listened to', () => {
   expect(spy).toBeCalledTimes(0);
 
   $a.set('aa');
-  tick();
+  flushSync();
 
   expect($b()).toBe('aa');
   expect(spy).toBeCalledTimes(0);
@@ -204,7 +204,7 @@ it('should ensure subs update even if one dep unmarks it', () => {
   expect($d()).toBe('a c');
 
   $a.set('aa');
-  tick();
+  flushSync();
 
   expect($d()).toBe('aa c');
   expect(spy).toHaveBeenCalledTimes(2);
@@ -236,7 +236,7 @@ it('should ensure subs update even if two deps unmark it', () => {
   expect($e()).toBe('a c d');
 
   $a.set('aa');
-  tick();
+  flushSync();
 
   expect($e()).toBe('aa c d');
   expect(spy).toHaveBeenCalledTimes(2);

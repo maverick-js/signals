@@ -1,6 +1,6 @@
-import { computed, effect, signal, onError, root, tick } from '../src';
+import { computed, effect, signal, onError, root, flushSync } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should store and return value on read', () => {
   const $a = signal(10);
@@ -8,7 +8,7 @@ it('should store and return value on read', () => {
   const $c = computed(() => $a() + $b());
 
   expect($c()).toBe(20);
-  tick();
+  flushSync();
 
   // Try again to ensure state is maintained.
   expect($c()).toBe(20);
@@ -102,7 +102,7 @@ it('should only re-compute whats needed', () => {
   expect($e()).toBe(20);
 
   $a.set(20);
-  tick();
+  flushSync();
 
   $e();
   expect(computeC).toHaveBeenCalledTimes(2);
@@ -110,7 +110,7 @@ it('should only re-compute whats needed', () => {
   expect($e()).toBe(30);
 
   $b.set(20);
-  tick();
+  flushSync();
 
   $e();
   expect(computeC).toHaveBeenCalledTimes(2);
@@ -133,11 +133,11 @@ it('should discover new dependencies', () => {
   expect($c()).toBe(1);
 
   $a.set(0);
-  tick();
+  flushSync();
   expect($c()).toBe(0);
 
   $b.set(10);
-  tick();
+  flushSync();
   expect($c()).toBe(10);
 });
 
@@ -159,13 +159,13 @@ it('should accept dirty option', () => {
   expect(effectA).toHaveBeenCalledTimes(1);
 
   $a.set(2);
-  tick();
+  flushSync();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 
   // no-change
   $a.set(3);
-  tick();
+  flushSync();
   expect($b()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 });

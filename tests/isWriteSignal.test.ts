@@ -1,6 +1,6 @@
-import { computed, signal, effect, tick, readonly, isWriteSignal } from '../src';
+import { computed, signal, effect, flushSync, readonly, isWriteSignal } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should return true given subject', () => {
   expect(isWriteSignal(signal(10))).toBe(true);

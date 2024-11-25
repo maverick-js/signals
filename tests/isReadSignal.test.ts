@@ -1,6 +1,6 @@
-import { computed, signal, tick, readonly, isReadSignal } from '../src';
+import { computed, signal, flushSync, readonly, isReadSignal } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should return true if given signal', () => {
   [signal(10), readonly(signal(10)), computed(() => 10)].forEach((type) => {

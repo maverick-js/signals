@@ -1,6 +1,6 @@
-import { effect, signal, tick } from '../src';
+import { effect, signal, flushSync } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should batch updates', () => {
   const $a = signal(10);
@@ -13,7 +13,7 @@ it('should batch updates', () => {
   $a.set(40);
 
   expect($effect).to.toHaveBeenCalledTimes(1);
-  tick();
+  flushSync();
   expect($effect).to.toHaveBeenCalledTimes(2);
 });
 
@@ -26,11 +26,11 @@ it('should wait for queue to flush', () => {
   expect($effect).to.toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  tick();
+  flushSync();
   expect($effect).to.toHaveBeenCalledTimes(2);
 
   $a.set(30);
-  tick();
+  flushSync();
   expect($effect).to.toHaveBeenCalledTimes(3);
 });
 
@@ -38,7 +38,7 @@ it('should not fail if called while flushing', () => {
   const $a = signal(10);
   const $effect = vi.fn(() => {
     $a();
-    tick();
+    flushSync();
   });
 
   effect(() => {
@@ -48,6 +48,6 @@ it('should not fail if called while flushing', () => {
   expect($effect).to.toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  tick();
+  flushSync();
   expect($effect).to.toHaveBeenCalledTimes(2);
 });

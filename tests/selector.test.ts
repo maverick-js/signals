@@ -1,4 +1,4 @@
-import { computed, root, signal, tick } from '../src';
+import { computed, root, signal, flushSync } from '../src';
 import { selector } from '../src/map';
 
 it('should observe key changes', () => {
@@ -22,7 +22,7 @@ it('should observe key changes', () => {
     expect(effect2).toHaveBeenCalledTimes(1);
 
     $source.set(1);
-    tick();
+    flushSync();
 
     expect($effect0()).toBe(false);
     expect($effect1()).toBe(true);
@@ -33,7 +33,7 @@ it('should observe key changes', () => {
     expect(effect2).toHaveBeenCalledTimes(1);
 
     $source.set(2);
-    tick();
+    flushSync();
 
     expect($effect0()).toBe(false);
     expect($effect1()).toBe(false);
@@ -44,7 +44,7 @@ it('should observe key changes', () => {
     expect(effect2).toHaveBeenCalledTimes(2);
 
     $source.set(-1);
-    tick();
+    flushSync();
 
     expect($effect0()).toBe(false);
     expect($effect1()).toBe(false);
@@ -57,11 +57,11 @@ it('should observe key changes', () => {
     dispose();
 
     $source.set(0);
-    tick();
+    flushSync();
     $source.set(1);
-    tick();
+    flushSync();
     $source.set(2);
-    tick();
+    flushSync();
 
     expect($effect0()).toBe(false);
     expect($effect1()).toBe(false);

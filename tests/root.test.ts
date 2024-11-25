@@ -4,7 +4,7 @@ import {
   signal,
   computed,
   effect,
-  tick,
+  flushSync,
   getScope,
   type Computation,
   type ReadSignal,
@@ -12,7 +12,7 @@ import {
   onDispose,
 } from '../src';
 
-afterEach(() => tick());
+afterEach(() => flushSync());
 
 it('should dispose of inner computations', () => {
   const computeB = vi.fn();
@@ -35,10 +35,10 @@ it('should dispose of inner computations', () => {
   expect($b!()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 
-  tick();
+  flushSync();
 
   $a!.set(50);
-  tick();
+  flushSync();
 
   expect($b!()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
@@ -73,7 +73,7 @@ it('should create new tracking scope', () => {
   stop();
 
   $a.set(10);
-  tick();
+  flushSync();
   expect(innerEffect).not.toHaveBeenCalledWith(10);
   expect(innerEffect).toHaveBeenCalledTimes(1);
 });
@@ -92,7 +92,7 @@ it('should not be reactive', () => {
   expect(rootCall).toHaveBeenCalledTimes(1);
 
   $a!.set(1);
-  tick();
+  flushSync();
   expect(rootCall).toHaveBeenCalledTimes(1);
 });
 
