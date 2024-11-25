@@ -285,7 +285,29 @@ function handleError(scope: Scope | null, error: unknown) {
   }
 
   // Error was not handled.
-  if (i === len) throw currentError;
+  if (i === len) {
+    // Filter out internals from the stack trace.
+    if (__DEV__ && currentError instanceof Error) {
+      const stack = currentError.stack;
+      if (stack) {
+        let line = '',
+          lines = stack.split('\n'),
+          filteredLines: string[] = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          line = lines[i];
+          if (line.includes('@maverick-js')) continue;
+          filteredLines.push(line);
+        }
+
+        Object.defineProperty(error, 'stack', {
+          value: stack + filteredLines.join('\n'),
+        });
+      }
+    }
+
+    throw currentError;
+  }
 }
 
 export function read(this: Computation): any {

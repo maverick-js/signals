@@ -1,6 +1,6 @@
-import { root, effect, onError, signal, flushSync, getContext } from '../src';
+import { root, effect, onError, signal, flushSync } from '../src';
 
-it('should let errors should bubble up when not handled', () => {
+it('should let errors bubble up when not handled', () => {
   const error = new Error();
   expect(() => {
     root(() => {
