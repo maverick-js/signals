@@ -1,5 +1,4 @@
 import { createComputation, dispose, isFunction, onDispose, read, update, write } from './core';
-import { SCOPE } from './symbols';
 import type {
   ComputedSignalOptions,
   Effect,
@@ -9,6 +8,8 @@ import type {
   StopEffect,
   WriteSignal,
 } from './types';
+
+export const SIGNAL_SYMBOL = Symbol.for('mk.signal');
 
 /**
  * Wraps the given value into a signal. The signal will return the current value when invoked
@@ -22,7 +23,7 @@ export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSig
     signal = read.bind(node) as WriteSignal<T>;
 
   if (__DEV__) signal.node = node;
-  signal[SCOPE] = true;
+  signal[SIGNAL_SYMBOL] = true;
   signal.set = write.bind(node) as WriteSignal<T>['set'];
 
   return signal;
@@ -34,7 +35,7 @@ export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSig
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
 export function isReadSignal<T>(fn: MaybeSignal<T>): fn is ReadSignal<T> {
-  return isFunction(fn) && SCOPE in fn;
+  return isFunction(fn) && SIGNAL_SYMBOL in fn;
 }
 
 /**
@@ -55,7 +56,7 @@ export function computed<T, R = never>(
     ),
     signal = read.bind(node) as ReadSignal<T | R>;
 
-  signal[SCOPE] = true;
+  signal[SIGNAL_SYMBOL] = true;
   if (__DEV__) signal.node = node;
   return signal;
 }
@@ -97,7 +98,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
  */
 export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
   const readonly = (() => signal()) as ReadSignal<T>;
-  readonly[SCOPE] = true;
+  readonly[SIGNAL_SYMBOL] = true;
   if (__DEV__) readonly.node = signal.node;
   return readonly;
 }

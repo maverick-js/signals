@@ -1,4 +1,3 @@
-import { SCOPE } from './symbols';
 import type {
   Callable,
   Computation,
@@ -50,7 +49,7 @@ function runEffects() {
 function runTop(node: Computation<any>) {
   let ancestors = [node];
 
-  while ((node = node[SCOPE] as Computation<any>)) {
+  while ((node = node._parent as Computation<any>)) {
     if (node._effect && node._state !== STATE_CLEAN) ancestors.push(node);
   }
 
@@ -206,7 +205,7 @@ export function dispose(this: Scope, self = true) {
   }
 
   if (self) {
-    const parent = this[SCOPE];
+    const parent = this._parent;
 
     if (parent) {
       if (Array.isArray(parent._children)) {
@@ -224,7 +223,7 @@ function disposeNode(node: Computation) {
   node._state = STATE_DISPOSED;
   if (node._disposal) emptyDisposal(node);
   if (node._sources) removeSourceObservers(node, 0);
-  node[SCOPE] = null;
+  node._parent = null;
   node._sources = null;
   node._observers = null;
   node._children = null;
@@ -345,7 +344,7 @@ export function write(this: Computation, newValue: any): any {
 }
 
 const ScopeNode = function Scope(this: Scope) {
-  this[SCOPE] = null;
+  this._parent = null;
   this._children = null;
   if (currentScope) currentScope.append(this);
 };
@@ -357,7 +356,7 @@ ScopeProto._compute = null;
 ScopeProto._disposal = null;
 
 ScopeProto.append = function (this: Scope, child: Scope) {
-  child[SCOPE] = this;
+  child._parent = this;
 
   if (!this._children) {
     this._children = child;
@@ -444,7 +443,7 @@ function updateCheck(node: Computation) {
 function cleanup(node: Computation) {
   if (node._children) dispose.call(node, false);
   if (node._disposal) emptyDisposal(node);
-  node._handlers = node[SCOPE] ? node[SCOPE]._handlers : null;
+  node._handlers = node._parent ? node._parent._handlers : null;
 }
 
 export function update(node: Computation) {

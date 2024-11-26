@@ -1,5 +1,3 @@
-import type { SCOPE } from './symbols';
-
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
@@ -51,7 +49,8 @@ export interface NextValue<T> {
 }
 
 export interface Scope {
-  [SCOPE]: Scope | null;
+  /** @internal */
+  _parent: Scope | null;
   /** @internal */
   _state: number;
   /** @internal */
