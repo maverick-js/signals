@@ -165,6 +165,7 @@ it('should dispose correctly on appended scopes', () => {
 
   scopeA.append(scopeB);
   scopeB.dispose();
+
   expect(disposals).toMatchInlineSnapshot(`
     [
       "b_effect_two",
@@ -174,6 +175,7 @@ it('should dispose correctly on appended scopes', () => {
   `);
 
   scopeA.dispose();
+
   expect(disposals).toMatchInlineSnapshot(`
     [
       "b_effect_two",

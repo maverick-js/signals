@@ -14,7 +14,8 @@ let scheduledEffects = false,
   currentObservers: Computation[] | null = null,
   currentObserversIndex = 0,
   effects: Computation[] = [],
-  defaultContext = {};
+  defaultContext = {},
+  isArray = Array.isArray;
 
 const NOOP = () => {},
   // For more information about this graph tracking scheme see Reactively:
@@ -194,29 +195,34 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 export function dispose(this: Scope, self = true) {
   if (this._state === STATE_DISPOSED) return;
 
-  if (this._children) {
-    if (Array.isArray(this._children)) {
-      for (let i = this._children.length - 1; i >= 0; i--) {
-        dispose.call(this._children[i]);
-      }
-    } else {
-      dispose.call(this._children);
-    }
-  }
+  let parents: Scope[] = [this],
+    children: Scope[] = [],
+    parent = this,
+    current = this._nextSibling,
+    head = self ? this._prevSibling : this;
 
-  if (self) {
-    const parent = this._parent;
+  main: do {
+    parent = parents.pop()!;
 
-    if (parent) {
-      if (Array.isArray(parent._children)) {
-        parent._children.splice(parent._children.indexOf(this), 1);
+    while (current && current._parent === parent) {
+      if (current._nextSibling?._parent === current) {
+        parents.push(parent, current);
+        current = current._nextSibling;
+        continue main;
       } else {
-        parent._children = null;
+        children.push(current);
+        current = current._nextSibling;
       }
     }
 
-    disposeNode(this as Computation);
-  }
+    children.push(parent);
+  } while (parents.length);
+
+  const stop = children.length - (self ? 0 : 1);
+  for (let i = 0; i < stop; i++) disposeNode(children[i] as Computation);
+
+  if (head) head._nextSibling = current;
+  if (current) current._prevSibling = head;
 }
 
 function disposeNode(node: Computation) {
@@ -226,7 +232,8 @@ function disposeNode(node: Computation) {
   node._parent = null;
   node._sources = null;
   node._observers = null;
-  node._children = null;
+  node._prevSibling = null;
+  node._nextSibling = null;
   node._context = defaultContext;
   node._handlers = null;
 }
@@ -345,7 +352,8 @@ export function write(this: Computation, newValue: any): any {
 
 const ScopeNode = function Scope(this: Scope) {
   this._parent = null;
-  this._children = null;
+  this._prevSibling = null;
+  this._nextSibling = null;
   if (currentScope) currentScope.append(this);
 };
 
@@ -357,14 +365,21 @@ ScopeProto._disposal = null;
 
 ScopeProto.append = function (this: Scope, child: Scope) {
   child._parent = this;
+  child._prevSibling = this;
 
-  if (!this._children) {
-    this._children = child;
-  } else if (Array.isArray(this._children)) {
-    this._children.push(child);
-  } else {
-    this._children = [this._children, child];
+  if (this._nextSibling) {
+    if (child._nextSibling) {
+      let tail = child._nextSibling;
+      while (tail._nextSibling) tail = tail._nextSibling;
+      this._nextSibling._prevSibling = tail;
+      tail._nextSibling = this._nextSibling;
+    } else {
+      child._nextSibling = this._nextSibling;
+      this._nextSibling._prevSibling = child;
+    }
   }
+
+  this._nextSibling = child;
 
   child._context =
     child._context === defaultContext ? this._context : { ...this._context, ...child._context };
@@ -441,7 +456,7 @@ function updateCheck(node: Computation) {
 }
 
 function cleanup(node: Computation) {
-  if (node._children) dispose.call(node, false);
+  if (node._nextSibling?._parent === node) dispose.call(node, false);
   if (node._disposal) emptyDisposal(node);
   node._handlers = node._parent ? node._parent._handlers : null;
 }

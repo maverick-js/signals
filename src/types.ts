@@ -56,7 +56,9 @@ export interface Scope {
   /** @internal */
   _compute: unknown;
   /** @internal */
-  _children: Scope | Scope[] | null;
+  _nextSibling: Scope | null;
+  /** @internal */
+  _prevSibling: Scope | null;
   /** @internal */
   _context: ContextRecord | null;
   /** @internal */
