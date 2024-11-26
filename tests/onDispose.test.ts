@@ -89,16 +89,22 @@ it('should dispose all roots', () => {
 
     root(() => {
       onDispose(() => disposals.push('s1'));
-      effect(() => onDispose(() => disposals.push('s1_effect_1')));
-      effect(() => onDispose(() => disposals.push('s1_effect_2')));
-      effect(() => onDispose(() => disposals.push('s1_effect_3')));
+
+      effect(() => {
+        onDispose(() => disposals.push('s1_1'));
+        effect(() => onDispose(() => disposals.push('s1_1_1')));
+        effect(() => onDispose(() => disposals.push('s1_1_2')));
+      });
+
+      effect(() => onDispose(() => disposals.push('s1_2')));
+      effect(() => onDispose(() => disposals.push('s1_3')));
     });
 
     root(() => {
       onDispose(() => disposals.push('s2'));
-      effect(() => onDispose(() => disposals.push('s2_effect_1')));
-      effect(() => onDispose(() => disposals.push('s2_effect_2')));
-      effect(() => onDispose(() => disposals.push('s2_effect_3')));
+      effect(() => onDispose(() => disposals.push('s2_1')));
+      effect(() => onDispose(() => disposals.push('s2_2')));
+      effect(() => onDispose(() => disposals.push('s2_3')));
     });
 
     return dispose;
@@ -107,13 +113,15 @@ it('should dispose all roots', () => {
   dispose();
   expect(disposals).toMatchInlineSnapshot(`
     [
-      "s2_effect_3",
-      "s2_effect_2",
-      "s2_effect_1",
+      "s2_3",
+      "s2_2",
+      "s2_1",
       "s2",
-      "s1_effect_3",
-      "s1_effect_2",
-      "s1_effect_1",
+      "s1_3",
+      "s1_2",
+      "s1_1_2",
+      "s1_1_1",
+      "s1_1",
       "s1",
       "root_2",
       "root",
