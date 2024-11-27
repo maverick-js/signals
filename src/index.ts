@@ -11,7 +11,7 @@ export {
   update,
   updateIfNeeded,
   write,
-} from './computation';
+} from './compute';
 export { dispose, onDispose } from './dispose';
 export { getContext, setContext } from './context';
 export { getScope, createScope } from './scope';

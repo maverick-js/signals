@@ -1,4 +1,4 @@
-import { isFunction } from './computation';
+import { isFunction } from './compute';
 import { NOOP, STATE_DISPOSED } from './constants';
 import { handleError } from './error';
 import { currentScope, defaultContext } from './scope';

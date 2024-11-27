@@ -1,7 +1,7 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
 import { createReadSignal, scoped } from './api';
-import { compute, createComputation } from './computation';
+import { compute, createComputation } from './compute';
 import { dispose } from './dispose';
 import { createScope } from './scope';
 import type { Computation, Maybe, ReadSignal, Scope } from './types';

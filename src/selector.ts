@@ -1,4 +1,4 @@
-import { isNotEqual, read, write } from './computation';
+import { isNotEqual, read, write } from './compute';
 import { dispose, onDispose } from './dispose';
 import { createReadSignal, effect } from './api';
 import type { Computation, ReadSignal } from './types';

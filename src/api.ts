@@ -6,7 +6,7 @@ import {
   read,
   update,
   write,
-} from './computation';
+} from './compute';
 import { TYPE_EFFECT } from './constants';
 import { dispose, onDispose } from './dispose';
 import { handleError } from './error';
