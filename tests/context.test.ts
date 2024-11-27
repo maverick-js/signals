@@ -1,4 +1,4 @@
-import { effect, getContext, getScope, root, Scope, setContext } from '../src';
+import { effect, getContext, getScope, root, type Scope, setContext } from '../src';
 
 it('should get context value', () => {
   const key = Symbol();

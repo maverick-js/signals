@@ -1,19 +1,21 @@
 export {
-  getContext,
-  getScope,
-  onDispose,
-  onError,
-  peek,
-  root,
-  scoped,
-  setContext,
-  tick,
+  compute,
+  createComputation,
   flushSync,
-  untrack,
+  isDirty,
   isFunction,
   isNotEqual,
-  createScope,
-  createComputation,
-} from './core';
-export * from './signals';
-export * from './types';
+  read,
+  reset,
+  tick,
+  update,
+  updateIfNeeded,
+  write,
+} from './computation';
+export { dispose, onDispose } from './dispose';
+export { getContext, setContext } from './context';
+export { getScope, createScope } from './scope';
+export { onError } from './error';
+
+export * from './api';
+export type * from './types';

@@ -1,4 +1,4 @@
-import { effect, flushSync, onDispose, root, createScope, scoped, getScope } from '../src';
+import { effect, flushSync, onDispose, root, createScope, scoped } from '../src';
 
 afterEach(() => flushSync());
 

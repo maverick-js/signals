@@ -1,29 +1,30 @@
-import { isNotEqual, onDispose, read, write } from './core';
-import { effect } from './signals';
-import { Computation, ReadSignal } from './types';
+import { isNotEqual, read, write } from './computation';
+import { dispose, onDispose } from './dispose';
+import { createReadSignal, effect } from './api';
+import type { Computation, ReadSignal } from './types';
 
-export interface SelectorSignal<T> {
-  (key: T): ReadSignal<Boolean>;
+export interface SelectorSignal<Key> {
+  (key: Key): ReadSignal<Boolean>;
 }
 
 /**
  * Creates a signal that observes the given `source` and returns a new signal who only notifies
  * observers when entering or exiting a specified key.
  */
-export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
-  let currentKey: T | undefined,
-    nodes = new Map<T, Selector<T>>();
+export function selector<Key>(source: ReadSignal<Key>): SelectorSignal<Key> {
+  let currentKey: Key | undefined,
+    nodes = new Map<Key, Selector<Key>>();
 
   effect(() => {
     const newKey = source(),
       prev = nodes.get(currentKey!),
       next = nodes.get(newKey);
-    prev && write.call(prev, false);
-    next && write.call(next, true);
+    prev && prev.write(false);
+    next && next.write(true);
     currentKey = newKey;
   });
 
-  return function observeSelector(key: T) {
+  return function observeSelector(key: Key) {
     let node = nodes.get(key);
 
     if (!node) nodes.set(key, (node = new Selector(key, key === currentKey, nodes)));
@@ -31,19 +32,23 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     node!._refs += 1;
     onDispose(node);
 
-    return read.bind(node!);
+    return createReadSignal(node!);
   };
 }
 
-interface Selector<T = any> extends Computation {
-  _key: T;
+interface Selector<Key = any> extends Computation<boolean> {
+  _key: Key;
   _value: boolean;
-  _nodes: Map<T, Selector> | null;
+  _nodes: Map<Key, Selector> | null;
   _refs: number;
-  call(): void;
 }
 
-function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Map<T, Selector>) {
+function Selector<Key>(
+  this: Selector<Key>,
+  key: Key,
+  initialValue: boolean,
+  nodes: Map<Key, Selector>,
+) {
   this._state = /** CLEAN */ 0;
   this._key = key;
   this._value = initialValue;
@@ -53,11 +58,19 @@ function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Ma
 }
 
 const SelectorProto = Selector.prototype;
-SelectorProto._changed = isNotEqual;
+
 SelectorProto.call = function (this: Selector) {
   this._refs -= 1;
+
   if (!this._refs) {
     this._nodes!.delete(this._key);
     this._nodes = null;
   }
+
+  return this._value;
 };
+
+SelectorProto._changed = isNotEqual;
+SelectorProto.read = read;
+SelectorProto.write = write;
+SelectorProto.dispose = dispose;

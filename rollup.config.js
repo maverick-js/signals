@@ -11,8 +11,8 @@ const mangleCache = {
   _handlers: '$h',
   _init: '$i',
   _key: '$k',
-  _nextSibling: '$f',
-  _prevSibling: '$l',
+  _next: '$b',
+  _prev: '$l',
   _nodes: '$n',
   _observers: '$o',
   _refs: '$r',
@@ -31,7 +31,7 @@ export default defineConfig([
 /** @returns {import('rollup').RollupOptions} */
 function define({ dev = false }) {
   return {
-    input: ['src/index.ts', 'src/core.ts', 'src/signals.ts', 'src/map.ts', 'src/symbols.ts'],
+    input: ['src/index.ts', 'src/map.ts'],
     treeshake: true,
     output: {
       format: 'esm',

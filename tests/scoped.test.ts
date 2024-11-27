@@ -1,4 +1,4 @@
-import { getContext, root, setContext, getScope, scoped, Scope, onError } from '../src';
+import { getContext, root, setContext, getScope, scoped, type Scope, onError } from '../src';
 
 it('should scope function to current scope', () => {
   let scope!: Scope | null;

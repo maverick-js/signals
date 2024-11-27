@@ -1,6 +1,9 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { compute, createComputation, createScope, dispose, read, scoped, write } from './core';
+import { createReadSignal, scoped } from './api';
+import { compute, createComputation } from './computation';
+import { dispose } from './dispose';
+import { createScope } from './scope';
 import type { Computation, Maybe, ReadSignal, Scope } from './types';
 
 export * from './selector';
@@ -19,7 +22,7 @@ export function computedMap<Item, MappedItem>(
   map: (value: ReadSignal<Item>, index: number) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
+  return createReadSignal(
     createComputation<MappedItem[]>(
       [],
       updateMap.bind({
@@ -39,7 +42,7 @@ export function computedMap<Item, MappedItem>(
 function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
   let i = 0,
     newItems = this._list() || [],
-    mapper = () => this._map(read.bind(this._nodes[i]), i);
+    mapper = () => this._map(createReadSignal(this._nodes[i]), i);
 
   scoped(() => {
     if (newItems.length === 0) {
@@ -56,7 +59,7 @@ function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
 
     for (i = 0; i < newItems.length; i++) {
       if (i < this._items.length && this._items[i] !== newItems[i]) {
-        write.call(this._nodes[i], newItems[i]);
+        this._nodes[i].write(newItems[i]);
       } else if (i >= this._items.length) {
         this._mappings[i] = compute<MappedItem>(
           (this._nodes[i] = createComputation(newItems[i], null)),
@@ -91,7 +94,7 @@ export function computedKeyedMap<Item, MappedItem>(
   map: (value: Item, index: ReadSignal<number>) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
+  return createReadSignal(
     createComputation<MappedItem[]>(
       [],
       updateKeyedMap.bind({
@@ -117,7 +120,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
       i: number,
       j: number,
       mapper = indexed
-        ? () => this._map(newItems[j], read.bind(this._nodes[j]))
+        ? () => this._map(newItems[j], createReadSignal(this._nodes[j]))
         : () => (this._map as (value: Item) => MappedItem)(newItems[j]);
 
     // fast path for empty arrays
@@ -198,7 +201,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
         if (j in temp) {
           this._mappings[j] = temp[j];
           this._nodes[j] = tempNodes[j];
-          write.call(this._nodes[j], j);
+          this._nodes[j].write(j);
         } else {
           this._mappings[j] = compute<MappedItem>(
             (this._nodes[j] = createComputation(j, null)),

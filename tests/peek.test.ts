@@ -1,4 +1,4 @@
-import { computed, signal, peek, effect, flushSync, onDispose, root, getScope } from '../src';
+import { computed, signal, peek, effect, flushSync, onDispose, root } from '../src';
 
 afterEach(() => flushSync());
 

@@ -17,6 +17,7 @@
     "noImplicitReturns": true,
     "noUnusedParameters": false,
     "preserveWatchOutput": true,
+    "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "sourceMap": false,
     "strict": true,

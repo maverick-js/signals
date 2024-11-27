@@ -1,11 +1,13 @@
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
-  /** @internal */
-  _effect: boolean;
-  /** @internal */
-  _init: boolean;
+  get value(): T;
+  set value(newValue: T);
 
+  /** @internal The effect type. */
+  _effect: number;
+  /** @internal Whether the derived has been initialized. */
+  _init: boolean;
   /** @internal */
   _value: T;
   /** @internal */
@@ -17,8 +19,24 @@ export interface Computation<T = any> extends Scope {
   _compute: (() => T) | null;
   /** @internal */
   _changed: (prev: T, next: T) => boolean;
-  /** read */
+
   call(this: Computation<T>): T;
+
+  /**
+   * Reads the current value of the computation and notifies the parent computation that this
+   * computation is being used.
+   */
+  read(): T;
+
+  /**
+   * Writes the new value of the computation. If the value has changed it will notify all observers.
+   */
+  write(value: T | NextValue<T>): T;
+
+  /**
+   * Disposes the computation, its observers, and its children.
+   */
+  dispose(): void;
 }
 
 export interface ReadSignal<T> {
@@ -56,16 +74,30 @@ export interface Scope {
   /** @internal */
   _compute: unknown;
   /** @internal */
-  _nextSibling: Scope | null;
+  _next: Scope | null;
   /** @internal */
-  _prevSibling: Scope | null;
+  _prev: Scope | null;
   /** @internal */
   _context: ContextRecord | null;
   /** @internal */
   _handlers: ErrorHandler<any>[] | null;
   /** @internal */
   _disposal: Disposable | Disposable[] | null;
+
+  /**
+   * Append child scope.
+   */
   append(scope: Scope): void;
+
+  /**
+   * Walks the scope tree (bottom-up) and runs the given callback for each child scope. The tail
+   * scope is returned that does not belong to the given scope root.
+   */
+  walk(callback: (child: Scope) => void): Scope | null;
+
+  /**
+   * Disposes the scope and its children.
+   */
   dispose(): void;
 }
 
