@@ -13,6 +13,7 @@ it('should be invoked when computation is disposed', () => {
     onDispose(callback3);
   });
 
+  flushSync();
   stop();
 
   expect(callback1).toHaveBeenCalled();
@@ -27,6 +28,8 @@ it('should clear disposal early', () => {
     const early = onDispose(dispose);
     early();
   });
+
+  flushSync();
 
   expect(dispose).toHaveBeenCalledTimes(1);
 
@@ -110,6 +113,8 @@ it('should dispose all roots', () => {
     return dispose;
   });
 
+  flushSync();
+
   dispose();
   expect(disposals).toMatchInlineSnapshot(`
     [
@@ -162,6 +167,8 @@ it('should dispose correctly on appended scopes', () => {
       };
     });
   }, scopeB);
+
+  flushSync();
 
   scopeA.append(scopeB);
   scopeB.dispose();

@@ -1,4 +1,13 @@
-import { compute, createComputation, isFunction, update } from './computation';
+import {
+  compute,
+  createComputation,
+  isFunction,
+  queueEffect,
+  read,
+  update,
+  write,
+} from './computation';
+import { TYPE_EFFECT } from './constants';
 import { dispose, onDispose } from './dispose';
 import { handleError } from './error';
 import { createScope, currentScope } from './scope';
@@ -7,6 +16,7 @@ import type {
   ComputedSignalOptions,
   Dispose,
   Effect,
+  EffectOptions,
   MaybeSignal,
   ReadSignal,
   Scope,
@@ -104,31 +114,47 @@ export function computed<T, R = never>(
 
 /**
  * Invokes the given function each time any of the signals that are read inside are updated
- * (i.e., their value changes). The effect is immediately invoked on initialization.
+ * (i.e., their value changes). Updates are queued and run asynchronously on the microtask queue.
+ *
+ * The first run is also queued, if you'd like to run immediately, pass `true` as the
+ * second argument.
  *
  * @see {@link https://github.com/maverick-js/signals#effect}
  */
-export function effect(effect: Effect, options?: { id?: string }): StopEffect {
+export function effect(compute: Effect, immediate?: boolean, options?: EffectOptions): StopEffect {
   const node = createComputation<null>(
     null,
     function runEffect() {
-      let effectResult = effect();
+      let effectResult = compute();
       isFunction(effectResult) && onDispose(effectResult);
       return null;
     },
-    __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
+    __DEV__ ? { id: options?.id ?? 'effect' } : options,
   );
 
-  node._effect = 1;
-  update(node);
+  node._type |= TYPE_EFFECT;
+
+  if (!immediate) {
+    queueEffect(node);
+  } else {
+    update(node);
+  }
 
   if (__DEV__) {
     return function stopEffect() {
-      dispose.call(node, true);
+      node.dispose();
     };
   }
 
-  return dispose.bind(node, true);
+  return dispose.bind(node);
+}
+
+/**
+ * Invokes the given function immediately and each time any of the signals that are read inside
+ * are updated (i.e., their value changes). This function is shorthand for `effect(compute, true)`.
+ */
+export function immediateEffect(compute: Effect, options?: EffectOptions) {
+  return effect(compute, true, options);
 }
 
 /**
@@ -154,7 +180,7 @@ export function isWriteSignal<T>(fn: MaybeSignal<T>): fn is WriteSignal<T> {
 }
 
 export function createReadSignal<T>(node: Computation<T>): ReadSignal<T> {
-  const signal = node.read.bind(node) as ReadSignal<T>;
+  const signal = read.bind<any>(node) as ReadSignal<T>;
   signal[SIGNAL_SYMBOL] = true;
   if (__DEV__) signal.node = node;
   return signal;
@@ -162,6 +188,6 @@ export function createReadSignal<T>(node: Computation<T>): ReadSignal<T> {
 
 export function createWriteSignal<T>(node: Computation<T>): WriteSignal<T> {
   const signal = createReadSignal(node) as WriteSignal<T>;
-  signal.set = node.write.bind(node) as WriteSignal<T>['set'];
+  signal.set = write.bind<any>(node) as WriteSignal<T>['set'];
   return signal;
 }

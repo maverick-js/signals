@@ -86,6 +86,8 @@ it('should notify observer', () => {
   effect($effect);
 
   source.set((prev) => prev.slice(1));
+
   flushSync();
-  expect($effect).toHaveBeenCalledTimes(2);
+
+  expect($effect).toHaveBeenCalledTimes(1);
 });

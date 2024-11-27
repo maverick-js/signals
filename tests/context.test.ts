@@ -1,4 +1,4 @@
-import { effect, getContext, getScope, root, type Scope, setContext } from '../src';
+import { effect, flushSync, getContext, getScope, root, type Scope, setContext } from '../src';
 
 it('should get context value', () => {
   const key = Symbol();
@@ -33,11 +33,14 @@ it('should use provided scope', () => {
 
   root(() => {
     scope = getScope()!;
+
     root(() => {
       effect(() => {
         setContext(key, 200, scope);
       });
     });
+
+    flushSync();
   });
 
   root(() => {

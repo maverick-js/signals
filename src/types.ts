@@ -1,11 +1,6 @@
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
-  get value(): T;
-  set value(newValue: T);
-
-  /** @internal The effect type. */
-  _effect: number;
   /** @internal Whether the derived has been initialized. */
   _init: boolean;
   /** @internal */
@@ -68,6 +63,8 @@ export interface NextValue<T> {
 
 export interface Scope {
   /** @internal */
+  _type: number;
+  /** @internal */
   _parent: Scope | null;
   /** @internal */
   _state: number;
@@ -106,6 +103,10 @@ export interface Dispose {
 }
 
 export interface Disposable extends Callable {}
+
+export interface EffectOptions {
+  id?: string;
+}
 
 export interface Effect {
   (): MaybeStopEffect;

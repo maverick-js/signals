@@ -1,4 +1,11 @@
-import { STATE_CHECK, STATE_CLEAN, STATE_DIRTY, STATE_DISPOSED } from './constants';
+import {
+  STATE_CHECK,
+  STATE_CLEAN,
+  STATE_DIRTY,
+  STATE_DISPOSED,
+  TYPE_EFFECT,
+  TYPE_REACTION,
+} from './constants';
 import { currentScope, ScopeNode, ScopeProto, setCurrentScope } from './scope';
 import type { Callable, Computation, ComputedSignalOptions, Scope } from './types';
 import { dispose, emptyDisposal, removeSourceObservers } from './dispose';
@@ -29,27 +36,22 @@ const ComputeNode = function Computation(
 
   this._state = compute ? STATE_DIRTY : STATE_CLEAN;
   this._init = false;
-  this._effect = 0;
   this._sources = null;
   this._observers = null;
   this._value = initialValue;
 
   if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
-  if (compute) this._compute = compute;
+
+  if (compute) {
+    this._type |= TYPE_REACTION;
+    this._compute = compute;
+  }
+
   if (options && options.dirty) this._changed = options.dirty;
 };
 
 const ComputeProto: Computation = ComputeNode.prototype;
 Object.setPrototypeOf(ComputeProto, ScopeProto);
-
-Object.defineProperty(ComputeProto, 'value', {
-  get(this: Computation) {
-    return this.read();
-  },
-  set(this: Computation, newValue: any) {
-    this.write(newValue);
-  },
-});
 
 ComputeProto._changed = isNotEqual;
 ComputeProto.call = read;
@@ -60,7 +62,7 @@ ComputeProto.dispose = dispose;
 export function read<T>(this: Computation<T>): T {
   if (this._state === STATE_DISPOSED) return this._value;
 
-  if (currentObserver && !this._effect) {
+  if (currentObserver && (this._type & TYPE_EFFECT) === 0) {
     if (
       !currentObservers &&
       currentObserver._sources &&
@@ -139,7 +141,7 @@ export function update(node: Computation) {
 
     updateObservers(node);
 
-    if (!node._effect && node._init) {
+    if ((node._type & TYPE_EFFECT) === 0 && node._init) {
       node.write(result);
     } else {
       node._value = result;
@@ -191,12 +193,16 @@ function updateObservers(node: Computation) {
   }
 }
 
+export function queueEffect(node: Computation) {
+  effects.push(node);
+  if (!scheduledEffects) flushEffects();
+}
+
 function notifyObservers(node: Computation, state: number) {
   if (node._state >= state) return;
 
-  if (node._effect && node._state === STATE_CLEAN) {
-    effects.push(node);
-    if (!scheduledEffects) flushEffects();
+  if (node._type & TYPE_EFFECT && node._state === STATE_CLEAN) {
+    queueEffect(node);
   }
 
   node._state = state;
@@ -211,7 +217,7 @@ export function isNotEqual(a: unknown, b: unknown) {
   return a !== b;
 }
 
-function flushEffects() {
+export function flushEffects() {
   scheduledEffects = true;
   queueMicrotask(runEffects);
 }
@@ -237,7 +243,7 @@ function runTop(node: Computation<any>) {
   let ancestors = [node];
 
   while ((node = node._parent as Computation<any>)) {
-    if (node._effect && node._state !== STATE_CLEAN) ancestors.push(node);
+    if (node._type & TYPE_EFFECT && node._state !== STATE_CLEAN) ancestors.push(node);
   }
 
   for (let i = ancestors.length - 1; i >= 0; i--) {

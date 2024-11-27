@@ -1,3 +1,4 @@
+import { TYPE_ROOT } from './constants';
 import { dispose } from './dispose';
 import type { Scope } from './types';
 
@@ -23,6 +24,7 @@ export function createScope(): Scope {
 }
 
 export const ScopeNode = function Scope(this: Scope) {
+  this._type = TYPE_ROOT;
   this._parent = null;
   this._prev = null;
   this._next = null;

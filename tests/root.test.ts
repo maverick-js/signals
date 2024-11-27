@@ -66,6 +66,11 @@ it('should create new tracking scope', () => {
     });
   });
 
+  expect(innerEffect).not.toHaveBeenCalledWith(0);
+  expect(innerEffect).toHaveBeenCalledTimes(0);
+
+  flushSync();
+
   expect(innerEffect).toHaveBeenCalledWith(0);
   expect(innerEffect).toHaveBeenCalledTimes(1);
 
@@ -73,6 +78,7 @@ it('should create new tracking scope', () => {
 
   $a.set(10);
   flushSync();
+
   expect(innerEffect).not.toHaveBeenCalledWith(10);
   expect(innerEffect).toHaveBeenCalledTimes(1);
 });

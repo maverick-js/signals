@@ -12,9 +12,9 @@ it('should batch updates', () => {
   $a.set(30);
   $a.set(40);
 
-  expect($effect).to.toHaveBeenCalledTimes(1);
+  expect($effect).to.toHaveBeenCalledTimes(0);
   flushSync();
-  expect($effect).to.toHaveBeenCalledTimes(2);
+  expect($effect).to.toHaveBeenCalledTimes(1);
 });
 
 it('should wait for queue to flush', () => {
@@ -23,15 +23,15 @@ it('should wait for queue to flush', () => {
 
   effect($effect);
 
-  expect($effect).to.toHaveBeenCalledTimes(1);
+  expect($effect).to.toHaveBeenCalledTimes(0);
 
   $a.set(20);
   flushSync();
-  expect($effect).to.toHaveBeenCalledTimes(2);
+  expect($effect).to.toHaveBeenCalledTimes(1);
 
   $a.set(30);
   flushSync();
-  expect($effect).to.toHaveBeenCalledTimes(3);
+  expect($effect).to.toHaveBeenCalledTimes(2);
 });
 
 it('should not fail if called while flushing', () => {
@@ -45,9 +45,10 @@ it('should not fail if called while flushing', () => {
     $effect();
   });
 
-  expect($effect).to.toHaveBeenCalledTimes(1);
+  expect($effect).to.toHaveBeenCalledTimes(0);
 
   $a.set(20);
   flushSync();
-  expect($effect).to.toHaveBeenCalledTimes(2);
+
+  expect($effect).to.toHaveBeenCalledTimes(1);
 });

@@ -20,6 +20,10 @@ it('should not create dependency', () => {
     expect(peek($c)).toBe(30);
   });
 
+  expect(effectA).toHaveBeenCalledTimes(0);
+
+  flushSync();
+
   expect(effectA).toHaveBeenCalledTimes(1);
   expect(computeC).toHaveBeenCalledTimes(1);
 
@@ -47,24 +51,31 @@ it('should not affect deep dependency being created', () => {
     expect(peek($d)).toBe(40);
   });
 
+  expect(effectA).toHaveBeenCalledTimes(0);
+
+  flushSync();
+
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(40);
   expect(computeD).toHaveBeenCalledTimes(1);
 
   $a.set(20);
   flushSync();
+
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
 
   $b.set(20);
   flushSync();
+
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
 
   $c.set(20);
   flushSync();
+
   expect(effectA).toHaveBeenCalledTimes(1);
   expect($d()).toBe(50);
   expect(computeD).toHaveBeenCalledTimes(2);
@@ -78,6 +89,7 @@ it('should track parent across peeks', () => {
 
   function child() {
     const $b = computed(() => $a() * 2, { id: '$b' });
+
     effect(() => {
       childCompute($b());
       onDispose(childDispose);
@@ -92,13 +104,13 @@ it('should track parent across peeks', () => {
   $a.set(1);
   flushSync();
   expect(childCompute).toHaveBeenCalledWith(2);
-  expect(childDispose).toHaveBeenCalledTimes(1);
+  expect(childDispose).toHaveBeenCalledTimes(0);
 
   dispose();
-  expect(childDispose).toHaveBeenCalledTimes(2);
+  expect(childDispose).toHaveBeenCalledTimes(1);
 
   $a.set(2);
   flushSync();
   expect(childCompute).not.toHaveBeenCalledWith(4);
-  expect(childDispose).toHaveBeenCalledTimes(2);
+  expect(childDispose).toHaveBeenCalledTimes(1);
 });

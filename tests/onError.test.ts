@@ -8,6 +8,8 @@ it('should let errors bubble up when not handled', () => {
         throw error;
       });
     });
+
+    flushSync();
   }).toThrowError(error);
 });
 
@@ -20,6 +22,8 @@ it('should handle error', () => {
       onError(handler);
       throw error;
     });
+
+    flushSync();
   });
 
   expect(handler).toHaveBeenCalledWith(error);
@@ -36,6 +40,8 @@ it('should throw error if there are no handlers left', () => {
       onError(handler);
       throw error;
     });
+
+    flushSync();
   }).toThrow(error);
 
   expect(handler).toHaveBeenCalledWith(error);
@@ -61,6 +67,8 @@ it('should forward error to another handler', () => {
         throw error;
       });
     });
+
+    flushSync();
   });
 
   expect(handler).toHaveBeenCalledWith(error);
@@ -86,12 +94,15 @@ it('should not duplicate error handler', () => {
     });
   });
 
+  flushSync();
+
   $a.set(1);
   flushSync();
 
   shouldThrow = true;
   $a.set(2);
   flushSync();
+
   expect(handler).toHaveBeenCalledTimes(1);
 });
 
@@ -133,6 +144,8 @@ it('should not coerce error', () => {
       onError(handler);
       throw error;
     });
+
+    flushSync();
   });
 
   expect(handler).toHaveBeenCalledWith(error);

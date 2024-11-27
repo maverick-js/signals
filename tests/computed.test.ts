@@ -156,18 +156,18 @@ it('should accept dirty option', () => {
   });
 
   expect($b()).toBe(0);
-  expect(effectA).toHaveBeenCalledTimes(1);
+  expect(effectA).toHaveBeenCalledTimes(0);
 
   $a.set(2);
   flushSync();
   expect($b()).toBe(2);
-  expect(effectA).toHaveBeenCalledTimes(2);
+  expect(effectA).toHaveBeenCalledTimes(1);
 
   // no-change
   $a.set(3);
   flushSync();
   expect($b()).toBe(2);
-  expect(effectA).toHaveBeenCalledTimes(2);
+  expect(effectA).toHaveBeenCalledTimes(1);
 });
 
 it('should use fallback if error is thrown during init', () => {

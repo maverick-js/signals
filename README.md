@@ -207,7 +207,7 @@ const $e = computed(() => $d());
 ### `effect`
 
 Invokes the given function each time any of the signals that are read inside are updated
-(i.e., their value changes). The effect is immediately invoked on initialization.
+(i.e., their value changes).
 
 ```js
 import { signal, computed, effect } from '@maverick-js/signals';
@@ -232,6 +232,15 @@ effect(() => {
     // Called each time effect re-runs and when disposed of.
   };
 });
+```
+
+By default, the effect is queued asynchronously on the first run. Pass `true` as the second argument
+to run immediately:
+
+```js
+effect(() => {
+  // ...
+}, true);
 ```
 
 ### `peek`

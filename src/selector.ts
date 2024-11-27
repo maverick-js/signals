@@ -22,7 +22,7 @@ export function selector<Key>(source: ReadSignal<Key>): SelectorSignal<Key> {
     prev && prev.write(false);
     next && next.write(true);
     currentKey = newKey;
-  });
+  }, true);
 
   return function observeSelector(key: Key) {
     let node = nodes.get(key);
