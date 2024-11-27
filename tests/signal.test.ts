@@ -1,4 +1,4 @@
-import { computed, signal, flushSync } from '../src';
+import { signal, flushSync } from '../src';
 
 afterEach(() => flushSync());
 

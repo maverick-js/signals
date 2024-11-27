@@ -580,10 +580,10 @@ const $foo = signal(10, { id: 'foo' });
 import {
   isReadSignal,
   isWriteSignal,
+  type Scope,
   type Effect,
   type ReadSignal,
   type WriteSignal,
-  type MaybeSignal,
 } from '@maverick-js/signals';
 
 // Types
@@ -594,13 +594,11 @@ const effect: Effect;
 // Provide generic if TS fails to infer correct type.
 const $a = computed<string>(() => /* ... */);
 
-const $b: MaybeSignal<number>;
-
-if (isReadSignal($b)) {
+if (isReadSignal<number>($b)) {
   $b(); // ReadSignal<number>
 }
 
-if (isWriteSignal($b)) {
+if (isWriteSignal<number>($b)) {
   $b.set(10); // WriteSignal<number>
 }
 ```

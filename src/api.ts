@@ -88,7 +88,7 @@ export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSig
  *
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
-export function isReadSignal<T>(fn: MaybeSignal<T>): fn is ReadSignal<T> {
+export function isReadSignal<T>(fn: unknown): fn is ReadSignal<T> {
   return isFunction(fn) && SIGNAL_SYMBOL in fn;
 }
 
@@ -175,7 +175,7 @@ export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
  *
  * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
-export function isWriteSignal<T>(fn: MaybeSignal<T>): fn is WriteSignal<T> {
+export function isWriteSignal<T>(fn: unknown): fn is WriteSignal<T> {
   return isReadSignal(fn) && 'set' in fn;
 }
 
