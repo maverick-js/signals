@@ -1,5 +1,8 @@
-import { currentScope } from './scope';
-import type { Scope } from './types';
+import { currentScope, type Scope } from './node/scope';
+
+export type ContextRecord = Record<string | symbol, unknown>;
+
+export const defaultContext = {};
 
 /**
  * Attempts to get a context value for the given key. It will start from the parent scope and

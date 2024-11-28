@@ -3,7 +3,7 @@
 import { createReadSignal, scoped } from './api';
 import { compute, createComputation } from './compute';
 import { dispose } from './dispose';
-import { createScope } from './scope';
+import { createScope } from './node/scope';
 import type { Computation, Maybe, ReadSignal, Scope } from './types';
 
 export * from './selector';

@@ -115,7 +115,7 @@ it('should not observe', () => {
   root(() => {
     $a();
     const scope = getScope() as Computation;
-    expect(scope._sources).toBeUndefined();
+    expect(scope._observables).toBeUndefined();
     expect(scope._observers).toBeUndefined();
   });
 });

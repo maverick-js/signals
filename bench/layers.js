@@ -105,7 +105,10 @@ async function main() {
 async function start(runner, layers) {
   return new Promise((done) => {
     runner(layers, done);
-  }).catch(() => -1);
+  }).catch((e) => {
+    console.log(e);
+    return -1;
+  });
 }
 
 /**
@@ -160,10 +163,10 @@ function runMaverick(layers, done) {
     for (let i = layers; i--; ) {
       layer = ((m) => {
         return {
-          a: maverick.computed(() => m.b()),
-          b: maverick.computed(() => m.a() - m.c()),
-          c: maverick.computed(() => m.b() + m.d()),
-          d: maverick.computed(() => m.c()),
+          a: maverick.computed(() => m.b.get()),
+          b: maverick.computed(() => m.a.get() - m.c.get()),
+          c: maverick.computed(() => m.b.get() + m.d.get()),
+          d: maverick.computed(() => m.c.get()),
         };
       })(layer);
     }
@@ -173,7 +176,7 @@ function runMaverick(layers, done) {
     start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1);
 
     const end = layer;
-    const solution = [end.a(), end.b(), end.c(), end.d()];
+    const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
     const endTime = performance.now() - startTime;
 
     dispose();
