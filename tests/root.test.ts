@@ -6,7 +6,7 @@ import {
   flushSync,
   getScope,
   type Computation,
-  type ReadSignal,
+  type Signal,
   type WriteSignal,
   onDispose,
 } from '../src';
@@ -17,7 +17,7 @@ it('should dispose of inner computations', () => {
   const computeB = vi.fn();
 
   let $a: WriteSignal<number>;
-  let $b: ReadSignal<number>;
+  let $b: Signal<number>;
 
   root((dispose) => {
     $a = signal(10);

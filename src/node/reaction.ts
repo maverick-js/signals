@@ -1,16 +1,25 @@
-import { queueEffect, updateReaction } from '../compute';
+import { queueEffect, read, updateReaction } from '../compute';
 import { onDispose } from '../dispose';
 import { FLAG_EFFECT, FLAG_EFFECT_INIT, FLAG_REACTION, FLAG_REACTION_INIT } from '../flags';
 import type { Maybe } from '../types';
 import { isFunction } from '../utils';
-import { destroyNode, isNode, type Node } from './node';
-import { Scope } from './scope';
-import { ReadSignal, type SignalOptions } from './signal';
+import { destroyNode, isNode, isNodeDead, killNode, type Node } from './node';
+import { appendChild, currentScope, Scope } from './scope';
+import type { ReadSignal } from './signal';
 
-export class Reaction<T = unknown> extends ReadSignal<T> {
+export class Reaction<T = unknown> implements ReadSignal<T> {
   /** @internal */
-  override f = FLAG_REACTION_INIT;
-
+  f = FLAG_REACTION_INIT;
+  /** @internal */
+  _value: T;
+  /** @internal */
+  _parent: Scope | null = null;
+  /** @internal */
+  _next: Node | null = null;
+  /** @internal */
+  _prev: Node | null = null;
+  /** @internal */
+  _reactions: Reaction[] | null = null;
   /** @internal */
   _scope = new Scope(this);
   /** @internal */
@@ -18,9 +27,16 @@ export class Reaction<T = unknown> extends ReadSignal<T> {
   /** @internal */
   _compute: () => T;
 
-  constructor(initialValue: T, compute: () => T, options?: SignalOptions<T>) {
-    super(initialValue, options);
+  constructor(initialValue: T, compute: () => T) {
+    this._value = initialValue;
     this._compute = compute;
+    if (currentScope) {
+      appendChild(currentScope, this);
+    }
+  }
+
+  get(): T {
+    return read(this);
   }
 
   reset() {
@@ -28,9 +44,11 @@ export class Reaction<T = unknown> extends ReadSignal<T> {
     this._scope.reset();
   }
 
-  override destroy() {
-    super.destroy();
+  destroy() {
+    if (isNodeDead(this)) return;
+    killNode(this);
     detachReaction(this, 0);
+    this._reactions = null;
     this._scope.destroy();
     this._signals = null;
   }
@@ -47,17 +65,17 @@ export function isReactionNode(node: Node): node is Reaction {
 }
 
 export function detachReaction(reaction: Reaction, index: number) {
-  let observables = reaction._signals;
-  if (!observables) return;
+  let signals = reaction._signals;
+  if (!signals) return;
 
-  let source: ReadSignal, swap: number;
+  let signal: ReadSignal, swap: number;
 
-  for (let i = index; i < observables.length; i++) {
-    source = observables[i];
-    if (source._reactions) {
-      swap = source._reactions.indexOf(reaction);
-      source._reactions[swap] = source._reactions[source._reactions.length - 1];
-      source._reactions.pop();
+  for (let i = index; i < signals.length; i++) {
+    signal = signals[i];
+    if (signal._reactions) {
+      swap = signal._reactions.indexOf(reaction);
+      signal._reactions[swap] = signal._reactions[signal._reactions.length - 1];
+      signal._reactions.pop();
     }
   }
 }

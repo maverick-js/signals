@@ -89,7 +89,6 @@ export function read<T>(signal: ReadSignal<T>): T {
 }
 
 export function write<T>(signal: ReadSignal<T>, value: T): T {
-  console.log(value);
   if (isNotEqual(signal._value, value)) {
     signal._value = value;
     if (signal._reactions) {
@@ -103,14 +102,9 @@ export function write<T>(signal: ReadSignal<T>, value: T): T {
 }
 
 export function updateIfNeeded(node: ReadSignal) {
-  if (!isReactionNode(node) || !isDirty(node)) return;
-  updateReaction(node);
-}
+  if (!isReactionNode(node)) return;
 
-export function isDirty(node: Reaction) {
-  if (!(node.f & FLAG_CLEAN)) {
-    return true;
-  } else if (node.f & FLAG_CHECK) {
+  if (node.f & FLAG_CHECK) {
     for (let i = 0; i < node._signals!.length; i++) {
       updateIfNeeded(node._signals![i]);
       if (!(node.f & FLAG_CLEAN)) {
@@ -122,9 +116,12 @@ export function isDirty(node: Reaction) {
     }
 
     node.f &= ~FLAG_CHECK;
-    return !(node.f & FLAG_CLEAN);
+  }
+
+  if (!(node.f & FLAG_CLEAN)) {
+    updateReaction(node);
   } else {
-    return false;
+    node.f |= FLAG_CLEAN;
   }
 }
 
@@ -170,11 +167,11 @@ function updateSignals(reaction: Reaction) {
       reaction._signals = currentSignals;
     }
 
-    let source: ReadSignal;
+    let signal: ReadSignal;
     for (let i = currentSignalsIndex; i < reaction._signals.length; i++) {
-      source = reaction._signals[i];
-      if (!source._reactions) source._reactions = [reaction];
-      else source._reactions.push(reaction);
+      signal = reaction._signals[i];
+      if (!signal._reactions) signal._reactions = [reaction];
+      else signal._reactions.push(reaction);
     }
   } else if (reaction._signals && currentSignalsIndex < reaction._signals.length) {
     detachReaction(reaction, currentSignalsIndex);
@@ -225,7 +222,9 @@ function runEffects() {
   isRunningEffects = true;
 
   for (let i = 0; i < effects.length; i++) {
-    if (!(effects[i].f & FLAG_CLEAN)) runTop(effects[i]);
+    if (effects[i].f & FLAG_CHECK || !(effects[i].f & FLAG_CLEAN)) {
+      runTop(effects[i]);
+    }
   }
 
   effects = [];
@@ -269,7 +268,7 @@ export function compute<T>(scope: Scope | null, compute: () => T, reaction: Reac
   currentReaction = reaction;
 
   try {
-    return compute.call(scope);
+    return compute();
   } finally {
     setScope(prevScope);
     currentReaction = prevReaction;

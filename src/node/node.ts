@@ -66,7 +66,7 @@ export function walkChildren(root: Node, callback: (child: Node) => void) {
  * Disposes a node and its children. Set `self` to `false` to skip disposing the node itself.
  */
 export function destroyNode(node: Node, self = true) {
-  if (isNodeDead(node) || (!self && !hasChildren(node))) return;
+  if (isNodeDead(node)) return;
 
   let head = self ? node._prev : node,
     tail = walkChildren(node, (child) => child.destroy());
@@ -74,10 +74,6 @@ export function destroyNode(node: Node, self = true) {
   if (self) node.destroy();
   if (head) head._next = tail;
   if (tail) tail._prev = head;
-}
-
-export function hasChildren(node: Node) {
-  return node._next?._parent === node;
 }
 
 export function getNodeScope(node: Node) {

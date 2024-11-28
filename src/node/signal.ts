@@ -1,12 +1,23 @@
 import { read, write } from '../compute';
-import { FLAG_SIGNAL_WRITE, FLAG_SIGNAL_INIT, FLAG_SIGNAL, FLAG_SIGNAL_WRITE_INIT } from '../flags';
+import { FLAG_SIGNAL_WRITE, FLAG_SIGNAL, FLAG_SIGNAL_WRITE_INIT } from '../flags';
 import { killNode, isNode, isNodeDead, type Node } from './node';
 import type { Reaction } from './reaction';
 import { appendChild, currentScope, Scope } from './scope';
 
-export class ReadSignal<T = unknown> implements Node {
+export interface ReadSignal<T = unknown> extends Node {
   /** @internal */
-  f = FLAG_SIGNAL_INIT;
+  f: number;
+  /** @internal */
+  _value: T;
+  /** @internal */
+  _reactions: Reaction[] | null;
+  get(): T;
+  destroy(): void;
+}
+
+export class Signal<T = unknown> implements ReadSignal<T> {
+  /** @internal */
+  f = FLAG_SIGNAL_WRITE_INIT;
   /** @internal */
   _value: T;
   /** @internal */
@@ -18,11 +29,7 @@ export class ReadSignal<T = unknown> implements Node {
   /** @internal */
   _reactions: Reaction[] | null = null;
 
-  get peek() {
-    return this._value;
-  }
-
-  constructor(value: T, options?: SignalOptions<T>) {
+  constructor(value: T) {
     this._value = value;
     if (currentScope) {
       appendChild(currentScope, this);
@@ -32,16 +39,6 @@ export class ReadSignal<T = unknown> implements Node {
   get(): T {
     return read(this);
   }
-
-  destroy() {
-    if (isNodeDead(this)) return;
-    killNode(this);
-    this._reactions = null;
-  }
-}
-
-export class Signal<T = unknown> extends ReadSignal<T> {
-  override f = FLAG_SIGNAL_WRITE_INIT;
 
   set(value: T) {
     if (!(this.f & FLAG_SIGNAL_WRITE)) {
@@ -54,13 +51,17 @@ export class Signal<T = unknown> extends ReadSignal<T> {
   next(next: NextValue<T>) {
     this.set(next(this._value));
   }
+
+  destroy() {
+    if (isNodeDead(this)) return;
+    killNode(this);
+    this._reactions = null;
+  }
 }
 
 export interface NextValue<T> {
   (prevValue: T): T;
 }
-
-export interface SignalOptions<T> {}
 
 export type InferSignalValue<T> = T extends Signal<infer R> ? R : never;
 
@@ -70,8 +71,8 @@ export type InferSignalValue<T> = T extends Signal<infer R> ? R : never;
  *
  * @see {@link https://github.com/maverick-js/signals#signal}
  */
-export function signal<T>(initialValue: T, options?: SignalOptions<T>): Signal<T> {
-  return new Signal(initialValue, options);
+export function signal<T>(initialValue: T): Signal<T> {
+  return new Signal(initialValue);
 }
 
 /**
@@ -79,12 +80,12 @@ export function signal<T>(initialValue: T, options?: SignalOptions<T>): Signal<T
  *
  * @see {@link https://github.com/maverick-js/signals#readonly}
  */
-export function readonly<T>(signal: Signal<T>): ReadSignal<T> {
+export function readonly<T>(signal: Signal<T>): Signal<T> {
   signal.f &= ~FLAG_SIGNAL_WRITE;
   return signal;
 }
 
-export function isSignalNode(node: Node): node is ReadSignal {
+export function isSignalNode(node: Node): node is Signal {
   return (node.f & FLAG_SIGNAL) > 0;
 }
 
@@ -94,7 +95,7 @@ export function isSignalNode(node: Node): node is ReadSignal {
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
 export function isReadSignal(value: unknown): value is ReadSignal {
-  return isNode(value) && isSignalNode(value);
+  return isNode(value) && isSignalNode(value) && !(value.f & FLAG_SIGNAL_WRITE);
 }
 
 /**
@@ -103,5 +104,5 @@ export function isReadSignal(value: unknown): value is ReadSignal {
  * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
 export function isWriteSignal<T>(value: unknown): value is Signal<T> {
-  return isReadSignal(value) && (value.f & FLAG_SIGNAL_WRITE) > 0;
+  return isNode(value) && isSignalNode(value) && (value.f & FLAG_SIGNAL_WRITE) > 0;
 }
