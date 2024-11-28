@@ -6,6 +6,7 @@ export default defineConfig({
     __TEST__: 'true',
   },
   test: {
+    include: ['tests/**'],
     globals: true,
   },
 });

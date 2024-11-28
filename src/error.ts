@@ -1,5 +1,8 @@
-import { currentScope } from './scope';
-import type { Scope } from './types';
+import { currentScope, type Scope } from './node/scope';
+
+export interface ErrorHandler<T = Error> {
+  (error: T): void;
+}
 
 /**
  * Runs the given function when an error is thrown in a child scope. If the error is thrown again

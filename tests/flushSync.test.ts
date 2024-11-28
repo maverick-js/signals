@@ -3,8 +3,8 @@ import { effect, signal, flushSync } from '../src';
 afterEach(() => flushSync());
 
 it('should batch updates', () => {
-  const $a = signal(10);
-  const $effect = vi.fn(() => void $a());
+  const $a = signal(10),
+    $effect = vi.fn(() => void $a.get());
 
   effect($effect);
 
@@ -18,8 +18,8 @@ it('should batch updates', () => {
 });
 
 it('should wait for queue to flush', () => {
-  const $a = signal(10);
-  const $effect = vi.fn(() => void $a());
+  const $a = signal(10),
+    $effect = vi.fn(() => void $a.get());
 
   effect($effect);
 
@@ -35,11 +35,11 @@ it('should wait for queue to flush', () => {
 });
 
 it('should not fail if called while flushing', () => {
-  const $a = signal(10);
-  const $effect = vi.fn(() => {
-    $a();
-    flushSync();
-  });
+  const $a = signal(10),
+    $effect = vi.fn(() => {
+      $a.get();
+      flushSync();
+    });
 
   effect(() => {
     $effect();

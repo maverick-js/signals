@@ -5,33 +5,31 @@ import {
   effect,
   flushSync,
   getScope,
-  type Computation,
-  type ReadSignal,
-  type WriteSignal,
   onDispose,
+  type Signal,
+  type Reaction,
 } from '../src';
 
 afterEach(() => flushSync());
 
 it('should dispose of inner computations', () => {
-  const computeB = vi.fn();
-
-  let $a: WriteSignal<number>;
-  let $b: ReadSignal<number>;
+  let computeB = vi.fn(),
+    $a: Signal<number>,
+    $b: Reaction<number>;
 
   root((dispose) => {
     $a = signal(10);
 
     $b = computed(() => {
       computeB();
-      return $a() + 10;
+      return $a.get() + 10;
     });
 
-    $b();
+    $b.get();
     dispose();
   });
 
-  expect($b!()).toBe(20);
+  expect($b!.get()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 
   flushSync();
@@ -39,7 +37,7 @@ it('should dispose of inner computations', () => {
   $a!.set(50);
   flushSync();
 
-  expect($b!()).toBe(20);
+  expect($b!.get()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 });
 
@@ -53,15 +51,14 @@ it('should return result', () => {
 });
 
 it('should create new tracking scope', () => {
-  const innerEffect = vi.fn();
-
-  const $a = signal(0);
+  const innerEffect = vi.fn(),
+    $a = signal(0);
 
   const stop = effect(() => {
-    $a();
+    $a.get();
     root(() => {
       effect(() => {
-        innerEffect($a());
+        innerEffect($a.get());
       });
     });
   });
@@ -84,13 +81,12 @@ it('should create new tracking scope', () => {
 });
 
 it('should not be reactive', () => {
-  let $a: WriteSignal<number>;
-
-  const rootCall = vi.fn();
+  let $a: Signal<number>,
+    rootCall = vi.fn();
 
   root(() => {
     $a = signal(0);
-    $a();
+    $a.get();
     rootCall();
   });
 
@@ -107,16 +103,6 @@ it('should hold parent tracking', () => {
     root(() => {
       expect(getScope()!._parent).toBe(parent);
     });
-  });
-});
-
-it('should not observe', () => {
-  const $a = signal(0);
-  root(() => {
-    $a();
-    const scope = getScope() as Computation;
-    expect(scope._sources).toBeUndefined();
-    expect(scope._observers).toBeUndefined();
   });
 });
 

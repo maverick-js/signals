@@ -9,7 +9,7 @@ it('should not track scope', () => {
       const $a = signal(0);
 
       effect(() => {
-        innerEffect($a());
+        innerEffect($a.get());
       });
 
       update = () => {

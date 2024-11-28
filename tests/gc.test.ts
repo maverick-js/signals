@@ -13,7 +13,7 @@ function gc() {
 if (global.gc) {
   it('should gc computed if there are no observers', async () => {
     const $a = signal(0),
-      ref = new WeakRef(computed(() => $a()));
+      ref = new WeakRef(computed(() => $a.get()));
 
     await gc();
     expect(ref.deref()).toBeUndefined();
@@ -23,9 +23,9 @@ if (global.gc) {
     let $a = signal(0),
       pointer;
 
-    const ref = new WeakRef((pointer = computed(() => $a())));
+    const ref = new WeakRef((pointer = computed(() => $a.get())));
 
-    ref.deref()!();
+    ref.deref()!.get();
 
     await gc();
     expect(ref.deref()).toBeDefined();
@@ -43,7 +43,7 @@ if (global.gc) {
     const dispose = root((dispose) => {
       ref = new WeakRef(
         (pointer = computed(() => {
-          $a();
+          $a.get();
         })),
       );
 
@@ -68,7 +68,7 @@ if (global.gc) {
 
     const dispose = root((dispose) => {
       effect(() => {
-        $a();
+        $a.get();
         ref = new WeakRef(getScope()!);
       });
 

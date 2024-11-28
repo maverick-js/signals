@@ -171,7 +171,7 @@ it('should dispose correctly on appended scopes', () => {
   flushSync();
 
   scopeA.append(scopeB);
-  scopeB.dispose();
+  scopeB.destroy();
 
   expect(disposals).toMatchInlineSnapshot(`
     [
@@ -181,7 +181,7 @@ it('should dispose correctly on appended scopes', () => {
     ]
   `);
 
-  scopeA.dispose();
+  scopeA.destroy();
 
   expect(disposals).toMatchInlineSnapshot(`
     [

@@ -1,21 +1,8 @@
-export {
-  compute,
-  createComputation,
-  flushSync,
-  isDirty,
-  isFunction,
-  isNotEqual,
-  read,
-  reset,
-  tick,
-  update,
-  updateIfNeeded,
-  write,
-} from './compute';
-export { dispose, onDispose } from './dispose';
-export { getContext, setContext } from './context';
-export { getScope, createScope } from './scope';
-export { onError } from './error';
-
-export * from './api';
-export type * from './types';
+export * from './node/node';
+export * from './node/scope';
+export * from './node/reaction';
+export * from './node/signal';
+export * from './compute';
+export * from './context';
+export * from './dispose';
+export * from './error';

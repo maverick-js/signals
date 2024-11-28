@@ -39,7 +39,7 @@ export function selector<Key>(source: ReadSignal<Key>): SelectorSignal<Key> {
 interface Selector<Key = any> extends Computation<boolean> {
   _key: Key;
   _value: boolean;
-  _nodes: Map<Key, Selector> | null;
+  _signals: Map<Key, Selector> | null;
   _refs: number;
 }
 
@@ -53,7 +53,7 @@ function Selector<Key>(
   this._key = key;
   this._value = initialValue;
   this._refs = 0;
-  this._nodes = nodes;
+  this._signals = nodes;
   this._observers = null;
 }
 
@@ -63,8 +63,8 @@ SelectorProto.call = function (this: Selector) {
   this._refs -= 1;
 
   if (!this._refs) {
-    this._nodes!.delete(this._key);
-    this._nodes = null;
+    this._signals!.delete(this._key);
+    this._signals = null;
   }
 
   return this._value;

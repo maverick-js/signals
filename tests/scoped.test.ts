@@ -2,6 +2,7 @@ import { getContext, root, setContext, getScope, scoped, type Scope, onError } f
 
 it('should scope function to current scope', () => {
   let scope!: Scope | null;
+
   root(() => {
     scope = getScope();
     setContext('id', 10);

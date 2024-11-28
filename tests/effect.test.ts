@@ -4,7 +4,7 @@ afterEach(() => flushSync());
 
 it('should run effect', () => {
   const $a = signal(0),
-    $effect = vi.fn(() => void $a());
+    $effect = vi.fn(() => void $a.get());
 
   effect($effect);
   expect($effect).toHaveBeenCalledTimes(0);
@@ -15,47 +15,43 @@ it('should run effect', () => {
 });
 
 it('should run effect on change', () => {
-  const effectA = vi.fn();
+  const $a = signal(10),
+    $b = signal(10),
+    $c = computed(() => $a.get() + $b.get()),
+    $d = computed(() => $c.get());
 
-  const $a = signal(10);
-  const $b = signal(10);
-  const $c = computed(() => $a() + $b());
-  const $d = computed(() => $c());
+  const $effect = vi.fn(() => void $d.get());
+  effect($effect);
 
-  effect(() => {
-    effectA();
-    $d();
-  });
-
-  expect(effectA).to.toHaveBeenCalledTimes(0);
+  expect($effect).to.toHaveBeenCalledTimes(0);
 
   $a.set(20);
   flushSync();
-  expect(effectA).to.toHaveBeenCalledTimes(1);
+  expect($effect).to.toHaveBeenCalledTimes(1);
 
   $b.set(20);
   flushSync();
-  expect(effectA).to.toHaveBeenCalledTimes(2);
+  expect($effect).to.toHaveBeenCalledTimes(2);
 
   $a.set(20);
   $b.set(20);
   flushSync();
-  expect(effectA).to.toHaveBeenCalledTimes(2);
+  expect($effect).to.toHaveBeenCalledTimes(2);
 });
 
 it('should handle nested effect', () => {
-  const $a = signal(0);
-  const $b = signal(0);
+  const $a = signal(0),
+    $b = signal(0);
 
-  const outerEffect = vi.fn();
-  const innerEffect = vi.fn();
-  const innerDispose = vi.fn();
+  const outerEffect = vi.fn(),
+    innerEffect = vi.fn(),
+    innerDispose = vi.fn();
 
   const stop = effect(() => {
-    $a();
+    $a.get();
     outerEffect();
     effect(() => {
-      $b();
+      $b.get();
       innerEffect();
       onDispose(innerDispose);
     });
@@ -101,30 +97,26 @@ it('should handle nested effect', () => {
 });
 
 it('should stop effect', () => {
-  const effectA = vi.fn();
+  const $effect = vi.fn(() => void $a.get());
 
   const $a = signal(10);
 
-  const stop = effect(() => {
-    effectA();
-    $a();
-  });
+  const stop = effect($effect);
 
   stop();
 
   $a.set(20);
   flushSync();
 
-  expect(effectA).toHaveBeenCalledTimes(0);
+  expect($effect).toHaveBeenCalledTimes(0);
 });
 
 it('should call returned dispose function', () => {
-  const dispose = vi.fn();
-
-  const $a = signal(0);
+  const dispose = vi.fn(),
+    $a = signal(0);
 
   effect(() => {
-    $a();
+    $a.get();
     return dispose;
   });
 
@@ -138,9 +130,11 @@ it('should call returned dispose function', () => {
 });
 
 it('should run all disposals before each new run', () => {
-  const effectA = vi.fn();
-  const disposeA = vi.fn();
-  const disposeB = vi.fn();
+  const $effect = vi.fn(() => {
+      fnA(), fnB(), $a.get();
+    }),
+    disposeA = vi.fn(),
+    disposeB = vi.fn();
 
   function fnA() {
     onDispose(disposeA);
@@ -151,31 +145,28 @@ it('should run all disposals before each new run', () => {
   }
 
   const $a = signal(0);
-  effect(() => {
-    effectA();
-    fnA(), fnB(), $a();
-  });
+  effect($effect);
 
-  expect(effectA).toHaveBeenCalledTimes(0);
+  expect($effect).toHaveBeenCalledTimes(0);
   expect(disposeA).toHaveBeenCalledTimes(0);
   expect(disposeB).toHaveBeenCalledTimes(0);
 
   for (let i = 1; i <= 3; i += 1) {
     $a.set(i);
     flushSync();
-    expect(effectA).toHaveBeenCalledTimes(i);
+    expect($effect).toHaveBeenCalledTimes(i);
     expect(disposeA).toHaveBeenCalledTimes(i - 1);
     expect(disposeB).toHaveBeenCalledTimes(i - 1);
   }
 });
 
 it('should dispose of nested effect', () => {
-  const $a = signal(0);
-  const innerEffect = vi.fn();
+  const $a = signal(0),
+    innerEffect = vi.fn();
 
   const stop = effect(() => {
     effect(() => {
-      innerEffect($a());
+      innerEffect($a.get());
     });
   });
 
@@ -189,16 +180,13 @@ it('should dispose of nested effect', () => {
 });
 
 it('should conditionally observe', () => {
-  const $a = signal(0);
-  const $b = signal(0);
-  const $cond = signal(true);
-  const $c = computed(() => ($cond() ? $a() : $b()));
-  const $effect = vi.fn();
+  const $a = signal(0),
+    $b = signal(0),
+    $condition = signal(true),
+    $c = computed(() => ($condition.get() ? $a.get() : $b.get()));
 
-  effect(() => {
-    $c();
-    $effect();
-  });
+  const $effect = vi.fn(() => void $c.get());
+  effect($effect);
 
   expect($effect).toHaveBeenCalledTimes(0);
 
@@ -210,7 +198,7 @@ it('should conditionally observe', () => {
   flushSync();
   expect($effect).toHaveBeenCalledTimes(2);
 
-  $cond.set(false);
+  $condition.set(false);
   flushSync();
   expect($effect).toHaveBeenCalledTimes(2);
 
@@ -226,8 +214,8 @@ it('should conditionally observe', () => {
 it('should dispose of nested conditional effect', () => {
   const $condition = signal(true);
 
-  const disposeA = vi.fn();
-  const disposeB = vi.fn();
+  const disposeA = vi.fn(),
+    disposeB = vi.fn();
 
   function a() {
     effect(() => {
@@ -241,7 +229,7 @@ it('should dispose of nested conditional effect', () => {
     });
   }
 
-  effect(() => ($condition() ? a() : b()));
+  effect(() => ($condition.get() ? a() : b()));
   flushSync();
 
   $condition.set(false);
@@ -260,10 +248,10 @@ it('should handle looped effects', () => {
   let x = 0;
   effect(() => {
     x++;
-    values.push($value());
+    values.push($value.get());
     for (let i = 0; i < loop; i++) {
       effect(() => {
-        values.push($value() + i);
+        values.push($value.get() + i);
       });
     }
   });
@@ -292,57 +280,53 @@ it('should handle looped effects', () => {
 it('should apply changes in effect in same flush', async () => {
   const $a = signal(0),
     $b = signal(0),
-    $c = computed(() => {
-      return $a() + 1;
-    }),
-    $d = computed(() => {
-      return $c() + 2;
-    });
+    $c = computed(() => $a.get() + 1),
+    $d = computed(() => $c.get() + 2);
 
   effect(() => {
-    $a.set((n) => n + 1);
-    $b();
+    $a.next((n) => n + 1);
+    $b.get();
   });
 
-  expect($a()).toBe(0);
-  expect($c()).toBe(1);
-  expect($d()).toBe(3);
+  expect($a.get()).toBe(0);
+  expect($c.get()).toBe(1);
+  expect($d.get()).toBe(3);
 
   flushSync();
 
-  expect($a()).toBe(1);
-  expect($c()).toBe(2);
-  expect($d()).toBe(4);
+  expect($a.get()).toBe(1);
+  expect($c.get()).toBe(2);
+  expect($d.get()).toBe(4);
 
   $b.set(1);
 
   await Promise.resolve();
 
-  expect($a()).toBe(2);
-  expect($d()).toBe(5);
-  expect($c()).toBe(3);
+  expect($a.get()).toBe(2);
+  expect($d.get()).toBe(5);
+  expect($c.get()).toBe(3);
 
   $b.set(2);
 
   await Promise.resolve();
 
-  expect($a()).toBe(3);
-  expect($d()).toBe(6);
-  expect($c()).toBe(4);
+  expect($a.get()).toBe(3);
+  expect($d.get()).toBe(6);
+  expect($c.get()).toBe(4);
 });
 
 it('runs parent effects before child effects', () => {
-  const $a = signal(0);
-  const $b = computed(() => $a());
+  const $a = signal(0),
+    $b = computed(() => $a.get());
 
   let calls = 0;
   effect(() => {
     effect(() => {
-      void $a();
+      void $a.get();
       calls++;
     });
 
-    $b();
+    $b.get();
   });
 
   $a.set(1);

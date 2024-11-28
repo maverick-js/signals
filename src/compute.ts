@@ -1,214 +1,191 @@
-import {
-  STATE_CHECK,
-  STATE_CLEAN,
-  STATE_DIRTY,
-  STATE_DISPOSED,
-  TYPE_EFFECT,
-  TYPE_REACTION,
-} from './constants';
-import { currentScope, ScopeNode, ScopeProto, setCurrentScope } from './scope';
-import type { Callable, Computation, ComputedSignalOptions, Scope } from './types';
-import { dispose, emptyDisposal, removeSourceObservers } from './dispose';
+import { currentScope, Scope, setScope } from './node/scope';
 import { handleError } from './error';
+import { destroyNode } from './node/node';
+import type { Dispose } from './dispose';
+import { type Reaction, isEffectNode, type Effect, isReactionNode } from './node/reaction';
+import type { ReadSignal } from './node/signal';
+import { isUndefined } from './utils';
+import { link, removeLink, type Link } from './node/link';
+import { STATE_CHECK, STATE_CLEAN, STATE_DEAD, STATE_DIRTY } from './constants';
 
-let scheduledEffects = false,
-  runningEffects = false,
-  effects: Computation[] = [],
-  currentObserver: Computation | null = null,
-  currentObservers: Computation[] | null = null,
-  currentObserversIndex = 0;
+let hasScheduledEffects = false,
+  isRunningEffects = false,
+  effects: Effect[] = [];
 
-export function createComputation<T>(
-  initialValue: T,
-  compute: (() => T) | null,
-  options?: ComputedSignalOptions<T>,
-): Computation<T> {
-  return new ComputeNode(initialValue, compute, options);
+export let currentReaction: Reaction | null = null;
+
+/**
+ * Creates a computation root which is given a `dispose()` function to dispose of all inner
+ * computations.
+ *
+ * @see {@link https://github.com/maverick-js/signals#root}
+ */
+export function root<T>(init: (dispose: Dispose) => T): T {
+  const scope = new Scope();
+  return compute(
+    scope,
+    !init.length ? (init as () => T) : init.bind(null, destroyNode.bind(null, scope)),
+    null,
+  ) as T;
 }
 
-const ComputeNode = function Computation(
-  this: Computation,
-  initialValue,
-  compute,
-  options?: ComputedSignalOptions<any, any>,
-) {
-  ScopeNode.call(this);
-
-  this._state = compute ? STATE_DIRTY : STATE_CLEAN;
-  this._init = false;
-  this._sources = null;
-  this._observers = null;
-  this._value = initialValue;
-
-  if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
-
-  if (compute) {
-    this._type |= TYPE_REACTION;
-    this._compute = compute;
-  }
-
-  if (options && options.dirty) this._changed = options.dirty;
-};
-
-const ComputeProto: Computation = ComputeNode.prototype;
-Object.setPrototypeOf(ComputeProto, ScopeProto);
-
-ComputeProto._changed = isNotEqual;
-ComputeProto.call = read;
-ComputeProto.read = read;
-ComputeProto.write = write;
-ComputeProto.dispose = dispose;
-
-export function read<T>(this: Computation<T>): T {
-  if (this._state === STATE_DISPOSED) return this._value;
-
-  if (currentObserver && (this._type & TYPE_EFFECT) === 0) {
-    if (
-      !currentObservers &&
-      currentObserver._sources &&
-      currentObserver._sources[currentObserversIndex] == this
-    ) {
-      currentObserversIndex++;
-    } else if (!currentObservers) currentObservers = [this];
-    else currentObservers.push(this);
-  }
-
-  if (this._compute) updateIfNeeded(this);
-
-  return this._value;
+/**
+ * Returns the current value stored inside the given compute function without triggering any
+ * dependencies. Use `untrack` if you want to also disable scope tracking.
+ *
+ * @see {@link https://github.com/maverick-js/signals#peek}
+ */
+export function peek<T>(fn: () => T): T {
+  return compute<T>(currentScope, fn, null);
 }
 
-export function write<T>(this: Computation<T>, newValue: T): T {
-  const value = isFunction(newValue) ? newValue(this._value) : newValue;
-
-  if (this._changed(this._value, value)) {
-    this._value = value;
-    if (this._observers) {
-      for (let i = 0; i < this._observers.length; i++) {
-        notifyObservers(this._observers[i], STATE_DIRTY);
-      }
-    }
-  }
-
-  return this._value;
+/**
+ * Returns the current value inside a signal whilst disabling both scope _and_ observer
+ * tracking. Use `peek` if only observer tracking should be disabled.
+ *
+ * @see {@link https://github.com/maverick-js/signals#untrack}
+ */
+export function untrack<T>(fn: () => T): T {
+  return compute<T>(null, fn, null);
 }
 
-export function isFunction(value: unknown): value is Function {
-  return typeof value === 'function';
-}
-
-export function updateIfNeeded(node: Computation) {
-  if (isDirty(node)) {
-    update(node);
-  } else {
-    node._state = STATE_CLEAN;
-  }
-}
-
-export function isDirty(node: Computation) {
-  if (node._state === STATE_CHECK) {
-    for (let i = 0; i < node._sources!.length; i++) {
-      updateIfNeeded(node._sources![i]);
-      if ((node._state as number) === STATE_DIRTY) {
-        // Stop the loop here so we won't trigger updates on other parents unnecessarily
-        // If our computation changes to no longer use some sources, we don't
-        // want to update() a source we used last time, but now don't use.
-        break;
-      }
-    }
-  }
-
-  return node._state === STATE_DIRTY;
-}
-
-export function reset(node: Computation) {
-  if (node._next?._parent === node) dispose.call(node, false);
-  if (node._disposal) emptyDisposal(node);
-  node._handlers = node._parent ? node._parent._handlers : null;
-}
-
-export function update(node: Computation) {
-  let prevObservers = currentObservers,
-    prevObserversIndex = currentObserversIndex;
-
-  currentObservers = null as Computation[] | null;
-  currentObserversIndex = 0;
-
+/**
+ * Runs the given function in the given scope so context and error handling continue to work.
+ *
+ * @see {@link https://github.com/maverick-js/signals#scoped}
+ */
+export function scoped<T>(run: () => T, scope: Scope | null): T | undefined {
   try {
-    reset(node);
+    return compute<T>(scope, run, null);
+  } catch (error) {
+    handleError(scope, error);
+    return; // TS -_-
+  }
+}
 
-    const result = compute(node, node._compute!, node);
+export function read<T>(signal: ReadSignal<T>): T {
+  if (signal._state === STATE_DEAD) return signal._value;
 
-    updateObservers(node);
+  if (currentReaction) {
+    const node = link(currentReaction, signal);
+    node._version = signal._version;
+  }
 
-    if ((node._type & TYPE_EFFECT) === 0 && node._init) {
-      node.write(result);
+  if (isReactionNode(signal)) update(signal);
+
+  return signal._value;
+}
+
+export function write<T>(signal: ReadSignal<T>, value: T): T {
+  if (isNotEqual(signal._value, value)) {
+    signal._value = value;
+    signal._version++;
+    notify(signal._reactions);
+  }
+
+  return signal._value;
+}
+
+export function computeReaction(reaction: Reaction) {
+  try {
+    reaction.reset();
+    reaction._signalsTail = null;
+
+    const result = compute(reaction._scope, reaction._compute, reaction),
+      tail = reaction._signalsTail as Link | null;
+
+    // Remove any signals that are no longer being used.
+    if (tail) {
+      if (tail._nextSignal) {
+        removeLink(tail._nextSignal);
+        tail._nextSignal = null;
+      }
+    } else if (reaction._signals) {
+      removeLink(reaction._signals);
+      reaction._signals = null;
+    }
+
+    if (!isEffectNode(reaction) && !isUndefined(reaction._value)) {
+      write(reaction, result);
     } else {
-      node._value = result;
-      node._init = true;
+      reaction._value = result;
     }
   } catch (error) {
-    if (__DEV__ && !__TEST__ && !node._init && typeof node._value === 'undefined') {
-      console.error(
-        `computed \`${node.id}\` threw error during first run, this can be fatal.` +
-          '\n\nSolutions:\n\n' +
-          '1. Set the `initial` option to silence this error',
-        '\n2. Or, use an `effect` if the return value is not being used',
-        '\n\n',
-        error,
-      );
-    }
-
-    updateObservers(node);
-    handleError(node, error);
+    handleError(reaction._scope, error);
   } finally {
-    currentObservers = prevObservers;
-    currentObserversIndex = prevObserversIndex;
-    node._state = STATE_CLEAN;
+    reaction._state = STATE_CLEAN;
   }
 }
 
-function updateObservers(node: Computation) {
-  if (currentObservers) {
-    if (node._sources) removeSourceObservers(node, currentObserversIndex);
+export function queueEffect(effect: Effect) {
+  effects.push(effect);
+  if (!hasScheduledEffects) flushEffects();
+}
 
-    if (node._sources && currentObserversIndex > 0) {
-      node._sources.length = currentObserversIndex + currentObservers.length;
-      for (let i = 0; i < currentObservers.length; i++) {
-        node._sources[currentObserversIndex + i] = currentObservers[i];
+export function update(reaction: Reaction) {
+  if (reaction._signals && reaction._state === STATE_CHECK) {
+    let currentLink: Link | null = reaction._signals,
+      signal: ReadSignal,
+      links: Array<Link | null> = [];
+
+    while (currentLink) {
+      signal = currentLink._signal;
+
+      if (isReactionNode(signal)) {
+        if (reaction._signals && reaction._state === STATE_CHECK) {
+          links.push(currentLink);
+          currentLink = reaction._signals;
+          continue;
+        }
+
+        if (currentLink._version !== signal._version) {
+          computeReaction(signal);
+        } else {
+          signal._state = STATE_CLEAN;
+        }
       }
-    } else {
-      node._sources = currentObservers;
-    }
 
-    let source: Computation;
-    for (let i = currentObserversIndex; i < node._sources.length; i++) {
-      source = node._sources[i];
-      if (!source._observers) source._observers = [node];
-      else source._observers.push(node);
+      currentLink = currentLink._nextSignal;
+      if (!currentLink) currentLink = links.pop()!;
     }
-  } else if (node._sources && currentObserversIndex < node._sources.length) {
-    removeSourceObservers(node, currentObserversIndex);
-    node._sources.length = currentObserversIndex;
+  }
+
+  if (reaction._state === STATE_DIRTY) {
+    computeReaction(reaction);
   }
 }
 
-export function queueEffect(node: Computation) {
-  effects.push(node);
-  if (!scheduledEffects) flushEffects();
-}
+export function notify(link: Link | null): void {
+  if (!link) return;
 
-function notifyObservers(node: Computation, state: number) {
-  if (node._state >= state) return;
+  let currentLink: Link | null = link,
+    reaction: Reaction,
+    state = STATE_DIRTY,
+    links: Array<Link | null> = [];
 
-  if (node._type & TYPE_EFFECT && node._state === STATE_CLEAN) {
-    queueEffect(node);
-  }
+  while (currentLink) {
+    reaction = currentLink._reaction;
 
-  node._state = state;
-  if (node._observers) {
-    for (let i = 0; i < node._observers.length; i++) {
-      notifyObservers(node._observers[i], STATE_CHECK);
+    if (reaction._state < state) {
+      if (isEffectNode(reaction) && reaction._state === STATE_CLEAN) {
+        queueEffect(reaction);
+      }
+
+      reaction._state = state;
+
+      if (reaction._reactions) {
+        links.push(currentLink._nextReaction);
+        state = STATE_CHECK;
+        currentLink = reaction._reactions;
+        continue;
+      }
+    }
+
+    currentLink = currentLink._nextReaction;
+
+    if (!currentLink) {
+      currentLink = links.pop()!;
+      if (links.length === 0) state = STATE_DIRTY;
     }
   }
 }
@@ -218,36 +195,43 @@ export function isNotEqual(a: unknown, b: unknown) {
 }
 
 export function flushEffects() {
-  scheduledEffects = true;
+  hasScheduledEffects = true;
   queueMicrotask(runEffects);
 }
 
 function runEffects() {
   if (!effects.length) {
-    scheduledEffects = false;
+    hasScheduledEffects = false;
     return;
   }
 
-  runningEffects = true;
+  isRunningEffects = true;
 
   for (let i = 0; i < effects.length; i++) {
-    if (effects[i]._state !== STATE_CLEAN) runTop(effects[i]);
+    if (effects[i]._state !== STATE_CLEAN) {
+      runEffect(effects[i]);
+    }
   }
 
   effects = [];
-  scheduledEffects = false;
-  runningEffects = false;
+  hasScheduledEffects = false;
+  isRunningEffects = false;
 }
 
-function runTop(node: Computation<any>) {
-  let ancestors = [node];
+function runEffect(effect: Effect) {
+  let ancestors: Effect[] = [effect],
+    scope = effect._scope,
+    reaction: Reaction | null = null;
 
-  while ((node = node._parent as Computation<any>)) {
-    if (node._type & TYPE_EFFECT && node._state !== STATE_CLEAN) ancestors.push(node);
+  while ((scope = scope._parent!)) {
+    reaction = scope._reaction;
+    if (reaction && isEffectNode(reaction) && reaction._state !== STATE_CLEAN) {
+      ancestors.push(reaction);
+    }
   }
 
   for (let i = ancestors.length - 1; i >= 0; i--) {
-    updateIfNeeded(ancestors[i]);
+    update(ancestors[i]);
   }
 }
 
@@ -258,27 +242,23 @@ function runTop(node: Computation<any>) {
  * @see {@link https://github.com/maverick-js/signals#flushSync}
  */
 export function flushSync(): void {
-  if (!runningEffects) runEffects();
+  if (!isRunningEffects) runEffects();
 }
 
 /** @deprecated use flushSync */
 export const tick = flushSync;
 
-export function compute<Result>(
-  scope: Scope | null,
-  compute: Callable<Scope | null, Result>,
-  observer: Computation | null,
-): Result {
+export function compute<T>(scope: Scope | null, compute: () => T, reaction: Reaction | null): T {
   const prevScope = currentScope,
-    prevObserver = currentObserver;
+    prevReaction = currentReaction;
 
-  setCurrentScope(scope);
-  currentObserver = observer;
+  setScope(scope);
+  currentReaction = reaction;
 
   try {
-    return compute.call(scope);
+    return compute();
   } finally {
-    setCurrentScope(prevScope);
-    currentObserver = prevObserver;
+    setScope(prevScope);
+    currentReaction = prevReaction;
   }
 }

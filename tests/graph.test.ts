@@ -11,19 +11,19 @@ it('should drop A->B->A updates', () => {
   //     |
   //     D
 
-  const $a = signal(2);
-  const $b = computed(() => $a() - 1);
-  const $c = computed(() => $a() + $b());
+  const $a = signal(2),
+    $b = computed(() => $a.get() - 1),
+    $c = computed(() => $a.get() + $b.get());
 
-  const compute = vi.fn(() => 'd: ' + $c());
+  const compute = vi.fn(() => 'd: ' + $c.get());
   const $d = computed(compute);
 
-  expect($d()).toBe('d: 3');
+  expect($d.get()).toBe('d: 3');
   expect(compute).toHaveBeenCalledTimes(1);
   compute.mockReset();
 
   $a.set(4);
-  $d();
+  $d.get();
   flushSync();
   expect(compute).toHaveBeenCalledTimes(1);
 });
@@ -37,19 +37,19 @@ it('should only update every signal once (diamond graph)', () => {
   //   \   /
   //     D
 
-  const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => $a());
+  const $a = signal('a'),
+    $b = computed(() => $a.get()),
+    $c = computed(() => $a.get());
 
-  const spy = vi.fn(() => $b() + ' ' + $c());
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get());
   const $d = computed(spy);
 
-  expect($d()).toBe('a a');
+  expect($d.get()).toBe('a a');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   flushSync();
-  expect($d()).toBe('aa aa');
+  expect($d.get()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -63,20 +63,20 @@ it('should only update every signal once (diamond graph + tail)', () => {
   //     |
   //     E
 
-  const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => $a());
-  const $d = computed(() => $b() + ' ' + $c());
+  const $a = signal('a'),
+    $b = computed(() => $a.get()),
+    $c = computed(() => $a.get()),
+    $d = computed(() => $b.get() + ' ' + $c.get());
 
-  const spy = vi.fn(() => $d());
+  const spy = vi.fn(() => $d.get());
   const $e = computed(spy);
 
-  expect($e()).toBe('a a');
+  expect($e.get()).toBe('a a');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   flushSync();
-  expect($e()).toBe('aa aa');
+  expect($e.get()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -87,19 +87,19 @@ it('should bail out if result is the same', () => {
   const $a = signal('a');
 
   const $b = computed(() => {
-    $a();
+    $a.get();
     return 'foo';
   });
 
-  const spy = vi.fn(() => $b());
-  const $c = computed(spy);
+  const spy = vi.fn(() => $b.get()),
+    $c = computed(spy);
 
-  expect($c()).toBe('foo');
+  expect($c.get()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   flushSync();
-  expect($c()).toBe('foo');
+  expect($c.get()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 });
 
@@ -115,47 +115,48 @@ it('should only update every signal once (jagged diamond graph + tails)', () => 
   //   /   \
   //  F     G
 
-  const $a = signal('a', { id: '$a' });
-  const $b = computed(() => $a(), { id: '$b' });
-  const $c = computed(() => $a(), { id: '$c' });
-  const $d = computed(() => $c(), { id: '$d' });
+  const $a = signal('a'),
+    $b = computed(() => $a.get()),
+    $c = computed(() => $a.get()),
+    $d = computed(() => $c.get());
 
-  const eSpy = vi.fn(() => $b() + ' ' + $d());
-  const $e = computed(eSpy, { id: '$e' });
+  const eSpy = vi.fn(() => $b.get() + ' ' + $d.get()),
+    $e = computed(eSpy);
 
-  const fSpy = vi.fn(() => $e());
-  const $f = computed(fSpy, { id: '$f' });
-  const gSpy = vi.fn(() => $e());
-  const $g = computed(gSpy, { id: '$g' });
+  const fSpy = vi.fn(() => $e.get()),
+    $f = computed(fSpy);
 
-  expect($f()).toBe('a a');
+  const gSpy = vi.fn(() => $e.get()),
+    $g = computed(gSpy);
+
+  expect($f.get()).toBe('a a');
   expect(fSpy).toHaveBeenCalledTimes(1);
 
-  expect($g()).toBe('a a');
+  expect($g.get()).toBe('a a');
   expect(gSpy).toHaveBeenCalledTimes(1);
 
   $a.set('b');
   flushSync();
 
-  expect($e()).toBe('b b');
+  expect($e.get()).toBe('b b');
   expect(eSpy).toHaveBeenCalledTimes(2);
 
-  expect($f()).toBe('b b');
+  expect($f.get()).toBe('b b');
   expect(fSpy).toHaveBeenCalledTimes(2);
 
-  expect($g()).toBe('b b');
+  expect($g.get()).toBe('b b');
   expect(gSpy).toHaveBeenCalledTimes(2);
 
   $a.set('c');
   flushSync();
 
-  expect($e()).toBe('c c');
+  expect($e.get()).toBe('c c');
   expect(eSpy).toHaveBeenCalledTimes(3);
 
-  expect($f()).toBe('c c');
+  expect($f.get()).toBe('c c');
   expect(fSpy).toHaveBeenCalledTimes(3);
 
-  expect($g()).toBe('c c');
+  expect($g.get()).toBe('c c');
   expect(gSpy).toHaveBeenCalledTimes(3);
 });
 
@@ -166,17 +167,18 @@ it('should only subscribe to signals listened to', () => {
 
   const $a = signal('a');
 
-  const $b = computed(() => $a());
-  const spy = vi.fn(() => $a());
+  const $b = computed(() => $a.get()),
+    spy = vi.fn(() => $a.get());
+
   computed(spy);
 
-  expect($b()).toBe('a');
+  expect($b.get()).toBe('a');
   expect(spy).toBeCalledTimes(0);
 
   $a.set('aa');
   flushSync();
 
-  expect($b()).toBe('aa');
+  expect($b.get()).toBe('aa');
   expect(spy).toBeCalledTimes(0);
 });
 
@@ -191,22 +193,22 @@ it('should ensure subs update even if one dep unmarks it', () => {
   //   \   /
   //     D
 
-  const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => {
-    $a();
-    return 'c';
-  });
+  const $a = signal('a'),
+    $b = computed(() => $a.get()),
+    $c = computed(() => {
+      $a.get();
+      return 'c';
+    });
 
-  const spy = vi.fn(() => $b() + ' ' + $c());
-  const $d = computed(spy);
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get()),
+    $d = computed(spy);
 
-  expect($d()).toBe('a c');
+  expect($d.get()).toBe('a c');
 
   $a.set('aa');
   flushSync();
 
-  expect($d()).toBe('aa c');
+  expect($d.get()).toBe('aa c');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -220,24 +222,24 @@ it('should ensure subs update even if two deps unmark it', () => {
   //   \ | /
   //     E
 
-  const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => {
-    $a();
-    return 'c';
-  });
-  const $d = computed(() => {
-    $a();
-    return 'd';
-  });
+  const $a = signal('a'),
+    $b = computed(() => $a.get()),
+    $c = computed(() => {
+      $a.get();
+      return 'c';
+    }),
+    $d = computed(() => {
+      $a.get();
+      return 'd';
+    });
 
-  const spy = vi.fn(() => $b() + ' ' + $c() + ' ' + $d());
-  const $e = computed(spy);
-  expect($e()).toBe('a c d');
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get() + ' ' + $d.get()),
+    $e = computed(spy);
+  expect($e.get()).toBe('a c d');
 
   $a.set('aa');
   flushSync();
 
-  expect($e()).toBe('aa c d');
+  expect($e.get()).toBe('aa c d');
   expect(spy).toHaveBeenCalledTimes(2);
 });

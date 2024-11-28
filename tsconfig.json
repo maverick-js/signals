@@ -22,7 +22,7 @@
     "sourceMap": false,
     "strict": true,
     "strictNullChecks": true,
-    "target": "es2020",
+    "target": "esnext",
     "types": ["@types/node", "vitest/globals"]
   },
   "include": ["src", "tests"],

@@ -58,7 +58,7 @@ it('should forward error to another handler', () => {
       onError(handler);
 
       effect(() => {
-        $a();
+        $a.get();
 
         onError((error) => {
           throw error;
@@ -88,7 +88,7 @@ it('should not duplicate error handler', () => {
 
   root(() => {
     effect(() => {
-      $a();
+      $a.get();
       onError(() => handler());
       if (shouldThrow) throw error;
     });
@@ -118,7 +118,7 @@ it('should not trigger wrong handler', () => {
     onError(rootHandler);
 
     effect(() => {
-      $a();
+      $a.get();
       if (shouldThrow) throw error;
     });
 
