@@ -1,7 +1,7 @@
 import { signal, root, untrack, effect, flushSync } from '../src';
 
 it('should not track scope', () => {
-  root((dispose) => {
+  root((scope) => {
     let innerEffect = vi.fn(),
       update!: () => void;
 
@@ -17,7 +17,7 @@ it('should not track scope', () => {
       };
     });
 
-    dispose();
+    scope.destroy();
     update();
     flushSync();
     expect(innerEffect).toHaveBeenCalledWith(10);

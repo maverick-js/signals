@@ -20,13 +20,9 @@ export let currentReaction: Reaction | null = null;
  *
  * @see {@link https://github.com/maverick-js/signals#root}
  */
-export function root<T>(init: (dispose: Dispose) => T): T {
+export function root<T>(init: (scope: Scope) => T): T {
   const scope = new Scope();
-  return compute(
-    scope,
-    !init.length ? (init as () => T) : init.bind(null, destroyNode.bind(null, scope)),
-    null,
-  ) as T;
+  return compute(scope, init.bind(null, scope), null) as T;
 }
 
 /**

@@ -95,9 +95,9 @@ it('should track parent across peeks', () => {
     });
   }
 
-  const dispose = root((dispose) => {
+  const scope = root((scope) => {
     peek(() => child());
-    return dispose;
+    return scope;
   });
 
   $a.set(1);
@@ -105,7 +105,7 @@ it('should track parent across peeks', () => {
   expect(childCompute).toHaveBeenCalledWith(2);
   expect(childDispose).toHaveBeenCalledTimes(0);
 
-  dispose();
+  scope.destroy();
   expect(childDispose).toHaveBeenCalledTimes(1);
 
   $a.set(2);

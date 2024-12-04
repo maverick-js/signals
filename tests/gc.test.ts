@@ -40,20 +40,20 @@ if (global.gc) {
       ref!: WeakRef<any>,
       pointer;
 
-    const dispose = root((dispose) => {
+    const scope = root((scope) => {
       ref = new WeakRef(
         (pointer = computed(() => {
           $a.get();
         })),
       );
 
-      return dispose;
+      return scope;
     });
 
     await gc();
     expect(ref.deref()).toBeDefined();
 
-    dispose();
+    scope.destroy();
     await gc();
     expect(ref.deref()).toBeDefined();
 
@@ -66,19 +66,19 @@ if (global.gc) {
     let $a = signal(0),
       ref!: WeakRef<any>;
 
-    const dispose = root((dispose) => {
+    const scope = root((scope) => {
       effect(() => {
         $a.get();
         ref = new WeakRef(getScope()!);
       });
 
-      return dispose;
+      return scope;
     });
 
     await gc();
     expect(ref.deref()).toBeDefined();
 
-    dispose();
+    scope.destroy();
     $a.set(1);
 
     await gc();

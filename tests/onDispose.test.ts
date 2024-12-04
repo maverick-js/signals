@@ -59,7 +59,7 @@ it('should not trigger wrong onDispose', () => {
 it('should dispose in-reverse-order', () => {
   let a, b, c;
 
-  const dispose = root((dispose) => {
+  const scope = root((scope) => {
     onDispose(() => {
       a = performance.now();
     });
@@ -76,17 +76,17 @@ it('should dispose in-reverse-order', () => {
       });
     });
 
-    return dispose;
+    return scope;
   });
 
-  dispose();
+  scope.destroy();
   expect(c < b < a).toBe(true);
 });
 
 it('should dispose all roots', () => {
   const disposals: string[] = [];
 
-  const dispose = root((dispose) => {
+  const scope = root((scope) => {
     onDispose(() => disposals.push('root'));
     onDispose(() => disposals.push('root_2'));
 
@@ -110,12 +110,12 @@ it('should dispose all roots', () => {
       effect(() => onDispose(() => disposals.push('s2_3')));
     });
 
-    return dispose;
+    return scope;
   });
 
   flushSync();
 
-  dispose();
+  scope.destroy();
   expect(disposals).toMatchInlineSnapshot(`
     [
       "s2_3",

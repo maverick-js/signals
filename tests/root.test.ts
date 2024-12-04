@@ -17,7 +17,7 @@ it('should dispose of inner computations', () => {
     $a: Signal<number>,
     $b: Reaction<number>;
 
-  root((dispose) => {
+  root((scope) => {
     $a = signal(10);
 
     $b = computed(() => {
@@ -26,7 +26,7 @@ it('should dispose of inner computations', () => {
     });
 
     $b.get();
-    dispose();
+    scope.destroy();
   });
 
   expect($b!.get()).toBe(20);
@@ -42,8 +42,8 @@ it('should dispose of inner computations', () => {
 });
 
 it('should return result', () => {
-  const result = root((dispose) => {
-    dispose();
+  const result = root((scope) => {
+    scope.destroy();
     return 10;
   });
 
@@ -107,11 +107,11 @@ it('should hold parent tracking', () => {
 });
 
 it('should not throw if dispose called during active disposal process', () => {
-  root((dispose) => {
+  root((scope) => {
     onDispose(() => {
-      dispose();
+      scope.destroy();
     });
 
-    dispose();
+    scope.destroy();
   });
 });
