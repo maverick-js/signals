@@ -1,11 +1,11 @@
-import { effect, flushSync, onDispose, root, createScope, scoped } from '../src';
+import { effect, flushSync, onDispose, root, createScope } from '../src';
 
 afterEach(() => flushSync());
 
-it('should be invoked when computation is disposed', () => {
-  const callback1 = vi.fn();
-  const callback2 = vi.fn();
-  const callback3 = vi.fn();
+it('should be invoked when effect is disposed', () => {
+  const callback1 = vi.fn(),
+    callback2 = vi.fn(),
+    callback3 = vi.fn();
 
   const stop = effect(() => {
     onDispose(callback1);
@@ -140,7 +140,7 @@ it('should dispose correctly on appended scopes', () => {
   const scopeA = createScope(),
     scopeB = createScope();
 
-  scoped(() => {
+  scopeA.run(() => {
     onDispose(() => disposals.push('scope_a'));
     effect(() => {
       effect(() => {
@@ -152,9 +152,9 @@ it('should dispose correctly on appended scopes', () => {
         disposals.push('a_effect_one');
       };
     });
-  }, scopeA);
+  });
 
-  scoped(() => {
+  scopeB.run(() => {
     onDispose(() => disposals.push('scope_b'));
     effect(() => {
       effect(() => {
@@ -166,7 +166,7 @@ it('should dispose correctly on appended scopes', () => {
         disposals.push('b_effect_one');
       };
     });
-  }, scopeB);
+  });
 
   flushSync();
 

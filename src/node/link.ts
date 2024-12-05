@@ -3,7 +3,7 @@
 import { isReactionNode, type Reaction } from './reaction';
 import type { ReadSignal } from './signal';
 
-// Reduce pressure on GC and recycle dead links.
+// Reduce pressure on GC and recycle links.
 let pool: Link | null = null;
 
 export interface Link {

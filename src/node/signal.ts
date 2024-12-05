@@ -1,9 +1,8 @@
-import { read, write } from '../compute';
+import { currentScope, read, write } from '../compute';
 import { STATE_CLEAN, STATE_DEAD } from '../constants';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
 import { Reaction } from './reaction';
-import { currentScope } from './scope';
 
 export interface ReadSignal<T = unknown> extends Node {
   /** @internal */
@@ -16,7 +15,6 @@ export interface ReadSignal<T = unknown> extends Node {
   _reactionsTail: Link | null;
   readonly value: T;
   get(): T;
-  destroy(): void;
 }
 
 export class Signal<T = unknown> implements ReadSignal<T> {
@@ -26,12 +24,6 @@ export class Signal<T = unknown> implements ReadSignal<T> {
   _value: T;
   /** @internal */
   _version = 0;
-  /** @internal */
-  _parent = currentScope;
-  /** @internal */
-  _next: Node | null = null;
-  /** @internal */
-  _prev: Node | null = currentScope;
   /** @internal */
   _reactions: Link | null = null;
   /** @internal */
@@ -61,9 +53,6 @@ export class Signal<T = unknown> implements ReadSignal<T> {
   destroy() {
     if (this._state === STATE_DEAD) return;
     this._state = STATE_DEAD;
-    this._parent = null;
-    this._next = null;
-    this._prev = null;
     if (this._reactions) removeLink(this._reactions);
   }
 }

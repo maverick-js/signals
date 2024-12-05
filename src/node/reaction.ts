@@ -1,12 +1,14 @@
-import { queueEffect, read, computeReaction } from '../compute';
+import { queueEffect, read, computeReaction, currentScope } from '../compute';
 import { STATE_DEAD, STATE_DIRTY } from '../constants';
 import { onDispose } from '../dispose';
 import type { Maybe } from '../types';
 import { isFunction } from '../utils';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
-import { currentScope, Scope } from './scope';
+import { Scope } from './scope';
 import type { ReadSignal } from './signal';
+
+export const EFFECT_SYMBOL = Symbol.for('mk.effect');
 
 export class Reaction<T = unknown> implements ReadSignal<T> {
   /** @internal */
@@ -33,7 +35,9 @@ export class Reaction<T = unknown> implements ReadSignal<T> {
   constructor(initialValue: T, compute: () => T) {
     this._value = initialValue;
     this._compute = compute;
-    currentScope?.append(this);
+    if (currentScope && initialValue !== EFFECT_SYMBOL) {
+      currentScope.append(this);
+    }
   }
 
   get(): T {
@@ -78,19 +82,12 @@ export function computed<T>(compute: () => T): Reaction<T> {
   return reaction(void 0, compute) as Reaction<T>;
 }
 
-export const EFFECT_SYMBOL = Symbol.for('mk.effect');
-
 export class Effect extends Reaction<typeof EFFECT_SYMBOL> {
   /** @internal */
   _scope: Scope | null = new Scope(this);
 
   constructor(fn: EffectFunction, options?: EffectOptions) {
-    super(EFFECT_SYMBOL, () => {
-      let stop = fn();
-      isFunction(stop) && onDispose(stop);
-      return EFFECT_SYMBOL;
-    });
-
+    super(EFFECT_SYMBOL, invokeEffect.bind(fn));
     if (!options?.immediate) {
       queueEffect(this);
     } else {
@@ -117,6 +114,12 @@ export class Effect extends Reaction<typeof EFFECT_SYMBOL> {
   }
 }
 
+function invokeEffect(this: EffectFunction): typeof EFFECT_SYMBOL {
+  let stop = this();
+  isFunction(stop) && onDispose(stop);
+  return EFFECT_SYMBOL;
+}
+
 export interface EffectOptions {
   immediate?: boolean;
 }
@@ -131,7 +134,7 @@ export interface StopEffect {
 
 export type MaybeStopEffect = Maybe<StopEffect>;
 
-const destroy = /*@__PURE__*/ Reaction.prototype.destroy;
+const destroyEffect = /*@__PURE__*/ Effect.prototype.destroy;
 
 /**
  * Invokes the given function each time any of the signals that are read inside are updated
@@ -140,7 +143,7 @@ const destroy = /*@__PURE__*/ Reaction.prototype.destroy;
  * @see {@link https://github.com/maverick-js/signals#effect}
  */
 export function effect(fn: EffectFunction, options?: EffectOptions): StopEffect {
-  return destroy.bind(new Effect(fn, options));
+  return destroyEffect.bind(new Effect(fn, options));
 }
 
 const immediateOptions = /*@__PURE__*/ { immediate: true };

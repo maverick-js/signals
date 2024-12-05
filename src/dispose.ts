@@ -1,5 +1,5 @@
+import { currentScope } from './compute';
 import { STATE_DEAD } from './constants';
-import { currentScope } from './node/scope';
 import type { Maybe } from './types';
 import { isFunction } from './utils';
 

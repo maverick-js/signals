@@ -1,4 +1,5 @@
-import { currentScope, type Scope } from './node/scope';
+import { currentScope } from './compute';
+import type { Scope } from './node/scope';
 
 export type ContextRecord = Record<string | symbol, unknown>;
 

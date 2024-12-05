@@ -1,4 +1,4 @@
-import { getContext, root, setContext, getScope, scoped, type Scope, onError } from '../src';
+import { getContext, root, setContext, getScope, type Scope, onError, scoped } from '../src';
 
 it('should scope function to current scope', () => {
   let scope!: Scope | null;
@@ -8,7 +8,9 @@ it('should scope function to current scope', () => {
     setContext('id', 10);
   });
 
-  scoped(() => expect(getContext('id')).toBe(10), scope);
+  scope?.run(() => {
+    expect(getContext('id')).toBe(10);
+  });
 });
 
 it('should return value', () => {
@@ -20,14 +22,15 @@ it('should handle errors', () => {
     handler = vi.fn();
 
   let scope!: Scope | null;
+
   root(() => {
     scope = getScope();
     onError(handler);
   });
 
-  scoped(() => {
+  scope?.run(() => {
     throw error;
-  }, scope);
+  });
 
   expect(handler).toHaveBeenCalledWith(error);
 });

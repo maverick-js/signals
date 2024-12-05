@@ -1,4 +1,4 @@
-import { currentScope, Scope, setScope } from './node/scope';
+import { Scope } from './node/scope';
 import { handleError } from './error';
 import {
   type Reaction,
@@ -10,17 +10,17 @@ import {
 import type { ReadSignal } from './node/signal';
 import { isUndefined } from './utils';
 import { link, removeLink, type Link } from './node/link';
-import { STATE_CHECK, STATE_CLEAN, STATE_DEAD, STATE_DIRTY } from './constants';
+import { STATE_CHECK, STATE_CLEAN, STATE_DEAD, STATE_DIRTY, STATE_INERT } from './constants';
 
 let hasScheduledEffects = false,
   isRunningEffects = false,
   effects: Effect[] = [];
 
+export let currentScope: Scope | null = null;
 export let currentReaction: Reaction | null = null;
 
 /**
- * Creates a computation root which is given a `dispose()` function to dispose of all inner
- * computations.
+ * Creates a computation root.
  *
  * @see {@link https://github.com/maverick-js/signals#root}
  */
@@ -87,10 +87,12 @@ export function write<T>(signal: ReadSignal<T>, value: T): T {
 }
 
 export function computeReaction(reaction: Reaction) {
-  const scope = isEffectNode(reaction) ? reaction._scope : currentScope;
+  const effectScope = isEffectNode(reaction) ? reaction._scope : null,
+    scope = effectScope || currentScope;
 
   try {
-    scope?.reset();
+    effectScope?.reset();
+
     reaction._signalsTail = null;
 
     const result = compute(scope, reaction._compute, reaction),
@@ -221,16 +223,16 @@ function runEffects() {
 }
 
 function runEffect(effect: Effect) {
-  if (effect._state === STATE_DEAD) return;
+  if (effect._state >= STATE_INERT) return;
 
   let ancestors: Effect[] = [effect],
     scope = effect._scope,
-    reaction: Reaction | null = null;
+    ancestorEffect: Effect | null = null;
 
   while ((scope = scope!._parent!)) {
-    reaction = scope._effect;
-    if (reaction && isEffectNode(reaction) && reaction._state !== STATE_CLEAN) {
-      ancestors.push(reaction);
+    ancestorEffect = scope._effect;
+    if (ancestorEffect && ancestorEffect._state !== STATE_CLEAN) {
+      ancestors.push(ancestorEffect);
     }
   }
 
@@ -256,13 +258,13 @@ export function compute<T>(scope: Scope | null, compute: () => T, reaction: Reac
   const prevScope = currentScope,
     prevReaction = currentReaction;
 
-  setScope(scope);
+  currentScope = scope;
   currentReaction = reaction;
 
   try {
     return compute();
   } finally {
-    setScope(prevScope);
+    currentScope = prevScope;
     currentReaction = prevReaction;
   }
 }
