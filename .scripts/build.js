@@ -15,7 +15,7 @@ const mangleCache = {
   _prev: 'l',
   _prevReaction: 'q',
   _prevSignal: 't',
-  _reaction: 'r',
+  _effect: 'r',
   _reactions: 'u',
   _reactionsTail: 'a',
   _refs: 'o',

@@ -4,7 +4,7 @@ import { defaultContext, type ContextRecord } from '../context';
 import { callDisposable, type Disposable } from '../dispose';
 import { handleError, type ErrorHandler } from '../error';
 import type { Node } from './node';
-import type { Reaction } from './reaction';
+import type { Effect } from './reaction';
 
 export let currentScope: Scope | null = null;
 
@@ -26,10 +26,10 @@ export class Scope implements Node {
   /** @internal */
   _disposal: Disposable | Disposable[] | null = null;
   /** @internal */
-  _reaction: Reaction | null;
+  _effect: Effect | null;
 
-  constructor(reaction: Reaction | null = null) {
-    this._reaction = reaction;
+  constructor(effect: Effect | null = null) {
+    this._effect = effect;
     this._context = currentScope ? currentScope._context : defaultContext;
     this._handlers = currentScope ? currentScope._handlers : null;
     currentScope?.append(this);
@@ -94,10 +94,10 @@ export class Scope implements Node {
     this._context = defaultContext;
     this._handlers = null;
 
-    if (this._reaction) {
-      this._reaction._scope = null;
-      this._reaction.destroy();
-      this._reaction = null;
+    if (this._effect) {
+      this._effect._scope = null;
+      this._effect.destroy();
+      this._effect = null;
     }
   }
 }
@@ -157,17 +157,14 @@ function destroyChildren(scope: Scope) {
     return scope._next;
   }
 
-  let parents: Node[] = [scope],
-    parent: Node | null = scope,
+  let parent: Node | null = scope,
     current: Node | null = scope._next!,
     next: Node | null = null;
 
   main: do {
-    parent = parents.pop()!;
-
     while (current && current._parent === parent) {
       if (current._next?._parent === current) {
-        parents.push(parent, current);
+        // TODO: parents.push(parent, current);
         current = current._next;
         continue main;
       } else {
@@ -178,8 +175,8 @@ function destroyChildren(scope: Scope) {
     }
 
     // Skip root.
-    if (parents.length) parent.destroy();
-  } while (parents.length);
+    // if (parents.length) parent.destroy();
+  } while (current);
 
   return current;
 }

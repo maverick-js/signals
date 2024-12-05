@@ -87,11 +87,13 @@ export function write<T>(signal: ReadSignal<T>, value: T): T {
 }
 
 export function computeReaction(reaction: Reaction) {
+  const scope = isEffectNode(reaction) ? reaction._scope : currentScope;
+
   try {
-    reaction.reset();
+    scope?.reset();
     reaction._signalsTail = null;
 
-    const result = compute(reaction._scope, reaction._compute, reaction),
+    const result = compute(scope, reaction._compute, reaction),
       tail = reaction._signalsTail as Link | null;
 
     // Remove any signals that are no longer being used.
@@ -111,7 +113,7 @@ export function computeReaction(reaction: Reaction) {
       reaction._value = result;
     }
   } catch (error) {
-    handleError(reaction._scope, error);
+    handleError(scope, error);
   } finally {
     reaction._state = STATE_CLEAN;
   }
@@ -226,7 +228,7 @@ function runEffect(effect: Effect) {
     reaction: Reaction | null = null;
 
   while ((scope = scope!._parent!)) {
-    reaction = scope._reaction;
+    reaction = scope._effect;
     if (reaction && isEffectNode(reaction) && reaction._state !== STATE_CLEAN) {
       ancestors.push(reaction);
     }

@@ -5,7 +5,7 @@ import type { Maybe } from '../types';
 import { isFunction } from '../utils';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
-import { Scope } from './scope';
+import { currentScope, Scope } from './scope';
 import type { ReadSignal } from './signal';
 
 export class Reaction<T = unknown> implements ReadSignal<T> {
@@ -15,8 +15,6 @@ export class Reaction<T = unknown> implements ReadSignal<T> {
   _value: T;
   /** @internal */
   _version = 0;
-  /** @internal */
-  _scope: Scope | null = new Scope(this);
   /** @internal */
   _signals: Link | null = null;
   /** @internal */
@@ -35,28 +33,23 @@ export class Reaction<T = unknown> implements ReadSignal<T> {
   constructor(initialValue: T, compute: () => T) {
     this._value = initialValue;
     this._compute = compute;
+    currentScope?.append(this);
   }
 
   get(): T {
     return read(this);
   }
 
-  reset() {
-    this._scope!.reset();
-  }
-
   destroy() {
     if (this._state === STATE_DEAD) return;
-
-    this._state = STATE_DEAD;
 
     if (this._signals) removeLink(this._signals);
     if (this._reactions) removeLink(this._reactions);
 
-    if (this._scope) {
-      this._scope._reaction = null;
-      this._scope.destroy();
-    }
+    this._signals = null;
+    this._reactions = null;
+
+    this._state = STATE_DEAD;
   }
 }
 
@@ -67,7 +60,7 @@ export function reaction<T>(initialValue: T, compute: () => T): Reaction<T> {
 }
 
 export function isReactionNode(node: Node): node is Reaction {
-  return !!(node as Reaction)._scope;
+  return !!(node as Reaction)._compute;
 }
 
 export function isReaction(value: unknown): value is Reaction {
@@ -88,6 +81,9 @@ export function computed<T>(compute: () => T): Reaction<T> {
 export const EFFECT_SYMBOL = Symbol.for('mk.effect');
 
 export class Effect extends Reaction<typeof EFFECT_SYMBOL> {
+  /** @internal */
+  _scope: Scope | null = new Scope(this);
+
   constructor(fn: EffectFunction, options?: EffectOptions) {
     super(EFFECT_SYMBOL, () => {
       let stop = fn();
@@ -100,6 +96,24 @@ export class Effect extends Reaction<typeof EFFECT_SYMBOL> {
     } else {
       computeReaction(this);
     }
+  }
+
+  override destroy() {
+    if (this._state === STATE_DEAD) return;
+
+    if (this._signals) removeLink(this._signals);
+    if (this._reactions) removeLink(this._reactions);
+
+    this._signals = null;
+    this._reactions = null;
+
+    if (this._scope) {
+      this._scope._effect = null;
+      this._scope.destroy();
+      this._scope = null;
+    }
+
+    this._state = STATE_DEAD;
   }
 }
 
