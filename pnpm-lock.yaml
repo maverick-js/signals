@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 devDependencies:
+  '@maverick-js/signals':
+    specifier: ^6.0.0
+    version: 6.0.0
   '@preact/signals-core':
     specifier: ^1.3.0
     version: 1.3.0
@@ -483,6 +486,10 @@ packages:
 
   /@jridgewell/sourcemap-codec@1.4.15:
     resolution: {integrity: sha512-eF2rxCRulEKXHTRiDrDy6erMYWqNw4LPdQ8UQA4huuxaQsVeRPFl2oM8oDGxMFhJUWZf9McpLtJasDDZb/Bpeg==}
+    dev: true
+
+  /@maverick-js/signals@6.0.0:
+    resolution: {integrity: sha512-aPAxQOjxcGaLpjMcfE0mRuMgnCVLfdPSGINYmKDjTbTfY37lZdz9CGnVDrkr+svNSADZbUVk7oPVjXA2+vtxYg==}
     dev: true
 
   /@preact/signals-core@1.3.0:

@@ -1,5 +1,5 @@
 import { scoped } from '../compute';
-import { STATE_DEAD, STATE_INERT, TYPE_SCOPE } from '../constants';
+import { STATE_DEAD, STATE_INERT } from '../constants';
 import { defaultContext, type ContextRecord } from '../context';
 import { callDisposable, type Disposable } from '../dispose';
 import { handleError, type ErrorHandler } from '../error';
@@ -9,8 +9,6 @@ import type { Reaction } from './reaction';
 export let currentScope: Scope | null = null;
 
 export class Scope implements Node {
-  /** @internal */
-  readonly _type = TYPE_SCOPE;
   /** @internal */
   _state = STATE_INERT;
   /** @internal */
@@ -32,7 +30,7 @@ export class Scope implements Node {
     this._reaction = reaction;
     this._context = currentScope ? currentScope._context : defaultContext;
     this._handlers = currentScope ? currentScope._handlers : null;
-    if (currentScope) appendScopeChild(currentScope, this);
+    appendScopeChild(currentScope, this);
   }
 
   run<T>(run: () => T): T | undefined {
@@ -99,7 +97,7 @@ export function setScope(scope: Scope | null) {
 }
 
 export function isScopeNode(node: Node): node is Scope {
-  return node._type === TYPE_SCOPE;
+  return node instanceof Scope;
 }
 
 export function emptyDisposal(scope: Scope) {
@@ -122,7 +120,9 @@ export function emptyDisposal(scope: Scope) {
 /**
  * Appends a child node to a parent scope.
  */
-export function appendScopeChild(scope: Scope, child: Node) {
+export function appendScopeChild(scope: Scope | null, child: Node) {
+  if (!scope) return;
+
   child._prev = scope;
 
   if (scope._next) {

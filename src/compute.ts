@@ -1,8 +1,12 @@
 import { currentScope, Scope, setScope } from './node/scope';
 import { handleError } from './error';
-import { destroyNode } from './node/node';
-import type { Dispose } from './dispose';
-import { type Reaction, isEffectNode, type Effect, isReactionNode } from './node/reaction';
+import {
+  type Reaction,
+  type Effect,
+  isReaction,
+  isEffectNode,
+  EFFECT_SYMBOL,
+} from './node/reaction';
 import type { ReadSignal } from './node/signal';
 import { isUndefined } from './utils';
 import { link, removeLink, type Link } from './node/link';
@@ -67,7 +71,7 @@ export function read<T>(signal: ReadSignal<T>): T {
     node._version = signal._version;
   }
 
-  if (isReactionNode(signal)) update(signal);
+  if (isReaction(signal)) update(signal);
 
   return signal._value;
 }
@@ -101,7 +105,7 @@ export function computeReaction(reaction: Reaction) {
       reaction._signals = null;
     }
 
-    if (!isEffectNode(reaction) && !isUndefined(reaction._value)) {
+    if (result !== EFFECT_SYMBOL && !isUndefined(reaction._value)) {
       write(reaction, result);
     } else {
       reaction._value = result;
@@ -127,7 +131,7 @@ export function update(reaction: Reaction) {
     while (currentLink) {
       signal = currentLink._signal;
 
-      if (isReactionNode(signal)) {
+      if (isReaction(signal)) {
         if (reaction._signals && reaction._state === STATE_CHECK) {
           links.push(currentLink);
           currentLink = reaction._signals;

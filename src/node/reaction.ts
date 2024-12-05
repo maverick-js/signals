@@ -1,5 +1,5 @@
 import { queueEffect, read, computeReaction } from '../compute';
-import { STATE_DEAD, STATE_DIRTY, TYPE_EFFECT, TYPE_REACTION } from '../constants';
+import { STATE_DEAD, STATE_DIRTY } from '../constants';
 import { onDispose } from '../dispose';
 import type { Maybe } from '../types';
 import { isFunction } from '../utils';
@@ -9,8 +9,6 @@ import { Scope } from './scope';
 import type { ReadSignal } from './signal';
 
 export class Reaction<T = unknown> implements ReadSignal<T> {
-  /** @internal */
-  readonly _type: number = TYPE_REACTION;
   /** @internal */
   _state = STATE_DIRTY;
   /** @internal */
@@ -63,7 +61,11 @@ export function reaction<T>(initialValue: T, compute: () => T): Reaction<T> {
 }
 
 export function isReactionNode(node: Node): node is Reaction {
-  return node._type === TYPE_REACTION;
+  return !!(node as Reaction)._scope;
+}
+
+export function isReaction(value: unknown): value is Reaction {
+  return isNode(value) && isReactionNode(value);
 }
 
 /**
@@ -77,14 +79,14 @@ export function computed<T>(compute: () => T): Reaction<T> {
   return reaction(void 0, compute) as Reaction<T>;
 }
 
-export class Effect extends Reaction<void> {
-  /** @internal */
-  override _type = TYPE_EFFECT;
+export const EFFECT_SYMBOL = Symbol.for('mk.effect');
 
+export class Effect extends Reaction<typeof EFFECT_SYMBOL> {
   constructor(fn: EffectFunction, options?: EffectOptions) {
-    super(void 0, () => {
+    super(EFFECT_SYMBOL, () => {
       let stop = fn();
       isFunction(stop) && onDispose(stop);
+      return EFFECT_SYMBOL;
     });
 
     if (!options?.immediate) {
@@ -137,5 +139,5 @@ export function isEffect(value: unknown): value is Effect {
 }
 
 export function isEffectNode(node: Node): node is Effect {
-  return node._type === TYPE_EFFECT;
+  return (node as Reaction)._value === EFFECT_SYMBOL;
 }

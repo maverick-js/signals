@@ -3,8 +3,6 @@ import { isReactionNode } from './reaction';
 import { isScopeNode, type Scope } from './scope';
 
 export interface Node {
-  /** @internal bitwise flags */
-  readonly _type: number;
   /** @internal current state */
   _state: number;
   /** @internal parent scope */
@@ -17,7 +15,7 @@ export interface Node {
 }
 
 export function isNode(value: unknown): value is Node {
-  return !!(value as any)?._type;
+  return !!(value as any)?._state;
 }
 
 /**

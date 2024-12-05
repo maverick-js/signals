@@ -1,5 +1,5 @@
 import { read, write } from '../compute';
-import { STATE_CLEAN, STATE_DEAD, TYPE_READ_SIGNAL, TYPE_SIGNAL } from '../constants';
+import { STATE_CLEAN, STATE_DEAD } from '../constants';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
 import { Reaction } from './reaction';
@@ -20,8 +20,6 @@ export interface ReadSignal<T = unknown> extends Node {
 }
 
 export class Signal<T = unknown> implements ReadSignal<T> {
-  /** @internal */
-  readonly _type = TYPE_SIGNAL;
   /** @internal */
   _state = STATE_CLEAN;
   /** @internal */
@@ -45,7 +43,7 @@ export class Signal<T = unknown> implements ReadSignal<T> {
 
   constructor(value: T) {
     this._value = value;
-    if (currentScope) appendScopeChild(currentScope, this);
+    appendScopeChild(currentScope, this);
   }
 
   get(): T {
@@ -53,10 +51,6 @@ export class Signal<T = unknown> implements ReadSignal<T> {
   }
 
   set(value: T) {
-    if ((this._type as number) >= TYPE_READ_SIGNAL) {
-      throw Error(__DEV__ ? 'Cannot set the value of a readonly signal' : 'readonly');
-    }
-
     write(this, value);
   }
 
@@ -105,7 +99,7 @@ export function readonly<T>(signal: Signal<T>): ReadSignal<T> {
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
 export function isReadSignal(value: unknown): value is ReadSignal {
-  return isNode(value) && value._type >= TYPE_READ_SIGNAL;
+  return isNode(value);
 }
 
 /**
@@ -114,5 +108,5 @@ export function isReadSignal(value: unknown): value is ReadSignal {
  * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
 export function isWriteSignal<T>(value: unknown): value is Signal<T> {
-  return isNode(value) && value._type === TYPE_SIGNAL;
+  return isNode(value) && !!(value as Signal).set;
 }

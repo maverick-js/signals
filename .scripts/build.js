@@ -23,8 +23,7 @@ const mangleCache = {
   _signal: 'g',
   _signals: 'y',
   _signalsTail: 'b',
-  _state: 'z',
-  _type: 'ø',
+  _state: 'ø',
   _value: 'v',
   _version: 'e',
 };
