@@ -4,7 +4,6 @@ afterEach(() => flushSync());
 
 it('should store and return value on read', () => {
   const $a = signal(10);
-  expect($a).toBeInstanceOf(Function);
   expect($a.get()).toBe(10);
 });
 

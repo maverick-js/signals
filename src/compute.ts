@@ -219,11 +219,13 @@ function runEffects() {
 }
 
 function runEffect(effect: Effect) {
+  if (effect._state === STATE_DEAD) return;
+
   let ancestors: Effect[] = [effect],
     scope = effect._scope,
     reaction: Reaction | null = null;
 
-  while ((scope = scope._parent!)) {
+  while ((scope = scope!._parent!)) {
     reaction = scope._reaction;
     if (reaction && isEffectNode(reaction) && reaction._state !== STATE_CLEAN) {
       ancestors.push(reaction);

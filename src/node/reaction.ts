@@ -4,7 +4,7 @@ import { onDispose } from '../dispose';
 import type { Maybe } from '../types';
 import { isFunction } from '../utils';
 import { removeLink, type Link } from './link';
-import { destroyNode, isNode, type Node } from './node';
+import { isNode, type Node } from './node';
 import { Scope } from './scope';
 import type { ReadSignal } from './signal';
 
@@ -16,7 +16,7 @@ export class Reaction<T = unknown> implements ReadSignal<T> {
   /** @internal */
   _version = 0;
   /** @internal */
-  readonly _scope = new Scope(this);
+  _scope: Scope | null = new Scope(this);
   /** @internal */
   _signals: Link | null = null;
   /** @internal */
@@ -42,15 +42,21 @@ export class Reaction<T = unknown> implements ReadSignal<T> {
   }
 
   reset() {
-    destroyNode(this, false);
-    this._scope.reset();
+    this._scope!.reset();
   }
 
   destroy() {
     if (this._state === STATE_DEAD) return;
+
     this._state = STATE_DEAD;
+
     if (this._signals) removeLink(this._signals);
     if (this._reactions) removeLink(this._reactions);
+
+    if (this._scope) {
+      this._scope._reaction = null;
+      this._scope.destroy();
+    }
   }
 }
 
@@ -111,7 +117,7 @@ export interface StopEffect {
 
 export type MaybeStopEffect = Maybe<StopEffect>;
 
-const destroyEffect = /*@__PURE__*/ Effect.prototype.destroy;
+const destroy = /*@__PURE__*/ Reaction.prototype.destroy;
 
 /**
  * Invokes the given function each time any of the signals that are read inside are updated
@@ -120,7 +126,7 @@ const destroyEffect = /*@__PURE__*/ Effect.prototype.destroy;
  * @see {@link https://github.com/maverick-js/signals#effect}
  */
 export function effect(fn: EffectFunction, options?: EffectOptions): StopEffect {
-  return destroyEffect.bind(new Effect(fn, options));
+  return destroy.bind(new Effect(fn, options));
 }
 
 const immediateOptions = /*@__PURE__*/ { immediate: true };

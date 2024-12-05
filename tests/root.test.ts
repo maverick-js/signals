@@ -13,17 +13,14 @@ import {
 afterEach(() => flushSync());
 
 it('should dispose of inner computations', () => {
-  let computeB = vi.fn(),
-    $a: Signal<number>,
-    $b: Reaction<number>;
+  let $a: Signal<number>,
+    $b: Reaction<number>,
+    computeB = vi.fn(() => $a.get() + 10);
 
   root((scope) => {
     $a = signal(10);
 
-    $b = computed(() => {
-      computeB();
-      return $a.get() + 10;
-    });
+    $b = computed(computeB);
 
     $b.get();
     scope.destroy();
@@ -51,33 +48,33 @@ it('should return result', () => {
 });
 
 it('should create new tracking scope', () => {
-  const innerEffect = vi.fn(),
-    $a = signal(0);
+  const $a = signal(0),
+    $effect = vi.fn();
 
   const stop = effect(() => {
     $a.get();
     root(() => {
       effect(() => {
-        innerEffect($a.get());
+        $effect($a.get());
       });
     });
   });
 
-  expect(innerEffect).not.toHaveBeenCalledWith(0);
-  expect(innerEffect).toHaveBeenCalledTimes(0);
+  expect($effect).not.toHaveBeenCalledWith(0);
+  expect($effect).toHaveBeenCalledTimes(0);
 
   flushSync();
 
-  expect(innerEffect).toHaveBeenCalledWith(0);
-  expect(innerEffect).toHaveBeenCalledTimes(1);
+  expect($effect).toHaveBeenCalledWith(0);
+  expect($effect).toHaveBeenCalledTimes(1);
 
   stop();
 
   $a.set(10);
   flushSync();
 
-  expect(innerEffect).not.toHaveBeenCalledWith(10);
-  expect(innerEffect).toHaveBeenCalledTimes(1);
+  expect($effect).not.toHaveBeenCalledWith(10);
+  expect($effect).toHaveBeenCalledTimes(1);
 });
 
 it('should not be reactive', () => {
@@ -106,7 +103,7 @@ it('should hold parent tracking', () => {
   });
 });
 
-it('should not throw if dispose called during active disposal process', () => {
+it('should not throw if destroy called during active disposal process', () => {
   root((scope) => {
     onDispose(() => {
       scope.destroy();

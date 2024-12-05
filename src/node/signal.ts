@@ -3,7 +3,7 @@ import { STATE_CLEAN, STATE_DEAD } from '../constants';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
 import { Reaction } from './reaction';
-import { appendScopeChild, currentScope } from './scope';
+import { currentScope } from './scope';
 
 export interface ReadSignal<T = unknown> extends Node {
   /** @internal */
@@ -43,7 +43,7 @@ export class Signal<T = unknown> implements ReadSignal<T> {
 
   constructor(value: T) {
     this._value = value;
-    appendScopeChild(currentScope, this);
+    currentScope?.append(this);
   }
 
   get(): T {

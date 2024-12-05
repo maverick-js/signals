@@ -8,6 +8,8 @@ import type { Reaction } from './reaction';
 
 export let currentScope: Scope | null = null;
 
+let isDestroying = false;
+
 export class Scope implements Node {
   /** @internal */
   _state = STATE_INERT;
@@ -30,7 +32,7 @@ export class Scope implements Node {
     this._reaction = reaction;
     this._context = currentScope ? currentScope._context : defaultContext;
     this._handlers = currentScope ? currentScope._handlers : null;
-    appendScopeChild(currentScope, this);
+    currentScope?.append(this);
   }
 
   run<T>(run: () => T): T | undefined {
@@ -38,12 +40,24 @@ export class Scope implements Node {
   }
 
   append(child: Node) {
-    // @ts-expect-error - override readonly
-    child._parent = this;
+    child._prev = this;
 
-    appendScopeChild(this, child);
+    if (this._next) {
+      if (child._next) {
+        let tail = child._next;
+        while (tail._next) tail = tail._next;
+        this._next._prev = tail;
+        tail._next = this._next;
+      } else {
+        child._next = this._next;
+        this._next._prev = child;
+      }
+    }
 
-    if (isScopeNode(child)) {
+    this._next = child;
+
+    // Appending outside of initial creation.
+    if (child._parent !== this && isScopeNode(child)) {
       child._context =
         child._context === defaultContext ? this._context : { ...this._context, ...child._context };
 
@@ -53,19 +67,27 @@ export class Scope implements Node {
           : [...child._handlers, ...this._handlers];
       }
     }
+
+    child._parent = this;
   }
 
   reset() {
-    emptyDisposal(this);
+    dispose(this);
+    destroy(this, this);
     this._handlers = this._parent ? this._parent._handlers : null;
   }
 
   destroy() {
     if (this._state === STATE_DEAD) return;
 
-    emptyDisposal(this);
+    if (!isDestroying) {
+      destroy(this, this._prev);
+    }
 
     this._state = STATE_DEAD;
+
+    dispose(this);
+
     this._parent = null;
     this._next = null;
     this._prev = null;
@@ -73,6 +95,7 @@ export class Scope implements Node {
     this._handlers = null;
 
     if (this._reaction) {
+      this._reaction._scope = null;
       this._reaction.destroy();
       this._reaction = null;
     }
@@ -100,7 +123,7 @@ export function isScopeNode(node: Node): node is Scope {
   return node instanceof Scope;
 }
 
-export function emptyDisposal(scope: Scope) {
+export function dispose(scope: Scope) {
   if (!scope._disposal) return;
   try {
     if (Array.isArray(scope._disposal)) {
@@ -117,25 +140,46 @@ export function emptyDisposal(scope: Scope) {
   }
 }
 
-/**
- * Appends a child node to a parent scope.
- */
-export function appendScopeChild(scope: Scope | null, child: Node) {
-  if (!scope) return;
+function destroy(scope: Scope, head: Node | null) {
+  const prev = isDestroying;
+  try {
+    isDestroying = true;
+    const tail = destroyChildren(scope);
+    if (head) head._next = tail;
+    if (tail) tail._prev = head;
+  } finally {
+    isDestroying = prev;
+  }
+}
 
-  child._prev = scope;
-
-  if (scope._next) {
-    if (child._next) {
-      let tail = child._next;
-      while (tail._next) tail = tail._next;
-      scope._next._prev = tail;
-      tail._next = scope._next;
-    } else {
-      child._next = scope._next;
-      scope._next._prev = child;
-    }
+function destroyChildren(scope: Scope) {
+  if (!scope._next || scope._next._parent !== scope) {
+    return scope._next;
   }
 
-  scope._next = child;
+  let parents: Node[] = [scope],
+    parent: Node | null = scope,
+    current: Node | null = scope._next!,
+    next: Node | null = null;
+
+  main: do {
+    parent = parents.pop()!;
+
+    while (current && current._parent === parent) {
+      if (current._next?._parent === current) {
+        parents.push(parent, current);
+        current = current._next;
+        continue main;
+      } else {
+        next = current._next!;
+        current.destroy();
+        current = next;
+      }
+    }
+
+    // Skip root.
+    if (parents.length) parent.destroy();
+  } while (parents.length);
+
+  return current;
 }
