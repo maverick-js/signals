@@ -5,5 +5,9 @@ export interface Node {
 }
 
 export function isNode(value: unknown): value is Node {
-  return !!(value as any)?._state;
+  if (__DEV__) {
+    return !!(value as any)?._state;
+  } else {
+    return value != null && 'ø' in (value as object);
+  }
 }

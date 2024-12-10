@@ -3,7 +3,7 @@ import { STATE_DEAD, STATE_INERT } from '../constants';
 import { defaultContext, type ContextRecord } from '../context';
 import { callDisposable, type Disposable } from '../dispose';
 import { handleError, type ErrorHandler } from '../error';
-import type { Node } from './node';
+import { isNode, type Node } from './node';
 import type { Effect } from './reaction';
 
 // Reduce pressure on GC and recycle children.
@@ -156,8 +156,16 @@ export function getScope(): Scope | null {
   return currentScope;
 }
 
+export function isScope(value: unknown): value is Scope {
+  return isNode(value) && isScopeNode(value);
+}
+
 export function isScopeNode(node: Node): node is Scope {
-  return !!(node as Scope)._context;
+  if (__DEV__) {
+    return !!(node as Scope)._context;
+  } else {
+    return 'µ' in node;
+  }
 }
 
 export function dispose(scope: Scope) {
@@ -180,11 +188,11 @@ export function dispose(scope: Scope) {
 function destroyChildren(scope: Scope) {
   if (!scope._head) return;
 
-  let prevIsDestroying = isDestroyingChildren,
-    currentChild = scope._tail,
+  let currentChild = scope._tail,
     currentScope: Scope | null = null,
     prevChild: ScopeChild | null = null,
-    nextScope: Scope | null = null;
+    nextScope: Scope | null = null,
+    prevIsDestroying = isDestroyingChildren;
 
   isDestroyingChildren = true;
 

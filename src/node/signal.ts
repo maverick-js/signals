@@ -97,5 +97,5 @@ export function isReadSignal(value: unknown): value is ReadSignal {
  * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
 export function isWriteSignal<T>(value: unknown): value is Signal<T> {
-  return isNode(value) && !!(value as Signal).set;
+  return isNode(value) && 'set' in value;
 }

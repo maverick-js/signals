@@ -3,9 +3,9 @@ import { handleError } from './error';
 import {
   type Reaction,
   type Effect,
-  isReaction,
   isEffectNode,
   EFFECT_SYMBOL,
+  isReactionNode,
 } from './node/reaction';
 import type { ReadSignal } from './node/signal';
 import { isUndefined } from './utils';
@@ -71,7 +71,7 @@ export function read<T>(signal: ReadSignal<T>): T {
     node._version = signal._version;
   }
 
-  if (isReaction(signal)) update(signal);
+  if (isReactionNode(signal)) updateReaction(signal);
 
   return signal._value;
 }
@@ -80,22 +80,26 @@ export function write<T>(signal: ReadSignal<T>, value: T): T {
   if (isNotEqual(signal._value, value)) {
     signal._value = value;
     signal._version++;
-    notify(signal._reactions);
+    notifyReactions(signal);
   }
 
   return signal._value;
 }
 
-export function computeReaction(reaction: Reaction) {
-  const effectScope = isEffectNode(reaction) ? reaction._scope : null,
-    scope = effectScope || currentScope;
+/**
+ * @returns Whether the reaction has changed.
+ */
+export function computeReaction(reaction: Reaction): boolean {
+  let effectScope = isEffectNode(reaction) ? reaction._scope : null,
+    scope = effectScope || currentScope,
+    version = reaction._version;
 
   try {
     effectScope?.reset();
 
     reaction._signalsTail = null;
 
-    const result = compute(scope, reaction._compute, reaction),
+    let result = compute(scope, reaction._compute, reaction),
       tail = reaction._signalsTail as Link | null;
 
     // Remove any signals that are no longer being used.
@@ -119,6 +123,8 @@ export function computeReaction(reaction: Reaction) {
   } finally {
     reaction._state = STATE_CLEAN;
   }
+
+  return reaction._version !== version;
 }
 
 export function queueEffect(effect: Effect) {
@@ -126,70 +132,120 @@ export function queueEffect(effect: Effect) {
   if (!hasScheduledEffects) flushEffects();
 }
 
-export function update(reaction: Reaction) {
-  if (reaction._signals && reaction._state === STATE_CHECK) {
-    let currentLink: Link | null = reaction._signals,
-      signal: ReadSignal,
-      links: Array<Link | null> = [];
+export function updateReaction(reaction: Reaction) {
+  if (reaction._state === STATE_CHECK && reaction._signals) {
+    let current: Link | null = reaction._signals,
+      head: Link | null = null,
+      prevHead: Link | null = null,
+      signal: ReadSignal = current._signal,
+      isDirty = false;
 
-    while (currentLink) {
-      signal = currentLink._signal;
+    main: while (current) {
+      signal = current._signal;
 
-      if (isReaction(signal)) {
-        if (reaction._signals && reaction._state === STATE_CHECK) {
-          links.push(currentLink);
-          currentLink = reaction._signals;
+      if (isReactionNode(signal)) {
+        if (current._version !== signal._version) {
+          isDirty = true;
+        } else if (signal._state === STATE_DIRTY) {
+          isDirty = computeReaction(signal);
+        } else if (signal._state === STATE_CHECK && signal._signals) {
+          signal._signals._prevReaction = head;
+          signal._signals._prevSignal = current;
+          current = head = signal._signals;
           continue;
-        }
-
-        if (currentLink._version !== signal._version) {
-          computeReaction(signal);
-        } else {
-          signal._state = STATE_CLEAN;
         }
       }
 
-      currentLink = currentLink._nextSignal;
-      if (!currentLink) currentLink = links.pop()!;
-    }
-  }
+      if (isDirty || !current._nextSignal) {
+        while (head && head._prevSignal) {
+          current = head._prevSignal;
+          head._prevSignal = null;
+          signal = current._signal;
 
-  if (reaction._state === STATE_DIRTY) {
+          // Recompute parent reaction if any child was found to be dirty.
+          if (isDirty) {
+            isDirty = computeReaction(signal as Reaction);
+          } else {
+            signal._state = STATE_CLEAN;
+          }
+
+          current = current._nextSignal;
+
+          if (isDirty || !current) {
+            prevHead = head._prevReaction;
+            head._prevReaction = null;
+            head = prevHead;
+            continue;
+          }
+
+          continue main;
+        }
+
+        // Exit the loop to avoid triggering updates on other reactions unnecessarily.
+        if (isDirty) break;
+      }
+
+      current = current?._nextSignal as Link;
+    }
+
+    if (isDirty) {
+      computeReaction(reaction);
+    } else {
+      reaction._state = STATE_CLEAN;
+    }
+  } else if (reaction._state === STATE_DIRTY) {
     computeReaction(reaction);
+  } else {
+    reaction._state = STATE_CLEAN;
   }
 }
 
-export function notify(link: Link | null): void {
-  if (!link) return;
+export function notifyReactions(signal: ReadSignal): void {
+  if (!signal._reactions) return;
 
-  let currentLink: Link | null = link,
-    reaction: Reaction,
+  let current: Link | null = signal._reactions,
+    prevHead: Link | null = null,
+    head: Link | null = null,
     state = STATE_DIRTY,
-    links: Array<Link | null> = [];
+    reaction = current._reaction;
 
-  while (currentLink) {
-    reaction = currentLink._reaction;
+  while (true) {
+    if (!current) {
+      if (!head) break;
 
-    if (reaction._state < state) {
-      if (isEffectNode(reaction) && reaction._state === STATE_CLEAN) {
-        queueEffect(reaction);
-      }
+      current = head._prevReaction;
+      head._prevReaction = null;
 
-      reaction._state = state;
+      prevHead = head._prevSignal;
+      head._prevSignal = null;
+      head = prevHead;
 
-      if (reaction._reactions) {
-        links.push(currentLink._nextReaction);
-        state = STATE_CHECK;
-        currentLink = reaction._reactions;
-        continue;
-      }
+      state = !head ? STATE_DIRTY : STATE_CHECK;
+
+      continue;
     }
 
-    currentLink = currentLink._nextReaction;
+    reaction = current._reaction;
 
-    if (!currentLink) {
-      currentLink = links.pop()!;
-      if (links.length === 0) state = STATE_DIRTY;
+    // Skip if already dirty, inert, or dead.
+    if (reaction._state >= state) {
+      current = current._nextReaction;
+      continue;
+    }
+
+    if (isEffectNode(reaction) && reaction._state === STATE_CLEAN) {
+      queueEffect(reaction);
+    }
+
+    reaction._state = state;
+
+    if (reaction._reactions) {
+      reaction._reactions._prevSignal = head;
+      reaction._reactions._prevReaction = current._nextReaction;
+      current = head = reaction._reactions;
+      state = STATE_CHECK;
+    } else {
+      current = current._nextReaction;
     }
   }
 }
@@ -237,7 +293,7 @@ function runEffect(effect: Effect) {
   }
 
   for (let i = ancestors.length - 1; i >= 0; i--) {
-    update(ancestors[i]);
+    updateReaction(ancestors[i]);
   }
 }
 

@@ -63,12 +63,16 @@ export function reaction<T>(initialValue: T, compute: () => T): Reaction<T> {
   return new Reaction(initialValue, compute);
 }
 
-export function isReactionNode(node: Node): node is Reaction {
-  return !!(node as Reaction)._compute;
-}
-
 export function isReaction(value: unknown): value is Reaction {
   return isNode(value) && isReactionNode(value);
+}
+
+export function isReactionNode(node: Node): node is Reaction {
+  if (__DEV__) {
+    return !!(node as Reaction)._compute;
+  } else {
+    return 'p' in node;
+  }
 }
 
 /**
@@ -162,5 +166,5 @@ export function isEffect(value: unknown): value is Effect {
 }
 
 export function isEffectNode(node: Node): node is Effect {
-  return (node as Reaction)._value === EFFECT_SYMBOL;
+  return (node as ReadSignal)._value === EFFECT_SYMBOL;
 }

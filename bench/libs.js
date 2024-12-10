@@ -10,14 +10,14 @@ export const libs = {
     read: (signal) => signal.get(),
     write: (signal, value) => signal.set(value),
   },
-  // preact: {
-  //   signal: preact.signal,
-  //   computed: preact.computed,
-  //   read: (signal) => signal.value,
-  //   write: (signal, value) => {
-  //     signal.value = value;
-  //   },
-  // },
+  preact: {
+    signal: preact.signal,
+    computed: preact.computed,
+    read: (signal) => signal.value,
+    write: (signal, value) => {
+      signal.value = value;
+    },
+  },
   'maverick@6': {
     signal: maverick6.signal,
     computed: maverick6.computed,

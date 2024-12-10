@@ -68,14 +68,15 @@ it('should only update every signal once (diamond graph + tail)', () => {
     $c = computed(() => $a.get()),
     $d = computed(() => $b.get() + ' ' + $c.get());
 
-  const spy = vi.fn(() => $d.get());
-  const $e = computed(spy);
+  const spy = vi.fn(() => $d.get()),
+    $e = computed(spy);
 
   expect($e.get()).toBe('a a');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   flushSync();
+
   expect($e.get()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
@@ -235,6 +236,7 @@ it('should ensure subs update even if two deps unmark it', () => {
 
   const spy = vi.fn(() => $b.get() + ' ' + $c.get() + ' ' + $d.get()),
     $e = computed(spy);
+
   expect($e.get()).toBe('a c d');
 
   $a.set('aa');
