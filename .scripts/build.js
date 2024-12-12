@@ -3,12 +3,13 @@ import { build } from 'esbuild';
 /** @type {Record<string, string>} */
 const mangleCache = {
   _child: 'c',
-  _compute: 'p',
+  _compute: 'ƒ',
   _context: 'µ',
   _disposal: 'd',
   _effect: 'e',
   _handlers: 'h',
   _head: 'a',
+  _lastComputedId: 'm',
   _key: 'k',
   _next: 'n',
   _nextReaction: 'r',
@@ -21,7 +22,7 @@ const mangleCache = {
   _reactions: 'u',
   _reactionsTail: 't',
   _refs: 'f',
-  _scope: 'g',
+  _scope: 'ß',
   _signal: 'i',
   _signals: 'y',
   _signalsTail: 'w',

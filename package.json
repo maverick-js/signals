@@ -19,7 +19,8 @@
     "test:watch": "vitest watch",
     "test:gc": "node --expose-gc ./vitest.js",
     "test:gc:watch": "node --expose-gc ./vitest.js --watch",
-    "bench:layers": "pnpm build && node bench/layers.js",
+    "bench:create": "pnpm build && node --expose-gc bench/create.js ",
+    "bench:layers": "pnpm build && node --expose-gc bench/layers.js ",
     "validate": "pnpm test && pnpm test:gc && pnpm build",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish"
   },

@@ -1,10 +1,10 @@
 import { currentScope, scoped } from '../compute';
 import { STATE_DEAD, STATE_INERT } from '../constants';
 import { defaultContext, type ContextRecord } from '../context';
-import { callDisposable, type Disposable } from '../dispose';
+import { dispose, type Disposable } from '../dispose';
 import { handleError, type ErrorHandler } from '../error';
+import type { Effect } from './effect';
 import { isNode, type Node } from './node';
-import type { Effect } from './reaction';
 
 // Reduce pressure on GC and recycle children.
 let pool: ScopeChild | null = null,
@@ -45,6 +45,7 @@ export class Scope implements Node {
     this._handlers = currentScope ? currentScope._handlers : null;
     currentScope?.append(this);
   }
+  _value: unknown;
 
   run<T>(fn: () => T): T | undefined {
     return scoped(fn, this);
@@ -91,7 +92,7 @@ export class Scope implements Node {
   }
 
   reset() {
-    dispose(this);
+    clearDisposal(this);
     destroyChildren(this);
     this._head = null;
     this._tail = null;
@@ -126,7 +127,7 @@ export class Scope implements Node {
     // Must be called here to prevent errors when destroying scopes inside `onDispose`.
     this._state = STATE_DEAD;
 
-    dispose(this);
+    clearDisposal(this);
 
     this._parent = null;
     this._child = null;
@@ -136,6 +137,7 @@ export class Scope implements Node {
     this._handlers = null;
 
     if (this._effect) {
+      // @ts-expect-error
       this._effect._scope = null;
       this._effect.destroy();
       this._effect = null;
@@ -162,21 +164,21 @@ export function isScope(value: unknown): value is Scope {
 
 export function isScopeNode(node: Node): node is Scope {
   if (__DEV__) {
-    return !!(node as Scope)._context;
+    return '_context' in node;
   } else {
     return 'µ' in node;
   }
 }
 
-export function dispose(scope: Scope) {
+export function clearDisposal(scope: Scope) {
   if (!scope._disposal) return;
   try {
     if (Array.isArray(scope._disposal)) {
       for (let i = scope._disposal.length - 1; i >= 0; i--) {
-        callDisposable(scope._disposal[i]);
+        dispose(scope._disposal[i]);
       }
     } else {
-      callDisposable(scope._disposal);
+      dispose(scope._disposal);
     }
 
     scope._disposal = null;

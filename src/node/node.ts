@@ -6,7 +6,7 @@ export interface Node {
 
 export function isNode(value: unknown): value is Node {
   if (__DEV__) {
-    return !!(value as any)?._state;
+    return value != null && '_state' in (value as object);
   } else {
     return value != null && 'ø' in (value as object);
   }

@@ -1,5 +1,6 @@
 import { currentScope } from './compute';
 import { STATE_DEAD } from './constants';
+import type { Scope } from './node/scope';
 import type { Maybe } from './types';
 import { isFunction } from './utils';
 
@@ -16,13 +17,12 @@ export type MaybeDisposable = Maybe<Disposable>;
  *
  * @see {@link https://github.com/maverick-js/signals#ondispose}
  */
-export function onDispose(disposable: MaybeDisposable): Dispose {
-  if (!disposable || !currentScope) {
-    return callDisposable.bind(null, disposable);
-  }
+export function onDispose(disposable: MaybeDisposable): void {
+  if (!disposable || !currentScope) return;
+  addDisposable(currentScope, disposable);
+}
 
-  const scope = currentScope;
-
+export function addDisposable(scope: Scope, disposable: Disposable) {
   if (!scope._disposal) {
     scope._disposal = disposable;
   } else if (Array.isArray(scope._disposal)) {
@@ -30,21 +30,19 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
   } else {
     scope._disposal = [scope._disposal, disposable];
   }
-
-  return function removeDisposable() {
-    if (scope._state === STATE_DEAD) return;
-
-    callDisposable(disposable);
-
-    if (Array.isArray(scope._disposal)) {
-      scope._disposal.splice(scope._disposal.indexOf(disposable), 1);
-    } else {
-      scope._disposal = null;
-    }
-  };
 }
 
-export function callDisposable(disposable: MaybeDisposable) {
+export function removeDisposable(scope: Scope, disposable: Disposable) {
+  if (scope._state === STATE_DEAD) {
+    // no-op
+  } else if (Array.isArray(scope._disposal)) {
+    scope._disposal.splice(scope._disposal.indexOf(disposable), 1);
+  } else {
+    scope._disposal = null;
+  }
+}
+
+export function dispose(disposable: MaybeDisposable) {
   if (isFunction(disposable)) {
     disposable();
   } else if (disposable) {

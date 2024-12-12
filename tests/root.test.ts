@@ -7,14 +7,14 @@ import {
   getScope,
   onDispose,
   type Signal,
-  type Reaction,
+  type Computed,
 } from '../src';
 
 afterEach(() => flushSync());
 
 it('should dispose of inner computations', () => {
   let $a: Signal<number>,
-    $b: Reaction<number>,
+    $b: Computed<number>,
     computeB = vi.fn(() => $a.get() + 10);
 
   root((scope) => {

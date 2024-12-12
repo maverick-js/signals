@@ -1,4 +1,12 @@
-import { effect, flushSync, onDispose, root, createScope } from '../src';
+import {
+  effect,
+  flushSync,
+  onDispose,
+  root,
+  createScope,
+  removeDisposable,
+  currentScope,
+} from '../src';
 
 afterEach(() => flushSync());
 
@@ -21,22 +29,17 @@ it('should be invoked when effect is disposed', () => {
   expect(callback3).toHaveBeenCalled();
 });
 
-it('should clear disposal early', () => {
+it('should remove disposable', () => {
   const dispose = vi.fn();
 
   const stop = effect(() => {
-    const early = onDispose(dispose);
-    early();
+    onDispose(dispose);
+    removeDisposable(currentScope!, dispose);
   });
 
   flushSync();
 
-  expect(dispose).toHaveBeenCalledTimes(1);
-
-  stop();
-  flushSync();
-
-  expect(dispose).toHaveBeenCalledTimes(1);
+  expect(dispose).toHaveBeenCalledTimes(0);
 });
 
 it('should not trigger wrong onDispose', () => {

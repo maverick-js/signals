@@ -4,6 +4,8 @@ export async function runBenches(benches, { unit = 'micro' } = {}) {
 
     await bench.run();
 
+    globalThis.gc?.();
+
     console.table(
       bench.table((task) => {
         return {

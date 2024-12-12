@@ -119,23 +119,40 @@ it('should only re-compute whats needed', () => {
 });
 
 it('should discover new dependencies', () => {
-  const $a = signal(1),
-    $b = signal(0),
-    $c = computed(() => {
+  let $a = signal(1),
+    $b = signal(10),
+    computeC = vi.fn(() => {
       if ($a.get()) {
         return $a.get();
       } else {
         return $b.get();
       }
-    });
+    }),
+    $c = computed(computeC);
 
   expect($c.get()).toBe(1);
 
   $a.set(0);
   flushSync();
-  expect($c.get()).toBe(0);
 
-  $b.set(10);
-  flushSync();
   expect($c.get()).toBe(10);
+  expect(computeC).toHaveBeenCalledTimes(2);
+
+  $b.set(20);
+  flushSync();
+
+  expect($c.get()).toBe(20);
+  expect(computeC).toHaveBeenCalledTimes(3);
+
+  $a.set(20);
+  flushSync();
+
+  expect($c.get()).toBe(20);
+  expect(computeC).toHaveBeenCalledTimes(3);
+
+  $b.set(40);
+  flushSync();
+
+  expect($c.get()).toBe(20);
+  expect(computeC).toHaveBeenCalledTimes(3);
 });

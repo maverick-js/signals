@@ -2,7 +2,7 @@ import { currentScope, read, write } from '../compute';
 import { STATE_CLEAN, STATE_DEAD } from '../constants';
 import { removeLink, type Link } from './link';
 import { isNode, type Node } from './node';
-import { Reaction } from './reaction';
+import { Computed } from './computed';
 
 export interface ReadSignal<T = unknown> extends Node {
   /** @internal */
@@ -13,6 +13,8 @@ export interface ReadSignal<T = unknown> extends Node {
   _reactions: Link | null;
   /** @internal */
   _reactionsTail: Link | null;
+  /** @internal */
+  _lastComputedId: number;
   readonly value: T;
   get(): T;
 }
@@ -24,6 +26,8 @@ export class Signal<T = unknown> implements ReadSignal<T> {
   _value: T;
   /** @internal */
   _version = 0;
+  /** @internal */
+  _lastComputedId = 0;
   /** @internal */
   _reactions: Link | null = null;
   /** @internal */
@@ -79,7 +83,7 @@ export function signal<T>(initialValue: T): Signal<T> {
  * @see {@link https://github.com/maverick-js/signals#readonly}
  */
 export function readonly<T>(signal: Signal<T>): ReadSignal<T> {
-  return new Reaction(signal._value, signal.get.bind(signal));
+  return new Computed(signal._value, signal.get.bind(signal));
 }
 
 /**

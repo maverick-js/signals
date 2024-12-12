@@ -1,16 +1,11 @@
 import { Scope } from './node/scope';
 import { handleError } from './error';
-import {
-  type Reaction,
-  type Effect,
-  isEffectNode,
-  EFFECT_SYMBOL,
-  isReactionNode,
-} from './node/reaction';
 import type { ReadSignal } from './node/signal';
-import { isUndefined } from './utils';
-import { link, removeLink, type Link } from './node/link';
+import { link, type Link } from './node/link';
 import { STATE_CHECK, STATE_CLEAN, STATE_DEAD, STATE_DIRTY, STATE_INERT } from './constants';
+import { isEffectNode, type Effect } from './node/effect';
+import { isReactionNode, type Reaction } from './node/reaction';
+import { isComputedNode } from './node/computed';
 
 let hasScheduledEffects = false,
   isRunningEffects = false,
@@ -18,15 +13,16 @@ let hasScheduledEffects = false,
 
 export let currentScope: Scope | null = null;
 export let currentReaction: Reaction | null = null;
+export let currentComputeId = 0;
 
 /**
- * Creates a computation root.
+ * Creates a new scope and runs the given function inside it returning the result.
  *
  * @see {@link https://github.com/maverick-js/signals#root}
  */
-export function root<T>(init: (scope: Scope) => T): T {
+export function root<T>(run: (scope: Scope) => T): T {
   const scope = new Scope();
-  return compute(scope, init.bind(null, scope), null) as T;
+  return compute(scope, null, run.bind(null, scope)) as T;
 }
 
 /**
@@ -36,7 +32,7 @@ export function root<T>(init: (scope: Scope) => T): T {
  * @see {@link https://github.com/maverick-js/signals#peek}
  */
 export function peek<T>(fn: () => T): T {
-  return compute<T>(currentScope, fn, null);
+  return compute<T>(currentScope, null, fn);
 }
 
 /**
@@ -46,7 +42,7 @@ export function peek<T>(fn: () => T): T {
  * @see {@link https://github.com/maverick-js/signals#untrack}
  */
 export function untrack<T>(fn: () => T): T {
-  return compute<T>(null, fn, null);
+  return compute<T>(null, null, fn);
 }
 
 /**
@@ -56,7 +52,7 @@ export function untrack<T>(fn: () => T): T {
  */
 export function scoped<T>(run: () => T, scope: Scope | null): T | undefined {
   try {
-    return compute<T>(scope, run, null);
+    return compute<T>(scope, null, run);
   } catch (error) {
     handleError(scope, error);
     return; // TS -_-
@@ -66,12 +62,14 @@ export function scoped<T>(run: () => T, scope: Scope | null): T | undefined {
 export function read<T>(signal: ReadSignal<T>): T {
   if (signal._state === STATE_DEAD) return signal._value;
 
-  if (currentReaction) {
-    const node = link(currentReaction, signal);
-    node._version = signal._version;
+  if (isReactionNode(signal)) {
+    signal.update();
   }
 
-  if (isReactionNode(signal)) updateReaction(signal);
+  if (currentReaction && signal._lastComputedId !== currentComputeId) {
+    signal._lastComputedId = currentComputeId;
+    link(currentReaction, signal)._version = signal._version;
+  }
 
   return signal._value;
 }
@@ -86,54 +84,15 @@ export function write<T>(signal: ReadSignal<T>, value: T): T {
   return signal._value;
 }
 
-/**
- * @returns Whether the reaction has changed.
- */
-export function computeReaction(reaction: Reaction): boolean {
-  let effectScope = isEffectNode(reaction) ? reaction._scope : null,
-    scope = effectScope || currentScope,
-    version = reaction._version;
-
-  try {
-    effectScope?.reset();
-
-    reaction._signalsTail = null;
-
-    let result = compute(scope, reaction._compute, reaction),
-      tail = reaction._signalsTail as Link | null;
-
-    // Remove any signals that are no longer being used.
-    if (tail) {
-      if (tail._nextSignal) {
-        removeLink(tail._nextSignal);
-        tail._nextSignal = null;
-      }
-    } else if (reaction._signals) {
-      removeLink(reaction._signals);
-      reaction._signals = null;
-    }
-
-    if (result !== EFFECT_SYMBOL && !isUndefined(reaction._value)) {
-      write(reaction, result);
-    } else {
-      reaction._value = result;
-    }
-  } catch (error) {
-    handleError(scope, error);
-  } finally {
-    reaction._state = STATE_CLEAN;
-  }
-
-  return reaction._version !== version;
-}
-
 export function queueEffect(effect: Effect) {
   effects.push(effect);
   if (!hasScheduledEffects) flushEffects();
 }
 
-export function updateReaction(reaction: Reaction) {
-  if (reaction._state === STATE_CHECK && reaction._signals) {
+export function shouldUpdate(reaction: Reaction): boolean {
+  if (reaction._state === STATE_CHECK) {
+    if (!reaction._signals) return false;
+
     let current: Link | null = reaction._signals,
       head: Link | null = null,
       prevHead: Link | null = null,
@@ -143,11 +102,11 @@ export function updateReaction(reaction: Reaction) {
     main: while (current) {
       signal = current._signal;
 
-      if (isReactionNode(signal)) {
+      if (isComputedNode(signal)) {
         if (current._version !== signal._version) {
           isDirty = true;
         } else if (signal._state === STATE_DIRTY) {
-          isDirty = computeReaction(signal);
+          isDirty = signal.update();
         } else if (signal._state === STATE_CHECK && signal._signals) {
           signal._signals._prevReaction = head;
           signal._signals._prevSignal = current;
@@ -164,7 +123,7 @@ export function updateReaction(reaction: Reaction) {
 
           // Recompute parent reaction if any child was found to be dirty.
           if (isDirty) {
-            isDirty = computeReaction(signal as Reaction);
+            isDirty = (signal as Reaction).update();
           } else {
             signal._state = STATE_CLEAN;
           }
@@ -182,22 +141,14 @@ export function updateReaction(reaction: Reaction) {
         }
 
         // Exit the loop to avoid triggering updates on other reactions unnecessarily.
-        if (isDirty) break;
+        return isDirty;
       }
 
       current = current?._nextSignal as Link;
     }
-
-    if (isDirty) {
-      computeReaction(reaction);
-    } else {
-      reaction._state = STATE_CLEAN;
-    }
-  } else if (reaction._state === STATE_DIRTY) {
-    computeReaction(reaction);
-  } else {
-    reaction._state = STATE_CLEAN;
   }
+
+  return reaction._state === STATE_DIRTY;
 }
 
 export function notifyReactions(signal: ReadSignal): void {
@@ -281,19 +232,17 @@ function runEffects() {
 function runEffect(effect: Effect) {
   if (effect._state >= STATE_INERT) return;
 
-  let ancestors: Effect[] = [effect],
-    scope = effect._scope,
-    ancestorEffect: Effect | null = null;
+  let effects: Effect[] = [effect],
+    scope = effect._scope;
 
   while ((scope = scope!._parent!)) {
-    ancestorEffect = scope._effect;
-    if (ancestorEffect && ancestorEffect._state !== STATE_CLEAN) {
-      ancestors.push(ancestorEffect);
+    if (scope._effect && scope._effect._state !== STATE_CLEAN) {
+      effects.push(scope._effect);
     }
   }
 
-  for (let i = ancestors.length - 1; i >= 0; i--) {
-    updateReaction(ancestors[i]);
+  for (let i = effects.length - 1; i >= 0; i--) {
+    effects[i].update();
   }
 }
 
@@ -310,17 +259,19 @@ export function flushSync(): void {
 /** @deprecated use flushSync */
 export const tick = flushSync;
 
-export function compute<T>(scope: Scope | null, compute: () => T, reaction: Reaction | null): T {
+export function compute<T>(scope: Scope | null, reaction: Reaction | null, run: () => T): T {
   const prevScope = currentScope,
     prevReaction = currentReaction;
 
   currentScope = scope;
   currentReaction = reaction;
+  ++currentComputeId;
 
   try {
-    return compute();
+    return run();
   } finally {
     currentScope = prevScope;
     currentReaction = prevReaction;
+    --currentComputeId;
   }
 }

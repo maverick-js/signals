@@ -1,5 +1,5 @@
-/** Adapted from: https://github.com/preactjs/signals :) */
-
+import { STATE_CLEAN, STATE_DIRTY } from '../constants';
+import { isEffectNode } from './effect';
 import { isReactionNode, type Reaction } from './reaction';
 import type { ReadSignal } from './signal';
 
@@ -23,13 +23,13 @@ export interface Link {
   _prevReaction: Link | null;
 }
 
+let nextLink: Link | null = null;
 export function link(reaction: Reaction, signal: ReadSignal): Link {
-  let currentSignal = reaction._signalsTail,
-    nextSignal = currentSignal ? currentSignal._nextSignal : reaction._signals;
-  if (nextSignal && nextSignal._signal === signal) {
-    return (reaction._signalsTail = nextSignal);
+  nextLink = reaction._signalsTail?._nextSignal || reaction._signals;
+  if (nextLink?._signal === signal) {
+    return (reaction._signalsTail = nextLink);
   } else {
-    return createLink(reaction, signal, nextSignal);
+    return createLink(reaction, signal, nextLink);
   }
 }
 
@@ -48,7 +48,7 @@ function createLink(reaction: Reaction, signal: ReadSignal, nextSignal: Link | n
       _version: 0,
       _signal: signal,
       _reaction: reaction,
-      _nextSignal: null,
+      _nextSignal: nextSignal,
       _prevSignal: null,
       _prevReaction: null,
       _nextReaction: null,
@@ -76,17 +76,23 @@ function createLink(reaction: Reaction, signal: ReadSignal, nextSignal: Link | n
 }
 
 export function removeLink(link: Link): void {
+  let signal = link._signal,
+    nextSignal: Link | null = null,
+    nextReaction: Link | null = null,
+    prevReaction: Link | null = null;
+
   do {
-    let signal = link._signal,
-      nextSignal = link._nextSignal,
-      nextReaction = link._nextReaction,
-      prevReaction = link._prevReaction;
+    signal = link._signal;
+    nextSignal = link._nextSignal;
+    nextReaction = link._nextReaction;
+    prevReaction = link._prevReaction;
 
     if (nextReaction) {
       nextReaction._prevReaction = prevReaction;
       link._nextReaction = null;
     } else {
       signal._reactionsTail = prevReaction;
+      signal._lastComputedId = 0;
     }
 
     if (prevReaction) {
@@ -96,15 +102,22 @@ export function removeLink(link: Link): void {
       signal._reactions = nextReaction;
     }
 
+    // Nullify fields and put link back into pool.
     // @ts-expect-error
     link._signal = null;
     // @ts-expect-error
     link._reaction = null;
     link._nextSignal = pool;
-
     pool = link;
 
-    if (signal._reactions && isReactionNode(signal)) {
+    // Check whether reaction node is now isolated.
+    if (!signal._reactions && isReactionNode(signal) && signal._signals) {
+      if (isEffectNode(signal)) {
+        signal._state = STATE_CLEAN;
+      } else {
+        signal._state = STATE_DIRTY;
+      }
+
       if (signal._signals) {
         link = signal._signals;
         signal._signalsTail!._nextSignal = nextSignal;
@@ -116,4 +129,17 @@ export function removeLink(link: Link): void {
 
     link = nextSignal!;
   } while (link);
+}
+
+export function removeDeadLinks(reaction: Reaction) {
+  let tail = reaction._signalsTail as Link | null;
+  if (tail) {
+    if (tail._nextSignal) {
+      removeLink(tail._nextSignal);
+      tail._nextSignal = null;
+    }
+  } else if (reaction._signals) {
+    removeLink(reaction._signals);
+    reaction._signals = null;
+  }
 }
