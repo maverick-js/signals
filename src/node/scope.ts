@@ -45,7 +45,6 @@ export class Scope implements Node {
     this._handlers = currentScope ? currentScope._handlers : null;
     currentScope?.append(this);
   }
-  _value: unknown;
 
   run<T>(fn: () => T): T | undefined {
     return scoped(fn, this);

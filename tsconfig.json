@@ -22,6 +22,7 @@
     "sourceMap": false,
     "strict": true,
     "strictNullChecks": true,
+    "stripInternal": true,
     "target": "esnext",
     "types": ["@types/node", "vitest/globals"]
   },

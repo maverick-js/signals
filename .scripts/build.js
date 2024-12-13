@@ -9,7 +9,6 @@ const mangleCache = {
   _effect: 'e',
   _handlers: 'h',
   _head: 'a',
-  _lastComputedId: 'm',
   _key: 'k',
   _next: 'n',
   _nextReaction: 'r',

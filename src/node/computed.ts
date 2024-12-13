@@ -14,8 +14,6 @@ export class Computed<T = unknown> implements ReadSignal<T> {
   /** @internal */
   _version = 0;
   /** @internal */
-  _lastComputedId = 0;
-  /** @internal */
   _signals: Link | null = null;
   /** @internal */
   _signalsTail: Link | null = null;

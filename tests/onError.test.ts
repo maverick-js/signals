@@ -79,7 +79,7 @@ it('should forward error to another handler', () => {
   expect(handler).toHaveBeenCalledTimes(2);
 });
 
-it.only('should not duplicate error handler', () => {
+it('should not duplicate error handler', () => {
   const error = new Error(),
     handler = vi.fn();
 
@@ -96,11 +96,9 @@ it.only('should not duplicate error handler', () => {
 
   flushSync();
 
-  console.log('--- 1.');
   $a.set(1);
   flushSync();
 
-  console.log('--- 2.');
   shouldThrow = true;
   $a.set(2);
   flushSync();

@@ -13,7 +13,6 @@ let hasScheduledEffects = false,
 
 export let currentScope: Scope | null = null;
 export let currentReaction: Reaction | null = null;
-export let currentComputeId = 0;
 
 /**
  * Creates a new scope and runs the given function inside it returning the result.
@@ -66,8 +65,7 @@ export function read<T>(signal: ReadSignal<T>): T {
     signal.update();
   }
 
-  if (currentReaction && signal._lastComputedId !== currentComputeId) {
-    signal._lastComputedId = currentComputeId;
+  if (currentReaction) {
     link(currentReaction, signal)._version = signal._version;
   }
 
@@ -265,13 +263,11 @@ export function compute<T>(scope: Scope | null, reaction: Reaction | null, run: 
 
   currentScope = scope;
   currentReaction = reaction;
-  ++currentComputeId;
 
   try {
     return run();
   } finally {
     currentScope = prevScope;
     currentReaction = prevReaction;
-    --currentComputeId;
   }
 }

@@ -213,7 +213,7 @@ it('should ensure subs update even if one dep unmarks it', () => {
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
-it('should ensure subs update even if two deps unmark it', () => {
+it.only('should ensure subs update even if two deps unmark it', () => {
   // In this scenario both "C" and "D" always return the same
   // value. But "E" must still update because "A"  marked it.
   // If "E" isn't updated, then we have a bug.

@@ -23,9 +23,8 @@ export interface Link {
   _prevReaction: Link | null;
 }
 
-let nextLink: Link | null = null;
 export function link(reaction: Reaction, signal: ReadSignal): Link {
-  nextLink = reaction._signalsTail?._nextSignal || reaction._signals;
+  let nextLink = reaction._signalsTail?._nextSignal || reaction._signals;
   if (nextLink?._signal === signal) {
     return (reaction._signalsTail = nextLink);
   } else {
@@ -76,30 +75,21 @@ function createLink(reaction: Reaction, signal: ReadSignal, nextSignal: Link | n
 }
 
 export function removeLink(link: Link): void {
-  let signal = link._signal,
-    nextSignal: Link | null = null,
-    nextReaction: Link | null = null,
-    prevReaction: Link | null = null;
-
   do {
-    signal = link._signal;
-    nextSignal = link._nextSignal;
-    nextReaction = link._nextReaction;
-    prevReaction = link._prevReaction;
+    let { _signal, _nextReaction, _prevReaction, _nextSignal } = link;
 
-    if (nextReaction) {
-      nextReaction._prevReaction = prevReaction;
+    if (_nextReaction) {
+      _nextReaction._prevReaction = _prevReaction;
       link._nextReaction = null;
     } else {
-      signal._reactionsTail = prevReaction;
-      signal._lastComputedId = 0;
+      _signal._reactionsTail = _prevReaction;
     }
 
-    if (prevReaction) {
-      prevReaction._nextReaction = nextReaction;
+    if (_prevReaction) {
+      _prevReaction._nextReaction = _nextReaction;
       link._prevReaction = null;
     } else {
-      signal._reactions = nextReaction;
+      _signal._reactions = _nextReaction;
     }
 
     // Nullify fields and put link back into pool.
@@ -107,27 +97,28 @@ export function removeLink(link: Link): void {
     link._signal = null;
     // @ts-expect-error
     link._reaction = null;
+    link._prevSignal = null;
     link._nextSignal = pool;
     pool = link;
 
     // Check whether reaction node is now isolated.
-    if (!signal._reactions && isReactionNode(signal) && signal._signals) {
-      if (isEffectNode(signal)) {
-        signal._state = STATE_CLEAN;
+    if (!_signal._reactions && isReactionNode(_signal) && _signal._signals) {
+      if (isEffectNode(_signal)) {
+        _signal._state = STATE_CLEAN;
       } else {
-        signal._state = STATE_DIRTY;
+        _signal._state = STATE_DIRTY;
       }
 
-      if (signal._signals) {
-        link = signal._signals;
-        signal._signalsTail!._nextSignal = nextSignal;
-        signal._signals = null;
-        signal._signalsTail = null;
+      if (_signal._signals) {
+        link = _signal._signals;
+        _signal._signalsTail!._nextSignal = _nextSignal;
+        _signal._signals = null;
+        _signal._signalsTail = null;
         continue;
       }
     }
 
-    link = nextSignal!;
+    link = _nextSignal!;
   } while (link);
 }
 

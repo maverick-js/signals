@@ -13,8 +13,6 @@ export interface ReadSignal<T = unknown> extends Node {
   _reactions: Link | null;
   /** @internal */
   _reactionsTail: Link | null;
-  /** @internal */
-  _lastComputedId: number;
   readonly value: T;
   get(): T;
 }
@@ -26,8 +24,6 @@ export class Signal<T = unknown> implements ReadSignal<T> {
   _value: T;
   /** @internal */
   _version = 0;
-  /** @internal */
-  _lastComputedId = 0;
   /** @internal */
   _reactions: Link | null = null;
   /** @internal */
