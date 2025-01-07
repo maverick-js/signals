@@ -373,8 +373,8 @@ const ComputeNode = function Computation(
   this._observers = null;
   this._value = initialValue;
 
-  if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
   if (compute) this._compute = compute;
+  if (__DEV__) this.id = options?.id ?? (this._compute ? 'computed' : 'signal');
   if (options && options.dirty) this._changed = options.dirty;
 };
 
