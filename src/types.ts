@@ -4,11 +4,6 @@ export interface Computation<T = any> extends Scope {
   id?: string | undefined;
 
   /** @internal */
-  _effect: boolean;
-  /** @internal */
-  _init: boolean;
-
-  /** @internal */
   _value: T;
   /** @internal */
   _sources: Computation[] | null;
@@ -54,7 +49,7 @@ export interface NextValue<T> {
 
 export interface Scope {
   [SCOPE]: Scope | null;
-  /** @internal */
+  /** @internal - low two bits are the state, remaining bits are flags. */
   _state: number;
   /** @internal */
   _compute: unknown;

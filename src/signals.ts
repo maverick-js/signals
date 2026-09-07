@@ -1,4 +1,5 @@
 import {
+  FLAG_EFFECT,
   createComputation,
   createSignal,
   dispose,
@@ -83,7 +84,7 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
-  signal._effect = true;
+  signal._state |= FLAG_EFFECT;
   update(signal);
 
   if (__DEV__) {

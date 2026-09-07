@@ -15,7 +15,8 @@ import {
   type Scope,
 } from '../src';
 
-const STATE_DISPOSED = 3;
+const STATE_DISPOSED = 3,
+  STATE_MASK = 3;
 
 afterEach(() => tick());
 
@@ -36,11 +37,11 @@ it('should keep a disposed computed disposed when an observer is checked', () =>
   expect(spy).toHaveBeenCalledTimes(1);
 
   disposeRoot();
-  expect($c.node!._state).toBe(STATE_DISPOSED);
+  expect($c.node!._state & STATE_MASK).toBe(STATE_DISPOSED);
 
   $s.set(1);
   tick();
-  expect($c.node!._state).toBe(STATE_DISPOSED);
+  expect($c.node!._state & STATE_MASK).toBe(STATE_DISPOSED);
   expect($c()).toBe(0); // last value.
 });
 
@@ -61,9 +62,9 @@ it('should keep a disposed child effect disposed when its parent re-runs mid-flu
 
   $a.set(1);
   tick();
-  expect(first._state).toBe(STATE_DISPOSED);
+  expect(first._state & STATE_MASK).toBe(STATE_DISPOSED);
   expect(child).not.toBe(first);
-  expect(child._state).not.toBe(STATE_DISPOSED);
+  expect(child._state & STATE_MASK).not.toBe(STATE_DISPOSED);
 });
 
 it('should not re-link an effect that stops itself during its own run', () => {

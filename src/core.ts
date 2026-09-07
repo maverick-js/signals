@@ -25,7 +25,13 @@ const NOOP = () => {},
   STATE_CLEAN = 0,
   STATE_CHECK = 1,
   STATE_DIRTY = 2,
-  STATE_DISPOSED = 3;
+  STATE_DISPOSED = 3,
+  // The low two bits of `_state` hold the state above, the rest are flags.
+  STATE_MASK = 3,
+  FLAG_EFFECT = 1 << 2,
+  FLAG_INIT = 1 << 3;
+
+export { FLAG_EFFECT };
 
 function flushEffects() {
   scheduledEffects = true;
@@ -51,7 +57,8 @@ function runEffects() {
     try {
       for (; i < effects.length; i++) {
         const effect = effects[i];
-        if (effect._state !== STATE_CLEAN && effect._state !== STATE_DISPOSED) runTop(effect);
+        const state = effect._state & STATE_MASK;
+        if (state !== STATE_CLEAN && state !== STATE_DISPOSED) runTop(effect);
       }
     } catch (e) {
       if (!hasError) {
@@ -73,7 +80,8 @@ function runTop(node: Computation) {
   let ancestors: Computation[] | null = null;
 
   for (let parent = node[SCOPE] as Computation | null; parent; parent = parent[SCOPE] as any) {
-    if (parent._effect && parent._state !== STATE_CLEAN && parent._state !== STATE_DISPOSED) {
+    const state = parent._state & STATE_MASK;
+    if (parent._state & FLAG_EFFECT && state !== STATE_CLEAN && state !== STATE_DISPOSED) {
       if (!ancestors) ancestors = [parent];
       else ancestors.push(parent);
     }
@@ -200,7 +208,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 
   // The scope was disposed during its own computation (e.g., an effect stopping itself) - run
   // the disposable now so it can't leak.
-  if (node._state === STATE_DISPOSED) {
+  if ((node._state & STATE_MASK) === STATE_DISPOSED) {
     disposable.call(disposable);
     return NOOP;
   }
@@ -239,7 +247,7 @@ function addDisposable(node: Scope, disposable: Disposable) {
  * scope itself is kept alive so it can be re-used).
  */
 export function dispose(this: Scope, self = true) {
-  if (this._state === STATE_DISPOSED) return;
+  if ((this._state & STATE_MASK) === STATE_DISPOSED) return;
 
   if (self) {
     const parent = this[SCOPE];
@@ -279,9 +287,9 @@ function disposeChildren(scope: Scope) {
  * `removeDisposedChildren`).
  */
 export function disposeNode(node: Computation) {
-  if (node._state === STATE_DISPOSED) return;
+  if ((node._state & STATE_MASK) === STATE_DISPOSED) return;
 
-  node._state = STATE_DISPOSED;
+  node._state = (node._state & ~STATE_MASK) | STATE_DISPOSED;
 
   try {
     if (node._children) disposeChildren(node);
@@ -305,10 +313,10 @@ export function removeDisposedChildren(scope: Scope) {
   if (Array.isArray(children)) {
     let live = 0;
     for (let i = 0; i < children.length; i++) {
-      if (children[i]._state !== STATE_DISPOSED) children[live++] = children[i];
+      if ((children[i]._state & STATE_MASK) !== STATE_DISPOSED) children[live++] = children[i];
     }
     children.length = live;
-  } else if (children && children._state === STATE_DISPOSED) {
+  } else if (children && (children._state & STATE_MASK) === STATE_DISPOSED) {
     scope._children = null;
   }
 }
@@ -376,9 +384,9 @@ function handleError(scope: Scope | null, error: unknown) {
 }
 
 export function read(this: Computation): any {
-  if (this._state === STATE_DISPOSED) return this._value;
+  if ((this._state & STATE_MASK) === STATE_DISPOSED) return this._value;
 
-  if (currentObserver && !this._effect) {
+  if (currentObserver && !(this._state & FLAG_EFFECT)) {
     if (
       !currentObservers &&
       currentObserver._sources &&
@@ -516,8 +524,6 @@ const ComputeNode = function Computation(
   ScopeNode.call(this);
 
   this._state = compute ? STATE_DIRTY : STATE_CLEAN;
-  this._init = false;
-  this._effect = false;
   this._sources = null;
   this._observers = null;
   this._mark = 0;
@@ -550,12 +556,12 @@ export function isFunction(value: unknown): value is Function {
 }
 
 function updateCheck(node: Computation) {
-  if (node._state === STATE_CHECK) {
+  if ((node._state & STATE_MASK) === STATE_CHECK) {
     const sources = node._sources!;
     for (let i = 0; i < sources.length; i++) {
       // Plain signals are never dirty, only computations need checking.
       if (sources[i]._compute) updateCheck(sources[i]);
-      if ((node._state as number) === STATE_DIRTY) {
+      if ((node._state & STATE_MASK) === STATE_DIRTY) {
         // Stop the loop here so we won't trigger updates on other parents unnecessarily
         // If our computation changes to no longer use some sources, we don't
         // want to update() a source we used last time, but now don't use.
@@ -564,9 +570,10 @@ function updateCheck(node: Computation) {
     }
   }
 
-  if (node._state === STATE_DIRTY) update(node);
+  const state = node._state & STATE_MASK;
+  if (state === STATE_DIRTY) update(node);
   // Only a node that was being checked transitions back to clean - never a disposed one.
-  else if (node._state === STATE_CHECK) node._state = STATE_CLEAN;
+  else if (state === STATE_CHECK) node._state &= ~STATE_MASK;
 }
 
 function cleanup(node: Computation) {
@@ -576,40 +583,46 @@ function cleanup(node: Computation) {
 }
 
 export function update(node: Computation) {
-  let prevObservers = currentObservers,
+  const prevScope = currentScope,
+    prevObserver = currentObserver,
+    prevObservers = currentObservers,
     prevObserversIndex = currentObserversIndex;
 
-  currentObservers = null as Computation[] | null;
+  currentObservers = null;
   currentObserversIndex = 0;
 
   try {
+    // Cleanup runs in the outer scope, only the computation itself runs as `node`.
     cleanup(node);
 
-    const result = compute(node, node._compute!, node);
+    currentScope = node;
+    currentObserver = node;
 
-    if (node._effect) {
+    const result = node._compute!.call(node);
+
+    if (node._state & FLAG_EFFECT) {
       // Effects may return a disposer that runs before the next run and on disposal.
       if (isFunction(result)) {
-        if (node._state === STATE_DISPOSED) result.call(result);
+        if ((node._state & STATE_MASK) === STATE_DISPOSED) result.call(result);
         else addDisposable(node, result);
       }
     }
 
     // The node may have been disposed during its own computation (e.g., an effect stopping
     // itself) - don't re-link it into the graph.
-    if (node._state === STATE_DISPOSED) return;
+    if ((node._state & STATE_MASK) === STATE_DISPOSED) return;
 
     updateObservers(node);
 
-    if (!node._effect) {
-      if (node._init) setValue(node, result);
+    if (!(node._state & FLAG_EFFECT)) {
+      if (node._state & FLAG_INIT) setValue(node, result);
       else {
         node._value = result;
-        node._init = true;
+        node._state |= FLAG_INIT;
       }
     }
   } catch (error) {
-    if (__DEV__ && !__TEST__ && !node._init && typeof node._value === 'undefined') {
+    if (__DEV__ && !__TEST__ && !(node._state & FLAG_INIT) && typeof node._value === 'undefined') {
       console.error(
         `computed \`${node.id}\` threw error during first run, this can be fatal.` +
           '\n\nSolutions:\n\n' +
@@ -620,12 +633,14 @@ export function update(node: Computation) {
       );
     }
 
-    if (node._state !== STATE_DISPOSED) updateObservers(node);
+    if ((node._state & STATE_MASK) !== STATE_DISPOSED) updateObservers(node);
     handleError(node, error);
   } finally {
+    currentScope = prevScope;
+    currentObserver = prevObserver;
     currentObservers = prevObservers;
     currentObserversIndex = prevObserversIndex;
-    if (node._state !== STATE_DISPOSED) node._state = STATE_CLEAN;
+    if ((node._state & STATE_MASK) !== STATE_DISPOSED) node._state &= ~STATE_MASK;
   }
 }
 
@@ -693,14 +708,15 @@ function removeObserver(source: Computation, node: Computation) {
 }
 
 function notify(node: Computation, state: number) {
-  if (node._state >= state) return;
+  if ((node._state & STATE_MASK) >= state) return;
 
-  if (node._effect && node._state === STATE_CLEAN) {
+  // A clean effect: schedule it (a dirty/checked one is already queued).
+  if ((node._state & (FLAG_EFFECT | STATE_MASK)) === FLAG_EFFECT) {
     effects.push(node);
     if (!scheduledEffects) flushEffects();
   }
 
-  node._state = state;
+  node._state = (node._state & ~STATE_MASK) | state;
 
   const observers = node._observers;
   if (observers) {
