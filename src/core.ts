@@ -100,7 +100,7 @@ export function root<T>(init: (dispose: Dispose) => T): T {
 
 /**
  * Returns the current value stored inside the given compute function without triggering any
- * dependencies. Use `untrack` if you want to also disable scope tracking.
+ * dependencies. Use `unscope` if you want to also disable scope tracking.
  *
  * @see {@link https://github.com/maverick-js/signals#peek}
  */
@@ -113,9 +113,9 @@ export function peek<T>(fn: () => T): T {
  * Computations created inside are orphans (they have no parent scope), and no dependencies are
  * tracked. Use `peek` if only observer tracking should be disabled.
  *
- * @see {@link https://github.com/maverick-js/signals#untrack}
+ * @see {@link https://github.com/maverick-js/signals#unscope}
  */
-export function untrack<T>(fn: () => T): T {
+export function unscope<T>(fn: () => T): T {
   return compute<T>(null, fn, null);
 }
 

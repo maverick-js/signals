@@ -8,7 +8,7 @@ export {
   scoped,
   setContext,
   tick,
-  untrack,
+  unscope,
   isFunction,
   isNotEqual,
   createScope,

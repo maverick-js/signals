@@ -92,7 +92,7 @@ $: yarn add @maverick-js/signals
 - [`computed`](#computed)
 - [`effect`](#effect)
 - [`peek`](#peek)
-- [`untrack`](#untrack)
+- [`unscope`](#unscope)
 - [`readonly`](#readonly)
 - [`tick`](#tick)
 - [`computedMap`](#computedmap)
@@ -237,7 +237,7 @@ effect(() => {
 ### `peek`
 
 Returns the current value stored inside the given compute function whilst disabling observer tracking, i.e.
-without triggering any dependencies. Use [`untrack`](#untrack) if you want to also disable scope tracking.
+without triggering any dependencies. Use [`unscope`](#unscope) if you want to also disable scope tracking.
 
 ```js
 import { signal, computed, peek } from '@maverick-js/signals';
@@ -250,7 +250,7 @@ const $b = computed(() => {
 });
 ```
 
-### `untrack`
+### `unscope`
 
 Runs the given function outside of the current scope whilst also disabling observer tracking.
 Computations created inside are orphans (they have no parent scope and will not be disposed of
@@ -258,10 +258,10 @@ with it), and no dependencies are tracked. Use [`peek`](#peek) if only observer 
 disabled.
 
 ```js
-import { signal, effect, untrack } from '@maverick-js/signals';
+import { signal, effect, unscope } from '@maverick-js/signals';
 
 effect(() => {
-  untrack(() => {
+  unscope(() => {
     // `$a` is now an orphan and also not tracked by the outer effect.
     const $a = signal(10);
   });
