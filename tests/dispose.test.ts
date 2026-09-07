@@ -126,7 +126,7 @@ it('should remove a stopped effect from its parent children list', () => {
   });
 });
 
-it('should collapse to a single child then null', () => {
+it('should track children in an array and clear it on dispose', () => {
   const scope = createScope();
 
   let stopA!: () => void, stopB!: () => void;
@@ -135,8 +135,7 @@ it('should collapse to a single child then null', () => {
     stopA = effect(() => {});
   }, scope);
 
-  expect(scope._children).not.toBeNull();
-  expect(Array.isArray(scope._children)).toBe(false);
+  expect(scope._children).toHaveLength(1);
 
   scoped(() => {
     stopB = effect(() => {});
@@ -333,11 +332,11 @@ it('should detach appended scopes from their parent when disposed', () => {
     child = createScope();
 
   parent.append(child);
-  expect(parent._children).toBe(child);
+  expect(parent._children).toEqual([child]);
   expect(child[SCOPE]).toBe(parent);
 
   child.dispose();
-  expect(parent._children).toBeNull();
+  expect(parent._children).toHaveLength(0);
   expect(child[SCOPE]).toBeNull();
 });
 

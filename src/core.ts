@@ -260,9 +260,7 @@ export function dispose(this: Scope, self = true) {
 
 function removeChild(parent: Scope, child: Scope) {
   const children = parent._children;
-  if (children === child) {
-    parent._children = null;
-  } else if (Array.isArray(children)) {
+  if (children) {
     const index = children.indexOf(child);
     if (index > -1) children.splice(index, 1);
   }
@@ -274,11 +272,7 @@ function disposeChildren(scope: Scope) {
   // Detach the whole list up-front so children don't pay to remove themselves one by one.
   scope._children = null;
 
-  if (Array.isArray(children)) {
-    for (let i = children.length - 1; i >= 0; i--) disposeNode(children[i] as Computation);
-  } else {
-    disposeNode(children as Computation);
-  }
+  for (let i = children.length - 1; i >= 0; i--) disposeNode(children[i] as Computation);
 }
 
 /**
@@ -310,14 +304,12 @@ export function disposeNode(node: Computation) {
  */
 export function removeDisposedChildren(scope: Scope) {
   const children = scope._children;
-  if (Array.isArray(children)) {
+  if (children) {
     let live = 0;
     for (let i = 0; i < children.length; i++) {
       if ((children[i]._state & STATE_MASK) !== STATE_DISPOSED) children[live++] = children[i];
     }
     children.length = live;
-  } else if (children && (children._state & STATE_MASK) === STATE_DISPOSED) {
-    scope._children = null;
   }
 }
 
@@ -450,13 +442,8 @@ const ScopeProto = ScopeNode.prototype;
 ScopeProto.append = function (this: Scope, child: Scope) {
   child[SCOPE] = this;
 
-  if (!this._children) {
-    this._children = child;
-  } else if (Array.isArray(this._children)) {
-    this._children.push(child);
-  } else {
-    this._children = [this._children, child];
-  }
+  if (!this._children) this._children = [child];
+  else this._children.push(child);
 
   if (child._context !== this._context) {
     child._context =
