@@ -134,7 +134,8 @@ root((dispose) => {
 
   effect(() => console.log($b()));
 
-  // Disposes of `$a`, $b`, and `effect`.
+  // Disposes of `$b` and the effect. Signals hold no subscriptions of their own, so they are
+  // never owned by a scope and never need disposing.
   dispose();
 });
 ```

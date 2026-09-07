@@ -205,13 +205,7 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
     return NOOP;
   }
 
-  if (!node._disposal) {
-    node._disposal = disposable;
-  } else if (Array.isArray(node._disposal)) {
-    node._disposal.push(disposable);
-  } else {
-    node._disposal = [node._disposal, disposable];
-  }
+  addDisposable(node, disposable);
 
   return function removeDispose() {
     const disposal = node._disposal;
@@ -228,6 +222,16 @@ export function onDispose(disposable: MaybeDisposable): Dispose {
 
     disposable.call(disposable);
   };
+}
+
+function addDisposable(node: Scope, disposable: Disposable) {
+  if (!node._disposal) {
+    node._disposal = disposable;
+  } else if (Array.isArray(node._disposal)) {
+    node._disposal.push(disposable);
+  } else {
+    node._disposal = [node._disposal, disposable];
+  }
 }
 
 /**
@@ -460,6 +464,48 @@ export function createScope(): Scope {
   return new ScopeNode();
 }
 
+/**
+ * Plain signals are not scopes: they run no code, so they have no parent, children, context or
+ * disposal and are never owned by a root. They use a much smaller node and a cheaper read path.
+ */
+const SignalNode = function Signal(
+  this: Computation,
+  initialValue,
+  options?: ComputedSignalOptions<any, any>,
+) {
+  this._value = initialValue;
+  this._observers = null;
+  if (__DEV__) this.id = options?.id ?? 'signal';
+  if (options && options.dirty) this._changed = options.dirty;
+};
+
+const SignalProto = SignalNode.prototype;
+SignalProto._changed = isNotEqual;
+// Read by `updateCheck` when walking sources - a prototype hit keeps that check cheap.
+SignalProto._compute = null;
+
+export function createSignal<T>(
+  initialValue: T,
+  options?: ComputedSignalOptions<T>,
+): Computation<T> {
+  return new SignalNode(initialValue, options);
+}
+
+export function readSignal(this: Computation): any {
+  if (currentObserver) {
+    if (
+      !currentObservers &&
+      currentObserver._sources &&
+      currentObserver._sources[currentObserversIndex] === this
+    ) {
+      currentObserversIndex++;
+    } else if (!currentObservers) currentObservers = [this];
+    else currentObservers.push(this);
+  }
+
+  return this._value;
+}
+
 const ComputeNode = function Computation(
   this: Computation,
   initialValue,
@@ -539,17 +585,26 @@ export function update(node: Computation) {
 
     const result = compute(node, node._compute!, node);
 
+    if (node._effect) {
+      // Effects may return a disposer that runs before the next run and on disposal.
+      if (isFunction(result)) {
+        if (node._state === STATE_DISPOSED) result.call(result);
+        else addDisposable(node, result);
+      }
+    }
+
     // The node may have been disposed during its own computation (e.g., an effect stopping
     // itself) - don't re-link it into the graph.
     if (node._state === STATE_DISPOSED) return;
 
     updateObservers(node);
 
-    if (!node._effect && node._init) {
-      setValue(node, result);
-    } else {
-      node._value = result;
-      node._init = true;
+    if (!node._effect) {
+      if (node._init) setValue(node, result);
+      else {
+        node._value = result;
+        node._init = true;
+      }
     }
   } catch (error) {
     if (__DEV__ && !__TEST__ && !node._init && typeof node._value === 'undefined') {

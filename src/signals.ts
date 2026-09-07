@@ -1,4 +1,13 @@
-import { createComputation, dispose, isFunction, onDispose, read, update, write } from './core';
+import {
+  createComputation,
+  createSignal,
+  dispose,
+  isFunction,
+  read,
+  readSignal,
+  update,
+  write,
+} from './core';
 import { SCOPE } from './symbols';
 import type {
   ComputedSignalOptions,
@@ -18,8 +27,8 @@ import type {
  * @see {@link https://github.com/maverick-js/signals#signal}
  */
 export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSignal<T> {
-  const node = createComputation(initialValue, null, options),
-    signal = read.bind(node) as WriteSignal<T>;
+  const node = createSignal(initialValue, options),
+    signal = readSignal.bind(node) as WriteSignal<T>;
 
   if (__DEV__) signal.node = node;
   signal[SCOPE] = true;
@@ -69,11 +78,8 @@ export function computed<T, R = never>(
 export function effect(effect: Effect, options?: { id?: string }): StopEffect {
   const signal = createComputation<null>(
     null,
-    function runEffect() {
-      let effectResult = effect();
-      if (isFunction(effectResult)) onDispose(effectResult);
-      return null;
-    },
+    // The returned disposer (if any) is registered by `update` - no wrapper closure needed.
+    effect as unknown as () => null,
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
