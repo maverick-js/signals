@@ -22,7 +22,7 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "es2020",
-    "types": ["@types/node", "vitest/globals"]
+    "types": ["@types/node", "vite-plus/test/globals"]
   },
   "include": ["src", "tests"],
   "exclude": ["dist", "node_modules"]

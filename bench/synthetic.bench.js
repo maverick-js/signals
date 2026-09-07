@@ -565,7 +565,7 @@ for (const order of ['creation order', 'reverse order']) {
  * @param {boolean} [phase.rebuild] instead of `restore`, dispose the maps after every iteration and
  *   build fresh ones at `initial` (for phases whose inverse is far more expensive than the phase)
  * @param {number} reps
- * @param {import('vitest').BenchRunOptions} [options]
+ * @param {Record<string, unknown>} [options]
  */
 function mapPhase(name, { create, initial, run, restore, rebuild }, reps, options) {
   scenario(

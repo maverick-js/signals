@@ -31,21 +31,21 @@ again. Without a baseline only `current` is measured.
 
 ## Files
 
-| File                     | Purpose                                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------------------- |
-| `synthetic.bench.js`     | Raw micro-benchmarks (create, re-run, fan-in/out, chains, diamonds, dispose, maps, ...).     |
-| `graph.bench.js`         | Reactively-style random dependency graphs (static + dynamic, push + pull).                   |
-| `dom.bench.js`           | "Real work" scenarios (TodoMVC, data grid, nested components, form) against a fake DOM.      |
-| `build-baseline.js`      | Bundles `src/` at a git ref into `bench/.baseline/index.js` (single file, esbuild).          |
-| `layers.js`              | Cross-library layers benchmark (maverick vs S.js vs solid); unrelated to the baseline.       |
-| `lib/scenario.js`        | `scenario()`: one `test()` per scenario with one `bench()` per library; run options; `sink`. |
-| `lib/load.js`            | Snapshots and loads `current` (`dist/prod`) and `baseline` (`bench/.baseline`).              |
-| `lib/rng.js`             | Seeded PRNG + shuffle so every library sees the identical random sequence.                   |
-| `lib/fake-dom.js`        | `FakeNode` + `syncChildren` with a global mutation counter.                                  |
-| `.baseline/` (generated) | Baseline bundle + `REF` file (ref and commit sha). Git-ignored.                              |
+| File                     | Purpose                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| `synthetic.bench.js`     | Raw micro-benchmarks (create, re-run, fan-in/out, chains, diamonds, dispose, maps, ...). |
+| `graph.bench.js`         | Reactively-style random dependency graphs (static + dynamic, push + pull).               |
+| `dom.bench.js`           | "Real work" scenarios (TodoMVC, data grid, nested components, form) against a fake DOM.  |
+| `build-baseline.js`      | Bundles `src/` at a git ref into `bench/.baseline/index.js` (single file, esbuild).      |
+| `layers.js`              | Cross-library layers benchmark (maverick vs S.js vs solid); unrelated to the baseline.   |
+| `lib/scenario.js`        | `scenario()`: one `describe()` per scenario with one `bench()` per library; run options. |
+| `lib/load.js`            | Snapshots and loads `current` (`dist/prod`) and `baseline` (`bench/.baseline`).          |
+| `lib/rng.js`             | Seeded PRNG + shuffle so every library sees the identical random sequence.               |
+| `lib/fake-dom.js`        | `FakeNode` + `syncChildren` with a global mutation counter.                              |
+| `.baseline/` (generated) | Baseline bundle + `REF` file (ref and commit sha). Git-ignored.                          |
 
 Bench files are matched by `test.benchmark.include` in `vite.config.ts` (`bench/**/*.bench.js`);
-`vitest run` (the regular test suite) skips them and `vitest bench` runs only them.
+`vp test` (the regular test suite) skips them and `vp test bench` runs only them.
 
 ## Running
 
@@ -60,7 +60,7 @@ pnpm bench -t "w1000.*push"      # ...any vitest -t / --testNamePattern
 BENCH_QUICK=1 pnpm bench dom -t Todo
 ```
 
-Every `pnpm bench*` script is `vitest bench --run` (plus an environment variable), so all vitest
+Every `pnpm bench*` script is `vp test bench --run` (plus an environment variable), so all vitest
 CLI flags work: `-t <regexp>` filters scenarios by name, positional arguments filter files,
 `--reporter=verbose` prints every scenario on its own line, `--reporter=json --outputFile=...`
 writes machine-readable results. Pass them directly after the script name - pnpm forwards a
@@ -78,8 +78,9 @@ the same mode.
 
 ## Reading the output
 
-Every scenario is a vitest `test()` that registers one `bench()` per library and runs them with
-`bench.compare()`. The reporter prints one table per scenario:
+Every scenario is a `describe()` with one `bench()` per library. Vitest compares the tasks of a
+`describe` against each other: it prints one table per scenario and, at the end, a summary of how
+many times faster the fastest task was than the others:
 
 ```
  ✓ |bench| bench/dom.bench.js (4 tests) 2691ms
@@ -165,33 +166,29 @@ if a new scenario reintroduces it:
 Both builds are snapshotted into a temp directory when a bench file starts, so rebuilding `dist/`
 while a suite is running does not mix two versions of the code.
 
-## Long-lived baselines (`writeResult` / `bench.from`)
+## Long-lived baselines (`--outputJson` / `--compare`)
 
 `bench/.baseline` is rebuilt from source every time, which is the most faithful comparison (same
-machine, same process, same run). If you want to keep a **recorded** result around instead - e.g.
-to compare against numbers from a release without rebuilding it - vitest can persist and reload
+machine, same process, same run). If you want to keep a **recorded** run around instead - e.g. to
+compare against numbers from a release without rebuilding it - vitest can persist and reload
 results:
 
-```js
-// record: writes the result of `current` to a JSON file after a successful run
-bench('current', { writeResult: './bench/results/deep-chain-1000.json' }, fn);
-
-// later: load the recorded result and compare against it without running anything
-const result = await bench.compare(
-  bench('current', fn),
-  bench.from('v6.0.0', './bench/results/deep-chain-1000.json'),
-);
+```sh
+pnpm bench --outputJson bench/results/v6.0.0.json   # record this run
+pnpm bench --compare bench/results/v6.0.0.json      # later: print the delta against the record
 ```
 
-Paths are relative to the project root and must stay inside it. Recorded numbers are only
-comparable on the same machine and Node version; for anything else, build a real baseline.
+Recorded numbers are only comparable on the same machine and Node version; for anything else,
+build a real baseline.
 
 ## Adding a benchmark
 
 All scenarios go through `scenario(libs, name, make, extra?)` from `lib/scenario.js`:
 
 - `make(lib)` returns `{ fn, beforeAll?, beforeEach?, afterEach?, afterAll? }`. `fn` is timed; the
-  hooks are not. Keep state in closure variables - `scenario()` calls `make` once per library, so
+  hooks are not (`beforeAll`/`afterAll` map to tinybench's `setup`/`teardown`; the per-iteration
+  hooks are attached to the tinybench task from `setup`, since vitest only forwards the
+  bench-level hooks). Keep state in closure variables - `scenario()` calls `make` once per library, so
   nothing is shared between `current` and `baseline`.
 - `extra.check(lib)` (optional) runs once per library before benchmarking and must return a
   number that is asserted equal across libraries (`extra.checkLabel` names it).
