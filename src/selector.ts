@@ -50,6 +50,7 @@ function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Ma
   this._refs = 0;
   this._nodes = nodes;
   this._observers = null;
+  this._mark = 0;
 }
 
 const SelectorProto = Selector.prototype;

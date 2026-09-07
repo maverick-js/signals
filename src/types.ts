@@ -14,6 +14,8 @@ export interface Computation<T = any> extends Scope {
   _sources: Computation[] | null;
   /** @internal */
   _observers: Computation[] | null;
+  /** @internal */
+  _mark: number;
 
   /** @internal */
   _compute: (() => T) | null;

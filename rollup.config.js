@@ -12,6 +12,7 @@ const mangleCache = {
   _handlers: '$eh',
   _init: '$i',
   _key: '$k',
+  _mark: '$m',
   _nodes: '$n',
   _observers: '$o',
   _refs: '$r',

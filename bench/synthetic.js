@@ -310,6 +310,75 @@ for (const K of [1, 5, 20]) {
   });
 }
 
+{
+  const iters = ITER(100_000);
+  define(
+    `dynamic prefix: toggle then 20 stable sources (1 observer each), toggle + read x${iters}`,
+    {
+      setup(lib) {
+        return withRoot(lib, () => {
+          const toggle = lib.signal(false);
+          const a = lib.signal(1);
+          const b = lib.signal(2);
+          const stable = range(20).map((i) => lib.signal(i));
+          const c = lib.computed(() => {
+            let total = toggle() ? a() : b();
+            for (let i = 0; i < stable.length; i++) total += stable[i]();
+            return total;
+          });
+          c();
+          return { toggle, c };
+        });
+      },
+      fn(_, { toggle, c }) {
+        let total = 0;
+        for (let i = 0; i < iters; i++) {
+          toggle.set((i & 1) === 1);
+          total += c();
+        }
+        sink.value = total;
+      },
+      teardown: (_, ctx) => ctx.dispose(),
+    },
+  );
+}
+
+{
+  const iters = ITER(2_000);
+  const count = 200;
+  define(
+    `dynamic prefix: ${count} computeds toggling, sharing 20 stable sources, toggle + read all x${iters}`,
+    {
+      setup(lib) {
+        return withRoot(lib, () => {
+          const toggle = lib.signal(false);
+          const a = lib.signal(1);
+          const b = lib.signal(2);
+          const stable = range(20).map((i) => lib.signal(i));
+          const computeds = range(count).map((k) =>
+            lib.computed(() => {
+              let total = (toggle() ? a() : b()) + k;
+              for (let i = 0; i < stable.length; i++) total += stable[i]();
+              return total;
+            }),
+          );
+          for (const c of computeds) c();
+          return { toggle, computeds };
+        });
+      },
+      fn(_, { toggle, computeds }) {
+        let total = 0;
+        for (let i = 0; i < iters; i++) {
+          toggle.set((i & 1) === 1);
+          for (let k = 0; k < computeds.length; k++) total += computeds[k]();
+        }
+        sink.value = total;
+      },
+      teardown: (_, ctx) => ctx.dispose(),
+    },
+  );
+}
+
 for (const size of [1_000, 10_000]) {
   const n = N(size);
   const iters = ITER(Math.max(20, Math.round(400_000 / n)));

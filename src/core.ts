@@ -475,6 +475,7 @@ const SignalNode = function Signal(
 ) {
   this._value = initialValue;
   this._observers = null;
+  this._mark = 0;
   if (__DEV__) this.id = options?.id ?? 'signal';
   if (options && options.dirty) this._changed = options.dirty;
 };
@@ -519,6 +520,7 @@ const ComputeNode = function Computation(
   this._effect = false;
   this._sources = null;
   this._observers = null;
+  this._mark = 0;
   this._value = initialValue;
   this._compute = compute || null;
 
@@ -628,27 +630,65 @@ export function update(node: Computation) {
 }
 
 function updateObservers(node: Computation) {
-  if (currentObservers) {
-    if (node._sources) removeSourceObservers(node, currentObserversIndex);
+  const sources = node._sources,
+    index = currentObserversIndex,
+    added = currentObservers;
 
-    if (node._sources && currentObserversIndex > 0) {
-      node._sources.length = currentObserversIndex + currentObservers.length;
-      for (let i = 0; i < currentObservers.length; i++) {
-        node._sources[currentObserversIndex + i] = currentObservers[i];
+  if (added) {
+    if (sources && index < sources.length) {
+      // Divergent run: the sources read after `index` differ from last time. Diff the old and new
+      // suffix so edges that survive are kept as-is instead of being unsubscribed (an indexOf on
+      // each source's observer list) and re-subscribed. Marks are counters so duplicate reads keep
+      // their exact edge counts, and passes never interleave so no identity is needed.
+      for (let i = index; i < sources.length; i++) sources[i]._mark++;
+
+      for (let i = 0; i < added.length; i++) {
+        const source = added[i];
+        if (source._mark > 0) source._mark--;
+        else addObserver(source, node);
       }
-    } else {
-      node._sources = currentObservers;
-    }
 
-    let source: Computation;
-    for (let i = currentObserversIndex; i < node._sources.length; i++) {
-      source = node._sources[i];
-      if (!source._observers) source._observers = [node];
-      else source._observers.push(node);
+      for (let i = index; i < sources.length; i++) {
+        const source = sources[i];
+        if (source._mark > 0) {
+          source._mark--;
+          removeObserver(source, node);
+        }
+      }
+
+      sources.length = index + added.length;
+      for (let i = 0; i < added.length; i++) sources[index + i] = added[i];
+    } else {
+      // Only additions: first run, or every previous source was re-read in the same order.
+      for (let i = 0; i < added.length; i++) addObserver(added[i], node);
+      if (sources) {
+        for (let i = 0; i < added.length; i++) sources.push(added[i]);
+      } else {
+        node._sources = added;
+      }
     }
-  } else if (node._sources && currentObserversIndex < node._sources.length) {
-    removeSourceObservers(node, currentObserversIndex);
-    node._sources.length = currentObserversIndex;
+  } else if (sources && index < sources.length) {
+    // Only removals: the tail of the previous sources was not read this time.
+    removeSourceObservers(node, index);
+    sources.length = index;
+  }
+}
+
+function addObserver(source: Computation, node: Computation) {
+  if (!source._observers) source._observers = [node];
+  else source._observers.push(node);
+}
+
+function removeObserver(source: Computation, node: Computation) {
+  const observers = source._observers;
+  if (!observers) return;
+  // Nodes are usually disposed in reverse creation order (and most sources have a single
+  // observer), so the node is almost always in the last slot - check it before searching.
+  let index = observers.length - 1;
+  if (observers[index] !== node) index = observers.indexOf(node);
+  if (index > -1) {
+    observers[index] = observers[observers.length - 1];
+    observers.pop();
   }
 }
 
@@ -670,19 +710,5 @@ function notify(node: Computation, state: number) {
 
 function removeSourceObservers(node: Computation, index: number) {
   const sources = node._sources!;
-  let source: Computation, observers: Computation[] | null, swap: number;
-  for (let i = index; i < sources.length; i++) {
-    source = sources[i];
-    observers = source._observers;
-    if (observers) {
-      // Nodes are usually disposed in reverse creation order (and most sources have a single
-      // observer), so the node is almost always in the last slot - check it before searching.
-      swap = observers.length - 1;
-      if (observers[swap] !== node) swap = observers.indexOf(node);
-      if (swap > -1) {
-        observers[swap] = observers[observers.length - 1];
-        observers.pop();
-      }
-    }
-  }
+  for (let i = index; i < sources.length; i++) removeObserver(sources[i], node);
 }

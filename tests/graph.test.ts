@@ -371,6 +371,84 @@ it('should grow and shrink dependencies across runs', () => {
   expect($sum()).toBe(1);
 });
 
+it('should keep edges for sources re-read after a divergence', () => {
+  const $toggle = signal(false),
+    $a = signal(1),
+    $b = signal(2),
+    stable = Array.from({ length: 5 }, (_, i) => signal(i));
+
+  const $c = computed(() => {
+    let total = $toggle() ? $a() : $b();
+    for (const $s of stable) total += $s();
+    return total;
+  });
+
+  expect($c()).toBe(2 + 10);
+  const observersBefore = stable.map(($s) => $s.node!._observers);
+
+  $toggle.set(true);
+  expect($c()).toBe(1 + 10);
+
+  // Same edge arrays, no unsubscribe/resubscribe of the stable suffix.
+  stable.forEach(($s, i) => {
+    expect($s.node!._observers).toBe(observersBefore[i]);
+    expect($s.node!._observers).toHaveLength(1);
+  });
+  expect($a.node!._observers).toHaveLength(1);
+  expect($b.node!._observers).toHaveLength(0);
+  expect($c.node!._sources).toEqual([$toggle.node, $a.node, ...stable.map(($s) => $s.node)]);
+
+  stable[3].set(100);
+  expect($c()).toBe(1 + 10 - 3 + 100);
+});
+
+it('should preserve duplicate edge counts across divergent runs', () => {
+  const $toggle = signal(false),
+    $a = signal(1),
+    $b = signal(2),
+    $c = signal(3);
+
+  const $d = computed(() => ($toggle() ? $a() : $b()) + $c() + $c());
+
+  expect($d()).toBe(2 + 6);
+  expect($c.node!._observers).toHaveLength(2);
+
+  $toggle.set(true);
+  expect($d()).toBe(1 + 6);
+  expect($c.node!._observers).toHaveLength(2);
+  expect($d.node!._sources).toEqual([$toggle.node, $a.node, $c.node, $c.node]);
+
+  $c.set(10);
+  expect($d()).toBe(21);
+
+  $toggle.set(false);
+  expect($d()).toBe(22);
+  expect($c.node!._observers).toHaveLength(2);
+  expect($a.node!._observers).toHaveLength(0);
+});
+
+it('should handle a source moving between prefix and suffix across runs', () => {
+  const $order = signal(true),
+    $a = signal(1),
+    $b = signal(2);
+
+  const $c = computed(() => ($order() ? $a() + $b() + $a() : $b() + $a() + $a()));
+
+  expect($c()).toBe(4);
+  expect($a.node!._observers).toHaveLength(2);
+  expect($b.node!._observers).toHaveLength(1);
+
+  $order.set(false);
+  expect($c()).toBe(4);
+  expect($a.node!._observers).toHaveLength(2);
+  expect($b.node!._observers).toHaveLength(1);
+
+  $a.set(5);
+  expect($c()).toBe(12);
+  $b.set(0);
+  expect($c()).toBe(10);
+});
+
 // ---------------------------------------------------------------------------------------------
 // Repeated reads
 // ---------------------------------------------------------------------------------------------
