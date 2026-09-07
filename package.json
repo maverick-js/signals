@@ -20,7 +20,7 @@
     "test:gc": "vitest run tests/gc.test.ts",
     "test:gc:watch": "vitest watch tests/gc.test.ts",
     "bench:layers": "pnpm build && node bench/layers.js",
-    "validate": "pnpm lint && pnpm format:check && pnpm test && pnpm build",
+    "validate": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish",
     "bench": "node --expose-gc bench/index.js",
     "bench:quick": "node --expose-gc bench/index.js --quick",
@@ -30,7 +30,8 @@
     "bench:graph": "node --expose-gc bench/graph.js",
     "bench:dom": "node --expose-gc bench/dom.js",
     "format:check": "oxfmt --check",
-    "lint": "oxlint"
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "contributors": [
     "Rahim Alwer <rahim.alwer@gmail.com>"
@@ -79,5 +80,6 @@
       "default": "./dist/prod/map.js"
     },
     "./package.json": "./package.json"
-  }
+  },
+  "packageManager": "pnpm@11.9.0"
 }
