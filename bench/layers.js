@@ -121,7 +121,7 @@ function runReactively(layers, done) {
 
   let layer = start;
 
-  for (let i = layers; i--; ) {
+  for (let i = layers; i--;) {
     layer = ((m) => {
       return {
         a: new reactively.Reactive(() => m.b.get()),
@@ -134,7 +134,7 @@ function runReactively(layers, done) {
 
   const startTime = performance.now();
 
-  start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1);
+  (start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1));
 
   const end = layer;
   const solution = [end.a.get(), end.b.get(), end.c.get(), end.d.get()];
@@ -157,7 +157,7 @@ function runMaverick(layers, done) {
 
     let layer = start;
 
-    for (let i = layers; i--; ) {
+    for (let i = layers; i--;) {
       layer = ((m) => {
         return {
           a: maverick.computed(() => m.b()),
@@ -170,7 +170,7 @@ function runMaverick(layers, done) {
 
     const startTime = performance.now();
 
-    start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1);
+    (start.a.set(4), start.b.set(3), start.c.set(2), start.d.set(1));
 
     const end = layer;
     const solution = [end.a(), end.b(), end.c(), end.d()];
@@ -197,7 +197,7 @@ function runS(layers, done) {
 
     let layer = start;
 
-    for (let i = layers; i--; ) {
+    for (let i = layers; i--;) {
       layer = ((m) => {
         return {
           a: S(() => m.b()),
@@ -212,7 +212,7 @@ function runS(layers, done) {
 
     const run = BATCHED ? (fn) => fn() : (fn) => fn();
     run(() => {
-      start.a(4), start.b(3), start.c(2), start.d(1);
+      (start.a(4), start.b(3), start.c(2), start.d(1));
     });
 
     const end = layer;
@@ -237,7 +237,7 @@ function runSolid(layers, done) {
 
     let layer = start;
 
-    for (let i = layers; i--; ) {
+    for (let i = layers; i--;) {
       layer = ((m) => {
         const props = {
           a: solid.createMemo(() => m.b()),
@@ -254,7 +254,7 @@ function runSolid(layers, done) {
 
     const run = BATCHED ? solid.batch : (fn) => fn();
     run(() => {
-      setA(4), setB(3), setC(2), setD(1);
+      (setA(4), setB(3), setC(2), setD(1));
     });
 
     const end = layer;
@@ -279,7 +279,7 @@ function runPreact(layers, done) {
 
   let layer = start;
 
-  for (let i = layers; i--; ) {
+  for (let i = layers; i--;) {
     layer = ((m) => {
       const props = {
         a: preact.computed(() => m.b.value),
@@ -296,7 +296,7 @@ function runPreact(layers, done) {
 
   const run = BATCHED ? preact.batch : (fn) => fn();
   run(() => {
-    (a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1);
+    ((a.value = 4), (b.value = 3), (c.value = 2), (d.value = 1));
 
     const end = layer;
     const solution = [end.a.value, end.b.value, end.c.value, end.d.value];
@@ -308,24 +308,27 @@ function runPreact(layers, done) {
 
 /**
  * @see {@link https://github.com/Riim/cellx}
+ *
+ * cellx 2.x: the `Cell` constructor only accepts an options object (`{ value }` for data cells,
+ * `{ pull }` for computed cells); passing a raw value / function silently yields `undefined`.
  */
 function runCellx(layers, done) {
   const start = {
-    a: new cellx.Cell(1),
-    b: new cellx.Cell(2),
-    c: new cellx.Cell(3),
-    d: new cellx.Cell(4),
+    a: new cellx.Cell({ value: 1 }),
+    b: new cellx.Cell({ value: 2 }),
+    c: new cellx.Cell({ value: 3 }),
+    d: new cellx.Cell({ value: 4 }),
   };
 
   let layer = start;
 
-  for (let i = layers; i--; ) {
+  for (let i = layers; i--;) {
     layer = ((m) => {
       const props = {
-        a: new cellx.Cell(() => m.b.get()),
-        b: new cellx.Cell(() => m.a.get() - m.c.get()),
-        c: new cellx.Cell(() => m.b.get() + m.d.get()),
-        d: new cellx.Cell(() => m.c.get()),
+        a: new cellx.Cell({ pull: () => m.b.get() }),
+        b: new cellx.Cell({ pull: () => m.a.get() - m.c.get() }),
+        c: new cellx.Cell({ pull: () => m.b.get() + m.d.get() }),
+        d: new cellx.Cell({ pull: () => m.c.get() }),
       };
 
       props.a.on('change', function () {});

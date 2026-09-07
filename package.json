@@ -22,6 +22,13 @@
     "bench:layers": "pnpm build && node bench/layers.js",
     "validate": "pnpm lint && pnpm format:check && pnpm test && pnpm build",
     "release": "pnpm validate && standard-version && git push --follow-tags origin main && npm publish",
+    "bench": "node --expose-gc bench/index.js",
+    "bench:quick": "node --expose-gc bench/index.js --quick",
+    "bench:calibrate": "node --expose-gc bench/index.js --calibrate",
+    "bench:baseline": "node bench/build-baseline.js",
+    "bench:synthetic": "node --expose-gc bench/synthetic.js",
+    "bench:graph": "node --expose-gc bench/graph.js",
+    "bench:dom": "node --expose-gc bench/dom.js",
     "format:check": "oxfmt --check",
     "lint": "oxlint"
   },

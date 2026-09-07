@@ -252,8 +252,10 @@ const $b = computed(() => {
 
 ### `untrack`
 
-Returns the current value inside a signal whilst disabling both scope _and_ observer
-tracking. Use [`peek`](#peek) if only observer tracking should be disabled.
+Runs the given function outside of the current scope whilst also disabling observer tracking.
+Computations created inside are orphans (they have no parent scope and will not be disposed of
+with it), and no dependencies are tracked. Use [`peek`](#peek) if only observer tracking should be
+disabled.
 
 ```js
 import { signal, effect, untrack } from '@maverick-js/signals';
@@ -597,6 +599,26 @@ if (isWriteSignal($b)) {
 ```
 
 ## Benchmarks
+
+### Running
+
+The `bench/` directory contains a dependency-free benchmark suite that compares the current build
+against a baseline built from any git ref, so changes can be measured rather than guessed at:
+
+```bash
+$: pnpm build                 # build dist/prod (the "current" library)
+$: pnpm bench:baseline v6.0.0 # build bench/.baseline from a git ref
+$: pnpm bench                 # run synthetic + graph + DOM emulation suites
+```
+
+- `bench/synthetic.js` - raw micro-benchmarks (create/read/write, static/dynamic deps, fan-out,
+  fan-in, deep chains, diamonds, disposal, `computedMap`/`computedKeyedMap`, errors, context).
+- `bench/graph.js` - Reactively-style random graphs (`width x depth`, static/dynamic, pull/push).
+- `bench/dom.js` - "real work" emulation on a fake DOM (TodoMVC, data grid, nested components,
+  form) that also asserts both builds perform identical DOM mutations.
+
+See [`bench/README.md`](./bench/README.md) for flags (`--quick`, `--filter`, `--calibrate`) and
+notes on noise.
 
 ### Layers
 
