@@ -7,11 +7,11 @@
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
 > do any unnecessary work and don't place the burden of figuring it out on the developer.
 
-This is a tiny (~1kB minzipped) library for creating reactive observables via functions called
+This is a tiny (~2kB minzipped) library for creating reactive observables via functions called
 signals. You can use signals to store state, create computed properties (`y = mx + b`), and subscribe
 to updates as its value changes.
 
-- 🪶 Light (~1kB minzipped)
+- 🪶 Light (~2kB minzipped)
 - 💽 Works in both browsers and Node.js
 - 🌎 All types are observable (i.e., string, array, object, etc.)
 - 🕵️‍♀️ Only updates when value has changed
