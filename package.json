@@ -12,7 +12,7 @@
     "*.d.ts"
   ],
   "scripts": {
-    "build": "pnpm types && vp pack",
+    "build": "tsc -p tsconfig.build.json && vp pack",
     "format": "vp fmt",
     "test": "vp test",
     "test:watch": "vp test watch",
