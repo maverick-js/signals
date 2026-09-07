@@ -10,10 +10,10 @@ import {
   removeDisposedChildren,
   scoped,
   setValue,
-} from './core';
-import type { Computation, Maybe, ReadSignal, Scope } from './types';
+} from './core.js';
+import type { Computation, Maybe, ReadSignal, Scope } from './types.js';
 
-export * from './selector';
+export * from './selector.js';
 
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.

@@ -12,7 +12,7 @@
     "*.d.ts"
   ],
   "scripts": {
-    "build": "vp pack && pnpm types",
+    "build": "pnpm types && vp pack",
     "format": "vp fmt",
     "test": "vp test",
     "test:watch": "vp test watch",
@@ -38,12 +38,13 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/maverick-js/signals.git"
+    "url": "git+https://github.com/maverick-js/signals.git"
   },
   "bugs": {
     "url": "https://github.com/maverick-js/signals/issues"
   },
   "devDependencies": {
+    "@arethetypeswrong/core": "^0.18.5",
     "@preact/signals-core": "^1.14.4",
     "@reactively/core": "^0.0.8",
     "@types/node": "^26.4.1",
@@ -51,6 +52,7 @@
     "cli-table": "^0.3.11",
     "kleur": "^4.1.5",
     "oxc-minify": "^0.148.0",
+    "publint": "^0.3.24",
     "s-js": "^0.4.9",
     "solid-js": "^1.9.15",
     "standard-version": "^9.5.0",

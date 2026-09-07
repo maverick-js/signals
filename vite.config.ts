@@ -64,6 +64,10 @@ export default defineConfig({
       outDir: 'dist/prod',
       define: { __DEV__: 'false', __TEST__: 'false' },
       plugins: [mangleProps()],
+      // Package checks run once, after the prod build. Types are emitted by `tsc` beforehand
+      // (see the `build` script), so attw sees the real declarations.
+      publint: { level: 'error' },
+      attw: { profile: 'esm-only', level: 'error' },
     },
   ],
   fmt: {

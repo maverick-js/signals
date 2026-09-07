@@ -8,8 +8,8 @@ import {
   readSignal,
   update,
   write,
-} from './core';
-import { SCOPE } from './symbols';
+} from './core.js';
+import { SCOPE } from './symbols.js';
 import type {
   ComputedSignalOptions,
   Effect,
@@ -18,7 +18,7 @@ import type {
   SignalOptions,
   StopEffect,
   WriteSignal,
-} from './types';
+} from './types.js';
 
 /**
  * Wraps the given value into a signal. The signal will return the current value when invoked

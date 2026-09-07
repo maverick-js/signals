@@ -1,6 +1,6 @@
-import { isNotEqual, onDispose, read, setValue } from './core';
-import { effect } from './signals';
-import { Computation, ReadSignal } from './types';
+import { isNotEqual, onDispose, read, setValue } from './core.js';
+import { effect } from './signals.js';
+import { Computation, ReadSignal } from './types.js';
 
 export interface SelectorSignal<T> {
   (key: T): ReadSignal<boolean>;

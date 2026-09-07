@@ -1,4 +1,4 @@
-import { SCOPE } from './symbols';
+import { SCOPE } from './symbols.js';
 import type {
   Callable,
   Computation,
@@ -7,7 +7,7 @@ import type {
   Dispose,
   MaybeDisposable,
   Scope,
-} from './types';
+} from './types.js';
 
 let scheduledEffects = false,
   runningEffects = false,

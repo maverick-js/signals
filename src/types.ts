@@ -1,4 +1,4 @@
-import type { SCOPE } from './symbols';
+import type { SCOPE } from './symbols.js';
 
 export interface Computation<T = any> extends Scope {
   id?: string | undefined;
