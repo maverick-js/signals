@@ -1,9 +1,9 @@
-import { isNotEqual, onDispose, read, write } from './core';
+import { isNotEqual, onDispose, read, setValue } from './core';
 import { effect } from './signals';
 import { Computation, ReadSignal } from './types';
 
 export interface SelectorSignal<T> {
-  (key: T): ReadSignal<Boolean>;
+  (key: T): ReadSignal<boolean>;
 }
 
 /**
@@ -18,8 +18,8 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     const newKey = source(),
       prev = nodes.get(currentKey!),
       next = nodes.get(newKey);
-    prev && write.call(prev, false);
-    next && write.call(next, true);
+    if (prev) setValue(prev, false);
+    if (next) setValue(next, true);
     currentKey = newKey;
   });
 

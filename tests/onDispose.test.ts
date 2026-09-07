@@ -1,4 +1,4 @@
-import { effect, tick, onDispose, root, createScope, scoped, getScope } from '../src';
+import { effect, tick, onDispose, root, createScope, scoped, signal, onError } from '../src';
 
 afterEach(() => tick());
 
@@ -54,21 +54,21 @@ it('should not trigger wrong onDispose', () => {
 });
 
 it('should dispose in-reverse-order', () => {
-  let a, b, c;
+  const order: string[] = [];
 
   const dispose = root((dispose) => {
     onDispose(() => {
-      a = performance.now();
+      order.push('root');
     });
 
     effect(() => {
       onDispose(() => {
-        b = performance.now();
+        order.push('effect');
       });
 
       effect(() => {
         onDispose(() => {
-          c = performance.now();
+          order.push('nested-effect');
         });
       });
     });
@@ -77,7 +77,7 @@ it('should dispose in-reverse-order', () => {
   });
 
   dispose();
-  expect(c < b < a).toBe(true);
+  expect(order).toEqual(['nested-effect', 'effect', 'root']);
 });
 
 it('should dispose all roots', () => {
@@ -176,4 +176,134 @@ it('should dispose correctly on appended scopes', () => {
       "scope_a",
     ]
   `);
+});
+
+it('should call the early-dispose handle only once', () => {
+  const dispose = vi.fn();
+
+  effect(() => {
+    const early = onDispose(dispose);
+    early();
+    early();
+  });
+
+  expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+it('should ignore a stale early-dispose handle after the scope re-runs', () => {
+  const $a = signal(0),
+    d1 = vi.fn(),
+    d2 = vi.fn(),
+    d3 = vi.fn();
+
+  let early!: () => void;
+
+  const stop = effect(() => {
+    if ($a() === 0) {
+      early = onDispose(d1);
+    } else {
+      onDispose(d2);
+      onDispose(d3);
+    }
+  });
+
+  $a.set(1);
+  tick();
+  expect(d1).toHaveBeenCalledTimes(1);
+
+  // Stale handle from run 1: must not call `d1` again nor remove anything from run 2.
+  early();
+  expect(d1).toHaveBeenCalledTimes(1);
+
+  stop();
+  expect(d2).toHaveBeenCalledTimes(1);
+  expect(d3).toHaveBeenCalledTimes(1);
+});
+
+it('should ignore a stale early-dispose handle when the new run registered a single disposable', () => {
+  const $a = signal(0),
+    d1 = vi.fn(),
+    d2 = vi.fn();
+
+  let early!: () => void;
+
+  const stop = effect(() => {
+    if ($a() === 0) early = onDispose(d1);
+    else onDispose(d2);
+  });
+
+  $a.set(1);
+  tick();
+  early();
+  expect(d1).toHaveBeenCalledTimes(1);
+
+  stop();
+  expect(d2).toHaveBeenCalledTimes(1);
+});
+
+it('should ignore a stale early-dispose handle after the scope is disposed', () => {
+  const dispose = vi.fn();
+
+  let early!: () => void;
+
+  const stop = effect(() => {
+    early = onDispose(dispose);
+  });
+
+  stop();
+  early();
+  expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+it('should run remaining disposables when one throws and is handled', () => {
+  const $a = signal(0),
+    handler = vi.fn(),
+    d1 = vi.fn(() => {
+      throw new Error('d1');
+    }),
+    d2 = vi.fn();
+
+  root(() => {
+    onError(handler);
+    effect(() => {
+      $a();
+      onDispose(d2);
+      onDispose(d1); // LIFO => runs first and throws.
+    });
+  });
+
+  $a.set(1);
+  tick();
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(d1).toHaveBeenCalledTimes(1);
+  expect(d2).toHaveBeenCalledTimes(1);
+
+  // A throwing disposable must not be kept around and re-run on the next cleanup.
+  $a.set(2);
+  tick();
+  expect(handler).toHaveBeenCalledTimes(2);
+  expect(d1).toHaveBeenCalledTimes(2);
+  expect(d2).toHaveBeenCalledTimes(2);
+});
+
+it('should run a disposable immediately when registered in an already disposed scope', () => {
+  const $a = signal(0),
+    dispose = vi.fn();
+
+  const stop = effect(() => {
+    if ($a() === 1) {
+      stop();
+      onDispose(dispose);
+    }
+  });
+
+  $a.set(1);
+  tick();
+  expect(dispose).toHaveBeenCalledTimes(1);
+});
+
+it('should return the disposable itself when there is no scope', () => {
+  const dispose = () => {};
+  expect(onDispose(dispose)).toBe(dispose);
+  expect(typeof onDispose(null)).toBe('function');
 });

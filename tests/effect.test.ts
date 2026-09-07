@@ -152,7 +152,9 @@ it('should run all disposals before each new run', () => {
   const $a = signal(0);
   effect(() => {
     effectA();
-    fnA(), fnB(), $a();
+    fnA();
+    fnB();
+    $a();
   });
 
   expect(effectA).toHaveBeenCalledTimes(1);

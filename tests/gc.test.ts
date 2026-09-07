@@ -25,6 +25,8 @@ if (global.gc) {
 
     const ref = new WeakRef((pointer = computed(() => $a())));
 
+    expect(pointer).toBeDefined();
+
     ref.deref()!();
 
     await gc();
@@ -50,6 +52,7 @@ if (global.gc) {
       return dispose;
     });
 
+    expect(pointer).toBeDefined();
     await gc();
     expect(ref.deref()).toBeDefined();
 

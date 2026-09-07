@@ -1,4 +1,4 @@
-import { signal, tick, effect } from '../src';
+import { signal, tick, effect, onDispose, getScope, SCOPE, type Scope } from '../src';
 import { computedKeyedMap } from '../src/map';
 
 it('should compute keyed map', () => {
@@ -88,4 +88,95 @@ it('should notify observer', () => {
   source.set((prev) => prev.slice(1));
   tick();
   expect($effect).toHaveBeenCalledTimes(2);
+});
+
+it('should dispose removed items and detach them from the scope', () => {
+  const a = { id: 'a' },
+    b = { id: 'b' },
+    c = { id: 'c' },
+    d = { id: 'd' },
+    e = { id: 'e' },
+    source = signal([a, b, c, d, e]),
+    disposed = vi.fn();
+
+  let scope!: Scope;
+
+  const map = computedKeyedMap(source, (item) => {
+    scope = getScope()![SCOPE]!;
+    onDispose(() => disposed(item.id));
+    return item.id;
+  });
+
+  expect(map()).toEqual(['a', 'b', 'c', 'd', 'e']);
+  expect(scope._children).toHaveLength(5);
+
+  source.set([a, c, e]);
+  tick();
+  expect(map()).toEqual(['a', 'c', 'e']);
+  expect(disposed.mock.calls.map((call) => call[0])).toEqual(['b', 'd']);
+  expect(scope._children).toHaveLength(3);
+
+  source.set([e, a]);
+  tick();
+  expect(map()).toEqual(['e', 'a']);
+  expect(disposed).toHaveBeenCalledTimes(3);
+  expect(scope._children).toHaveLength(2);
+
+  source.set([e, a, b]);
+  tick();
+  expect(map()).toEqual(['e', 'a', 'b']);
+  expect(scope._children).toHaveLength(3);
+
+  source.set([]);
+  tick();
+  map();
+  expect(disposed).toHaveBeenCalledTimes(6);
+  expect(scope._children).toBeNull();
+});
+
+it('should update index signals when items move', () => {
+  const a = { id: 'a' },
+    b = { id: 'b' },
+    c = { id: 'c' },
+    source = signal([a, b, c]),
+    indexes: number[][] = [];
+
+  const map = computedKeyedMap(source, (item, index) => {
+    effect(() => {
+      indexes.push([item.id.charCodeAt(0) - 97, index()]);
+    });
+    return item;
+  });
+
+  map();
+  indexes.length = 0;
+
+  source.set([c, a, b]);
+  tick();
+  map();
+  tick();
+  expect(indexes.sort()).toEqual([
+    [0, 1],
+    [1, 2],
+    [2, 0],
+  ]);
+});
+
+it('should handle a mapped value of undefined', () => {
+  const a = { id: 'a' },
+    b = { id: 'b' },
+    source = signal([a, b]),
+    compute = vi.fn();
+
+  const map = computedKeyedMap(source, () => {
+    compute();
+    return undefined;
+  });
+
+  expect(map()).toEqual([undefined, undefined]);
+
+  source.set([b, a]);
+  tick();
+  expect(map()).toEqual([undefined, undefined]);
+  expect(compute).toHaveBeenCalledTimes(2);
 });

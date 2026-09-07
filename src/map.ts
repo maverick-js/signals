@@ -1,6 +1,16 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { compute, createComputation, createScope, dispose, read, scoped, write } from './core';
+import {
+  compute,
+  createComputation,
+  createScope,
+  dispose,
+  disposeNode,
+  read,
+  removeDisposedChildren,
+  scoped,
+  setValue,
+} from './core';
 import type { Computation, Maybe, ReadSignal, Scope } from './types';
 
 export * from './selector';
@@ -56,7 +66,7 @@ function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
 
     for (i = 0; i < newItems.length; i++) {
       if (i < this._items.length && this._items[i] !== newItems[i]) {
-        write.call(this._nodes[i], newItems[i]);
+        setValue(this._nodes[i], newItems[i]);
       } else if (i >= this._items.length) {
         this._mappings[i] = compute<MappedItem>(
           (this._nodes[i] = createComputation(newItems[i], null)),
@@ -66,7 +76,12 @@ function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
       }
     }
 
-    for (; i < this._items.length; i++) dispose.call(this._nodes[i]);
+    if (i < this._items.length) {
+      // Dispose removed tail items in reverse creation order (cheapest for observer removal) and
+      // then detach them all from the scope in a single pass.
+      for (let j = this._items.length - 1; j >= i; j--) disposeNode(this._nodes[j]);
+      removeDisposedChildren(this._scope);
+    }
 
     this._len = this._nodes.length = newItems.length;
     this._items = newItems.slice(0);
@@ -149,6 +164,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
         end: number,
         newEnd: number,
         item: Item,
+        removed = false,
         newIndices: Map<Item, number>,
         newIndicesNext: number[],
         temp: MappedItem[] = new Array(newLen),
@@ -190,15 +206,18 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
           tempNodes[j] = this._nodes[i];
           j = newIndicesNext[j];
           newIndices.set(item, j);
-        } else dispose.call(this._nodes[i]);
+        } else {
+          disposeNode(this._nodes[i]);
+          removed = true;
+        }
       }
 
       // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
       for (j = start; j < newLen; j++) {
-        if (j in temp) {
+        if (tempNodes[j]) {
           this._mappings[j] = temp[j];
           this._nodes[j] = tempNodes[j];
-          write.call(this._nodes[j], j);
+          setValue(this._nodes[j], j);
         } else {
           this._mappings[j] = compute<MappedItem>(
             (this._nodes[j] = createComputation(j, null)),
@@ -208,10 +227,13 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
         }
       }
 
-      // 3) in case the new set is shorter than the old, set the length of the mapped array
+      // 3) detach all disposed nodes from the scope in a single pass
+      if (removed) removeDisposedChildren(this._scope);
+
+      // 4) in case the new set is shorter than the old, set the length of the mapped array
       this._mappings = this._mappings.slice(0, (this._len = newLen));
 
-      // 4) save a copy of the mapped items for the next update
+      // 5) save a copy of the mapped items for the next update
       this._items = newItems.slice(0);
     }
   }, this._scope);

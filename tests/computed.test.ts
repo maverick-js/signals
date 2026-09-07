@@ -175,13 +175,160 @@ it('should use fallback if error is thrown during init', () => {
     onError(() => {});
 
     const $a = computed(
-      () => {
-        if (1) throw Error();
-        return '';
+      (): string => {
+        throw Error();
       },
       { initial: 'foo' },
     );
 
     expect($a()).toBe('foo');
   });
+});
+
+it('should store function values without invoking them', () => {
+  const $a = signal(0),
+    fnA = () => 'a',
+    fnB = () => 'b';
+
+  const $fn = computed(() => ($a() === 0 ? fnA : fnB));
+
+  expect($fn()).toBe(fnA);
+
+  $a.set(1);
+  expect($fn()).toBe(fnB);
+
+  $a.set(2);
+  expect($fn()).toBe(fnB);
+});
+
+it('should not notify observers when a function value is unchanged', () => {
+  const $a = signal(0),
+    fn = () => {};
+
+  const $fn = computed(() => {
+    $a();
+    return fn;
+  });
+
+  const spy = vi.fn(() => void $fn());
+  effect(spy);
+
+  $a.set(1);
+  tick();
+  expect(spy).toHaveBeenCalledTimes(1);
+});
+
+it('should keep the previous value and stay clean after throwing', () => {
+  const $a = signal(1);
+
+  const $b = computed(() => {
+    if ($a() === 2) throw new Error('bad');
+    return $a() * 10;
+  });
+
+  expect($b()).toBe(10);
+
+  $a.set(2);
+  expect(() => $b()).toThrow('bad');
+  expect($b()).toBe(10);
+
+  $a.set(3);
+  expect($b()).toBe(30);
+});
+
+it('should keep tracking dependencies read before an error', () => {
+  const $a = signal(1),
+    $b = signal(1),
+    spy = vi.fn();
+
+  const $c = computed(() => {
+    spy();
+    const a = $a();
+    if (a === 2) throw new Error('bad');
+    return a + $b();
+  });
+
+  expect($c()).toBe(2);
+
+  $a.set(2);
+  expect(() => $c()).toThrow('bad');
+  expect(spy).toHaveBeenCalledTimes(2);
+
+  // `$b` was not read during the failed run so it is no longer a dependency.
+  $b.set(5);
+  expect($c()).toBe(2);
+  expect(spy).toHaveBeenCalledTimes(2);
+
+  $a.set(3);
+  expect($c()).toBe(8);
+  expect(spy).toHaveBeenCalledTimes(3);
+});
+
+it('should not recompute when a dependency is set to the same value', () => {
+  const spy = vi.fn(),
+    $a = signal(1);
+
+  const $b = computed(() => {
+    spy();
+    return $a();
+  });
+
+  expect($b()).toBe(1);
+  $a.set(1);
+  expect($b()).toBe(1);
+  expect(spy).toHaveBeenCalledTimes(1);
+});
+
+it('should recompute only once after multiple writes', () => {
+  const spy = vi.fn(),
+    $a = signal(1);
+
+  const $b = computed(() => {
+    spy();
+    return $a();
+  });
+
+  $b();
+  $a.set(2);
+  $a.set(3);
+  $a.set(4);
+  expect($b()).toBe(4);
+  expect(spy).toHaveBeenCalledTimes(2);
+});
+
+it('should not recompute an unobserved computed until it is read', () => {
+  const spy = vi.fn(),
+    $a = signal(1);
+
+  const $b = computed(() => {
+    spy();
+    return $a();
+  });
+
+  $b();
+  $a.set(2);
+  tick();
+  expect(spy).toHaveBeenCalledTimes(1);
+  $b();
+  expect(spy).toHaveBeenCalledTimes(2);
+});
+
+it('should compute with an object initial value that is later replaced', () => {
+  const $a = signal<{ v: number } | null>(null);
+
+  const $b = computed(() => $a()?.v ?? -1, { initial: 100 });
+
+  expect($b()).toBe(-1);
+  $a.set({ v: 5 });
+  expect($b()).toBe(5);
+});
+
+it('should use a dev id derived from the kind of computation', () => {
+  const $a = signal(0),
+    $b = computed(() => 0),
+    $c = computed(() => 0, { id: 'c' });
+
+  expect($a.node!.id).toBe('signal');
+  expect($b.node!.id).toBe('computed');
+  expect($c.node!.id).toBe('c');
 });

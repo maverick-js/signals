@@ -1,4 +1,4 @@
-import { computed, signal, peek, effect, tick, onDispose, root, getScope } from '../src';
+import { computed, signal, peek, effect, tick, onDispose, root } from '../src';
 
 afterEach(() => tick());
 
