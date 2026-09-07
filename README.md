@@ -603,22 +603,28 @@ if (isWriteSignal($b)) {
 
 ### Running
 
-The `bench/` directory contains a dependency-free benchmark suite that compares the current build
-against a baseline built from any git ref, so changes can be measured rather than guessed at:
+The `bench/` directory contains a benchmark suite built on [Vitest's benchmark
+runner](https://vitest.dev/guide/benchmarking). Every scenario compares the current build against a
+baseline built from any git ref in the same process, so changes can be measured rather than guessed
+at:
 
 ```bash
 $: pnpm build                 # build dist/prod (the "current" library)
 $: pnpm bench:baseline v6.0.0 # build bench/.baseline from a git ref
-$: pnpm bench                 # run synthetic + graph + DOM emulation suites
+$: pnpm bench                 # run synthetic + graph + DOM emulation suites (~4 min)
+$: pnpm bench:quick           # smaller sizes, ~1 min
+$: pnpm bench -t dispose      # only scenarios whose name matches
 ```
 
-- `bench/synthetic.js` - raw micro-benchmarks (create/read/write, static/dynamic deps, fan-out,
-  fan-in, deep chains, diamonds, disposal, `computedMap`/`computedKeyedMap`, errors, context).
-- `bench/graph.js` - Reactively-style random graphs (`width x depth`, static/dynamic, pull/push).
-- `bench/dom.js` - "real work" emulation on a fake DOM (TodoMVC, data grid, nested components,
-  form) that also asserts both builds perform identical DOM mutations.
+- `bench/synthetic.bench.js` - raw micro-benchmarks (create/read/write, static/dynamic deps,
+  fan-out, fan-in, deep chains, diamonds, disposal, `computedMap`/`computedKeyedMap`, errors,
+  context).
+- `bench/graph.bench.js` - Reactively-style random graphs (`width x depth`, static/dynamic,
+  pull/push) that assert both builds run the same number of computations.
+- `bench/dom.bench.js` - "real work" emulation on a fake DOM (TodoMVC, data grid, nested
+  components, form) that asserts both builds perform identical DOM mutations.
 
-See [`bench/README.md`](./bench/README.md) for flags (`--quick`, `--filter`, `--calibrate`) and
+See [`bench/README.md`](./bench/README.md) for reading the tables, the A/A calibration mode, and
 notes on noise.
 
 ### Layers

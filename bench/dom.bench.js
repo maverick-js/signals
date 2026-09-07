@@ -1,39 +1,30 @@
 /**
  * "Real work" benchmarks against a fake DOM: `current` (dist/prod) vs `baseline` (bench/.baseline).
  *
- *   node bench/dom.js [--quick] [--filter <substring>] [--calibrate] [--samples n] [--warmup n]
+ *   pnpm bench:dom            # or: vitest bench --run bench/dom
+ *   BENCH_QUICK=1 pnpm bench:dom
  *
  * Each scenario builds a UI (signals + computeds + effects writing to `FakeNode`s), drives it through
  * a scripted sequence of interactions with `tick()` after every write, and disposes everything.
- * The whole scenario is timed. The number of DOM mutations is recorded and must be identical for
- * both libraries - a difference means the two builds are not doing the same work (a warning is
- * printed).
+ * The whole scenario is timed. Before benchmarking, every scenario is run once per library and the
+ * number of fake-DOM mutations is asserted to be identical - a difference means the builds are not
+ * doing the same work.
  */
 
-import { ensureExposeGC, parseArgs, rng, sink } from './lib/harness.js';
-import { FakeNode, dom, syncChildren } from './lib/fake-dom.js';
-import { runSuite } from './lib/runner.js';
+import * as fakeDom from './lib/fake-dom.js';
+import { loadLibs } from './lib/load.js';
+import * as random from './lib/rng.js';
+import * as helpers from './lib/scenario.js';
 
-if (ensureExposeGC()) process.exit();
+// Local bindings: inside a vitest worker every access to an imported name goes through a module
+// getter, which adds overhead to hot loops (see "Module runner overhead" in bench/README.md).
+const { FakeNode, dom, syncChildren } = fakeDom;
+const { rng } = random;
+const { quick, range, scenario, sink } = helpers;
 
-const args = parseArgs();
-
-if (args.help) {
-  console.log(
-    'node bench/dom.js [--quick] [--filter <substring>] [--calibrate] [--samples n] [--warmup n] [--rounds n]',
-  );
-  process.exit(0);
-}
-
-const quick = args.quick;
-const ROUNDS = args.rounds ?? (quick ? 2 : 3);
-const SAMPLES = args.samples ?? (quick ? 6 : 12);
-const WARMUP = args.warmup ?? (quick ? 1 : 2);
+const libs = loadLibs();
 
 /** @typedef {import('./lib/load.js').Lib} Lib */
-
-/** @param {number} n */
-const range = (n) => Array.from({ length: n }, (_, i) => i);
 
 // ---------------------------------------------------------------------------------------
 // TodoMVC
@@ -486,12 +477,12 @@ function form(lib, { fields: n, keystrokes }) {
 }
 
 // ---------------------------------------------------------------------------------------
-// Runner
+// Scenarios
 // ---------------------------------------------------------------------------------------
 
 /**
- * Lighter scenarios are repeated `reps` times per sample so every sample is at least ~10ms
- * (sub-millisecond samples are dominated by timer / scheduling noise).
+ * Lighter scenarios are repeated `reps` times per iteration so every iteration is at least ~10ms
+ * (sub-millisecond iterations are dominated by timer / scheduling noise).
  *
  * @type {Array<{ name: string, reps: number, run: (lib: Lib) => void }>}
  */
@@ -518,25 +509,22 @@ const scenarios = [
   },
 ];
 
-await runSuite({
-  title: 'dom (fake DOM, real-world patterns)',
-  args,
-  rounds: ROUNDS,
-  samples: SAMPLES,
-  warmup: WARMUP,
-  countColumn: 'mutations',
-  items: scenarios.map((scenario) => ({
-    name: scenario.name,
-    make: (lib, record) => ({
-      setup() {
-        dom.mutations = 0;
-      },
+for (const { name, reps, run } of scenarios) {
+  scenario(
+    libs,
+    name,
+    (lib) => ({
       fn() {
-        for (let r = 0; r < scenario.reps; r++) scenario.run(lib);
-      },
-      teardown() {
-        record(dom.mutations);
+        for (let r = 0; r < reps; r++) run(lib);
       },
     }),
-  })),
-});
+    {
+      checkLabel: 'mutations',
+      check(lib) {
+        dom.mutations = 0;
+        for (let r = 0; r < reps; r++) run(lib);
+        return dom.mutations;
+      },
+    },
+  );
+}

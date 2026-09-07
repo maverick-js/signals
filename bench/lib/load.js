@@ -6,22 +6,30 @@
  *
  * Only built ESM output is ever imported - never `src/`.
  *
- * `createLoader()` snapshots both builds into a temp directory at start-up (so a concurrent
- * `rollup -c` cannot change the code half way through a run) and can hand out FRESH module
- * instances per round (`load(round)`), each with its own module state and JIT feedback.
+ * Both builds are snapshotted into a temp directory first so a concurrent `rollup -c` cannot swap
+ * the code half way through a run. The snapshots are loaded with `createRequire` (Node's native
+ * `require(esm)`) instead of `import()` on purpose: inside a vitest worker `import()` goes through
+ * vite's module runner, which rewrites every cross-module reference into a getter access. That
+ * would slow down the multi-file `dist/prod` build but not the single-file baseline bundle, and
+ * the comparison would be meaningless. `require()` bypasses the module runner entirely.
+ *
+ * `BENCH_CALIBRATE=1` switches to an A/A test: the "baseline" becomes an independent second copy
+ * of `dist/prod`, so both sides run identical code and every reported difference is pure noise.
  */
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import kleur from 'kleur';
+import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const DIST_DIR = path.join(ROOT, 'dist', 'prod');
 export const BASELINE_DIR = path.join(ROOT, 'bench', '.baseline');
 export const BASELINE_FILE = path.join(BASELINE_DIR, 'index.js');
 export const BASELINE_REF_FILE = path.join(BASELINE_DIR, 'REF');
+
+const require = createRequire(import.meta.url);
 
 /**
  * @typedef {object} Lib
@@ -47,154 +55,78 @@ export const BASELINE_REF_FILE = path.join(BASELINE_DIR, 'REF');
  * @typedef {object} Libs
  * @property {Lib} current
  * @property {Lib} [baseline]
- * @property {string} [baselineRef] short description of the baseline ref (from `.baseline/REF`)
+ * @property {string} [baselineRef] short description of the baseline (from `.baseline/REF`)
  */
-
-/** @param {string} file */
-async function importFile(file) {
-  return import(pathToFileURL(file).href);
-}
 
 /**
- * Imports `index.js` + `map.js` from a `dist/prod`-shaped directory and merges their exports.
+ * Loads `index.js` + `map.js` from a `dist/prod`-shaped directory and merges their exports into a
+ * plain object (so hot loops never touch module-namespace getters).
  *
  * @param {string} dir
- * @returns {Promise<Lib>}
+ * @returns {Lib}
  */
-async function importDist(dir) {
-  const [index, map] = await Promise.all([
-    importFile(path.join(dir, 'index.js')),
-    importFile(path.join(dir, 'map.js')),
-  ]);
-  return { ...index, ...map };
+function loadDist(dir) {
+  return { ...require(path.join(dir, 'index.js')), ...require(path.join(dir, 'map.js')) };
 }
 
 function requireDist() {
   if (!existsSync(path.join(DIST_DIR, 'index.js')) || !existsSync(path.join(DIST_DIR, 'map.js'))) {
-    console.error(
-      kleur.red(`Missing ${path.relative(ROOT, DIST_DIR)}/ - build it first:\n`) +
-        kleur.cyan('  ./node_modules/.bin/rollup -c'),
+    throw new Error(
+      `Missing ${path.relative(ROOT, DIST_DIR)}/ - build it first: ./node_modules/.bin/rollup -c`,
     );
-    process.exit(1);
   }
 }
 
-function printMissingBaselineHint() {
-  console.log(
-    kleur.yellow('No baseline build found at ') +
-      kleur.cyan(path.relative(ROOT, BASELINE_FILE)) +
-      kleur.yellow(' - only `current` will be measured.\n') +
-      kleur.dim('Create one with: ') +
-      kleur.cyan('node bench/build-baseline.js [git-ref]') +
-      kleur.dim(' (default ref: v6.0.0)'),
-  );
-}
-
-function readBaselineRef() {
+/** Contents of `bench/.baseline/REF` as `ref (sha)`, or `undefined` when there is no baseline. */
+export function readBaselineRef() {
   if (!existsSync(BASELINE_REF_FILE)) return undefined;
   const [ref, sha] = readFileSync(BASELINE_REF_FILE, 'utf8').trim().split('\n');
   return sha ? `${ref} (${sha.slice(0, 7)})` : ref;
 }
 
 /**
- * @typedef {object} Loader
- * @property {boolean} hasBaseline
- * @property {string} [baselineRef]
- * @property {(round: number) => Promise<Libs>} load fresh module instances for the given round
+ * Snapshots and loads the libraries to benchmark.
+ *
+ * @param {{ calibrate?: boolean }} [options] `calibrate` defaults to `BENCH_CALIBRATE=1`
+ * @returns {Libs}
  */
-
-/**
- * @param {{ calibrate?: boolean, quiet?: boolean }} [options]
- *   `calibrate` - A/A test: instead of `bench/.baseline`, use an independent copy of `dist/prod`
- *   as the baseline. Both sides then run identical code and any reported delta is pure noise,
- *   which tells you how much to trust small deltas on this machine.
- * @returns {Promise<Loader>}
- */
-export async function createLoader({ calibrate = false, quiet = false } = {}) {
+export function loadLibs({ calibrate = process.env.BENCH_CALIBRATE === '1' } = {}) {
   requireDist();
 
   const snapshot = mkdtempSync(path.join(os.tmpdir(), 'maverick-signals-bench-'));
   process.on('exit', () => rmSync(snapshot, { recursive: true, force: true }));
 
-  const currentSnapshot = path.join(snapshot, 'current');
-  const baselineSnapshot = path.join(snapshot, 'baseline');
-  cpSync(DIST_DIR, currentSnapshot, { recursive: true });
+  const currentDir = path.join(snapshot, 'current');
+  const baselineDir = path.join(snapshot, 'baseline');
+  cpSync(DIST_DIR, currentDir, { recursive: true });
 
-  let hasBaseline = false;
-  /** @type {string | undefined} */
-  let baselineRef;
+  /** @type {Libs} */
+  const libs = { current: loadDist(currentDir) };
 
   if (calibrate) {
-    cpSync(DIST_DIR, baselineSnapshot, { recursive: true });
-    hasBaseline = true;
-    baselineRef = 'calibrate';
-    if (!quiet) {
-      console.log(
-        kleur.dim(`current:  ${path.relative(ROOT, DIST_DIR)}/\n`) +
-          kleur.yellow('baseline: independent copy of dist/prod (--calibrate, A/A noise test)'),
-      );
-    }
+    // A separate copy of the files yields a separate module instance (own state + JIT feedback).
+    cpSync(DIST_DIR, baselineDir, { recursive: true });
+    libs.baseline = loadDist(baselineDir);
+    libs.baselineRef = 'calibrate (independent copy of dist/prod)';
   } else if (existsSync(BASELINE_FILE)) {
-    mkdirSync(baselineSnapshot, { recursive: true });
-    cpSync(BASELINE_FILE, path.join(baselineSnapshot, 'index.js'));
-    hasBaseline = true;
-    baselineRef = readBaselineRef();
-    if (!quiet) {
-      console.log(
-        kleur.dim(
-          `current:  ${path.relative(ROOT, DIST_DIR)}/\n` +
-            `baseline: ${path.relative(ROOT, BASELINE_FILE)}${baselineRef ? ` [${baselineRef}]` : ''}`,
-        ),
-      );
-    }
-  } else if (!quiet) {
-    printMissingBaselineHint();
+    mkdirSync(baselineDir, { recursive: true });
+    cpSync(BASELINE_FILE, path.join(baselineDir, 'index.js'));
+    libs.baseline = { ...require(path.join(baselineDir, 'index.js')) };
+    libs.baselineRef = readBaselineRef();
   }
 
-  return {
-    hasBaseline,
-    baselineRef,
-    async load(round) {
-      // Every round gets its own copy of the files so `import()` yields new module instances.
-      const dir = path.join(snapshot, `round-${round}`);
-      cpSync(currentSnapshot, path.join(dir, 'current'), { recursive: true });
-
-      /** @type {Libs} */
-      const libs = { current: await importDist(path.join(dir, 'current')), baselineRef };
-
-      if (hasBaseline) {
-        cpSync(baselineSnapshot, path.join(dir, 'baseline'), { recursive: true });
-        libs.baseline = calibrate
-          ? await importDist(path.join(dir, 'baseline'))
-          : { ...(await importFile(path.join(dir, 'baseline', 'index.js'))) };
-      }
-
-      return libs;
-    },
-  };
+  return libs;
 }
 
 /**
- * Convenience: loads a single set of libraries (round 0).
- *
- * @param {{ calibrate?: boolean }} [options]
- * @returns {Promise<Libs>}
- */
-export async function loadLibs(options = {}) {
-  const loader = await createLoader(options);
-  return loader.load(0);
-}
-
-/**
- * Returns `[label, lib]` pairs in the order they should be benchmarked (baseline first).
+ * Returns `[label, lib]` pairs for every available library.
  *
  * @param {Libs} libs
- * @returns {Array<['baseline' | 'current', Lib]>}
+ * @returns {Array<['current' | 'baseline', Lib]>}
  */
 export function libEntries(libs) {
-  /** @type {Array<['baseline' | 'current', Lib]>} */
-  const entries = [];
+  /** @type {Array<['current' | 'baseline', Lib]>} */
+  const entries = [['current', libs.current]];
   if (libs.baseline) entries.push(['baseline', libs.baseline]);
-  entries.push(['current', libs.current]);
   return entries;
 }

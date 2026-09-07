@@ -9,5 +9,8 @@ export default defineConfig({
     globals: true,
     // Required by `tests/gc.test.ts` so `global.gc` is available inside the worker.
     execArgv: ['--expose-gc'],
+    benchmark: {
+      include: ['bench/**/*.bench.js'],
+    },
   },
 });

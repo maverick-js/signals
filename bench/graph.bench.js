@@ -1,7 +1,8 @@
 /**
  * Reactively-style dependency-graph benchmark: `current` (dist/prod) vs `baseline` (bench/.baseline).
  *
- *   node bench/graph.js [--quick] [--filter <substring>] [--calibrate] [--samples n] [--warmup n]
+ *   pnpm bench:graph            # or: vitest bench --run bench/graph
+ *   BENCH_QUICK=1 pnpm bench:graph
  *
  * A graph is `width` signals (layer 0) followed by `depth` layers of `width` computeds. Each
  * computed sums `nSources` seeded-random nodes of the previous layer. A `dynamicFraction` of the
@@ -14,30 +15,24 @@
  * - pull: leaves are read directly (lazy re-computation on read)
  * - push: a single effect observes all leaves (re-computation is driven by `tick()`)
  *
- * The total number of computed executions is counted and printed for both libraries as a sanity
- * check - they must match, otherwise the libraries are not doing the same work.
+ * Before a scenario is benchmarked it is run once per library and the total number of computed
+ * executions is asserted to be identical - otherwise the libraries are not doing the same work.
  *
  * @see {@link https://github.com/milomg/reactively/tree/main/packages/bench}
  */
 
-import { ensureExposeGC, parseArgs, rng, sink } from './lib/harness.js';
-import { runSuite } from './lib/runner.js';
+import { loadLibs } from './lib/load.js';
+import * as random from './lib/rng.js';
+import * as helpers from './lib/scenario.js';
 
-if (ensureExposeGC()) process.exit();
+// Local bindings: inside a vitest worker every access to an imported name goes through a module
+// getter, which adds overhead to hot loops (see "Module runner overhead" in bench/README.md).
+const { rng } = random;
+const { quick, scenario, sink } = helpers;
 
-const args = parseArgs();
+const libs = loadLibs();
 
-if (args.help) {
-  console.log(
-    'node bench/graph.js [--quick] [--filter <substring>] [--calibrate] [--samples n] [--warmup n] [--rounds n]',
-  );
-  process.exit(0);
-}
-
-const quick = args.quick;
-const ROUNDS = args.rounds ?? (quick ? 2 : 3);
-const SAMPLES = args.samples ?? (quick ? 6 : 12);
-const WARMUP = args.warmup ?? (quick ? 1 : 2);
+/** Iterations per timed call: quick mode divides by 4. */
 const ITER = (n) => (quick ? Math.max(1, Math.ceil(n / 4)) : n);
 
 /**
@@ -159,6 +154,33 @@ export function runGraph(lib, graph, iterations, seed) {
 }
 
 /**
+ * Builds the graph for a scenario and brings it to its steady state (untimed): `push` attaches an
+ * effect over all leaves (creating it computes the whole graph once), `pull` reads every leaf
+ * once. The execution counter is reset afterwards.
+ *
+ * @param {Lib} lib
+ * @param {GraphConfig} config
+ * @param {'pull' | 'push'} mode
+ */
+function setupGraph(lib, config, mode) {
+  const graph = makeGraph(lib, config);
+  if (mode === 'push') {
+    // Attach the observing effect inside the graph's root so `graph.dispose()` stops it.
+    lib.scoped(() => {
+      lib.effect(() => {
+        let sum = 0;
+        for (let i = 0; i < graph.leaves.length; i++) sum += graph.leaves[i]();
+        sink.value = sum;
+      });
+    }, graph.scope);
+  } else {
+    for (let i = 0; i < graph.leaves.length; i++) sink.value = graph.leaves[i]();
+  }
+  graph.counter.count = 0;
+  return graph;
+}
+
+/**
  * @type {Array<{ name: string, config: Omit<GraphConfig, 'seed'>, iterations: number }>}
  */
 const configs = [
@@ -199,54 +221,31 @@ const configs = [
   },
 ];
 
-/** @type {import('./lib/runner.js').SuiteItem[]} */
-const items = [];
-
 for (const entry of configs) {
   for (const mode of /** @type {const} */ (['pull', 'push'])) {
     const iterations = ITER(entry.iterations);
     const config = { ...entry.config, seed: 1234 };
 
-    items.push({
-      name: `${entry.name} [${mode}] x${iterations}`,
-      make: (lib, record) => ({
-        setup() {
-          const graph = makeGraph(lib, config);
-          if (mode === 'push') {
-            // Attach the observing effect inside the graph's root so `graph.dispose()` stops it.
-            // Creating it runs it once, which computes the whole graph (untimed).
-            lib.scoped(() => {
-              lib.effect(() => {
-                let sum = 0;
-                for (let i = 0; i < graph.leaves.length; i++) sum += graph.leaves[i]();
-                sink.value = sum;
-              });
-            }, graph.scope);
-          } else {
-            // Initial pull so the timed region measures steady-state updates only.
-            for (let i = 0; i < graph.leaves.length; i++) sink.value = graph.leaves[i]();
-          }
-          graph.counter.count = 0;
-          return graph;
-        },
-        fn(graph) {
+    scenario(
+      libs,
+      `${entry.name} [${mode}] x${iterations}`,
+      (lib) => {
+        let graph;
+        return {
+          beforeAll: () => void (graph = setupGraph(lib, config, mode)),
+          fn: () => runGraph(lib, graph, iterations, 99),
+          afterAll: () => graph.dispose(),
+        };
+      },
+      {
+        checkLabel: 'computeds run',
+        check(lib) {
+          const graph = setupGraph(lib, config, mode);
           runGraph(lib, graph, iterations, 99);
-        },
-        teardown(graph) {
-          record(graph.counter.count);
           graph.dispose();
+          return graph.counter.count;
         },
-      }),
-    });
+      },
+    );
   }
 }
-
-await runSuite({
-  title: 'graph (Reactively-style)',
-  args,
-  rounds: ROUNDS,
-  samples: SAMPLES,
-  warmup: WARMUP,
-  countColumn: 'computeds run',
-  items,
-});
