@@ -199,7 +199,7 @@ it('should ignore a stale early-dispose handle after the scope re-runs', () => {
   let early!: () => void;
 
   const stop = effect(() => {
-    if ($a() === 0) {
+    if ($a.get() === 0) {
       early = onDispose(d1);
     } else {
       onDispose(d2);
@@ -228,7 +228,7 @@ it('should ignore a stale early-dispose handle when the new run registered a sin
   let early!: () => void;
 
   const stop = effect(() => {
-    if ($a() === 0) early = onDispose(d1);
+    if ($a.get() === 0) early = onDispose(d1);
     else onDispose(d2);
   });
 
@@ -266,7 +266,7 @@ it('should run remaining disposables when one throws and is handled', () => {
   root(() => {
     onError(handler);
     effect(() => {
-      $a();
+      $a.get();
       onDispose(d2);
       onDispose(d1); // LIFO => runs first and throws.
     });
@@ -291,7 +291,7 @@ it('should run a disposable immediately when registered in an already disposed s
     dispose = vi.fn();
 
   const stop = effect(() => {
-    if ($a() === 1) {
+    if ($a.get() === 1) {
       stop();
       onDispose(dispose);
     }

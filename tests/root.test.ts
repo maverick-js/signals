@@ -25,14 +25,14 @@ it('should dispose of inner computations', () => {
 
     $b = computed(() => {
       computeB();
-      return $a() + 10;
+      return $a.get() + 10;
     });
 
-    $b();
+    $b.get();
     dispose();
   });
 
-  expect($b!()).toBe(20);
+  expect($b!.get()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 
   tick();
@@ -40,7 +40,7 @@ it('should dispose of inner computations', () => {
   $a!.set(50);
   tick();
 
-  expect($b!()).toBe(20);
+  expect($b!.get()).toBe(20);
   expect(computeB).toHaveBeenCalledTimes(1);
 });
 
@@ -59,10 +59,10 @@ it('should create new tracking scope', () => {
   const $a = signal(0);
 
   const stop = effect(() => {
-    $a();
+    $a.get();
     root(() => {
       effect(() => {
-        innerEffect($a());
+        innerEffect($a.get());
       });
     });
   });
@@ -85,7 +85,7 @@ it('should not be reactive', () => {
 
   root(() => {
     $a = signal(0);
-    $a();
+    $a.get();
     rootCall();
   });
 
@@ -108,7 +108,7 @@ it('should hold parent tracking', () => {
 it('should not observe', () => {
   const $a = signal(0);
   root(() => {
-    $a();
+    $a.get();
     const scope = getScope() as Computation;
     expect(scope._sources).toBeUndefined();
     expect(scope._observers).toBeUndefined();

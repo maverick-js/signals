@@ -7,7 +7,7 @@ it('should recover after an unhandled error is thrown during a flush', () => {
 
   let shouldThrow = false;
   effect(() => {
-    $a();
+    $a.get();
     if (shouldThrow) throw new Error('boom');
   });
 
@@ -18,7 +18,7 @@ it('should recover after an unhandled error is thrown during a flush', () => {
 
   // The scheduler must still be alive for unrelated effects.
   const $b = signal(0),
-    spy = vi.fn(() => void $b());
+    spy = vi.fn(() => void $b.get());
 
   effect(spy);
   $b.set(1);
@@ -36,12 +36,12 @@ it('should keep running the remaining effects when one throws', () => {
     spyB = vi.fn();
 
   effect(() => {
-    spyA($a());
-    if ($a() === 1) throw new Error('a');
+    spyA($a.get());
+    if ($a.get() === 1) throw new Error('a');
   });
 
   effect(() => {
-    spyB($a());
+    spyB($a.get());
   });
 
   $a.set(1);
@@ -55,11 +55,11 @@ it('should rethrow the first error when multiple effects throw', () => {
   const $a = signal(0);
 
   effect(() => {
-    if ($a() === 1) throw new Error('first');
+    if ($a.get() === 1) throw new Error('first');
   });
 
   effect(() => {
-    if ($a() === 1) throw new Error('second');
+    if ($a.get() === 1) throw new Error('second');
   });
 
   $a.set(1);
@@ -69,10 +69,10 @@ it('should rethrow the first error when multiple effects throw', () => {
 it('should flush effects scheduled during a flush that threw', () => {
   const $a = signal(0),
     $b = signal(0),
-    spy = vi.fn(() => void $b());
+    spy = vi.fn(() => void $b.get());
 
   effect(() => {
-    if ($a() === 1) {
+    if ($a.get() === 1) {
       $b.set(1);
       throw new Error('boom');
     }
@@ -92,7 +92,7 @@ it('should keep flushing on the microtask queue after a handled error', async ()
   root(() => {
     onError(handler);
     effect(() => {
-      if ($a() === 1) throw new Error('boom');
+      if ($a.get() === 1) throw new Error('boom');
     });
   });
 
@@ -101,7 +101,7 @@ it('should keep flushing on the microtask queue after a handled error', async ()
   expect(handler).toHaveBeenCalledTimes(1);
 
   const $b = signal(0),
-    spy = vi.fn(() => void $b());
+    spy = vi.fn(() => void $b.get());
 
   effect(spy);
   $b.set(1);
@@ -117,8 +117,8 @@ it('should mark a throwing effect clean so it re-runs on the next change', () =>
   root(() => {
     onError(handler);
     effect(() => {
-      spy($a());
-      if ($a() === 1) throw new Error('boom');
+      spy($a.get());
+      if ($a.get() === 1) throw new Error('boom');
     });
   });
 
@@ -140,11 +140,11 @@ it('should not run an effect that was disposed earlier in the same flush', () =>
   let stop!: () => void;
 
   effect(() => {
-    if ($a() === 1) stop();
+    if ($a.get() === 1) stop();
   });
 
   stop = effect(() => {
-    spy($a());
+    spy($a.get());
   });
 
   $a.set(1);
@@ -158,7 +158,7 @@ it('should not schedule the same effect twice in one flush', () => {
     spy = vi.fn();
 
   effect(() => {
-    spy($a() + $b());
+    spy($a.get() + $b.get());
   });
 
   $a.set(1);

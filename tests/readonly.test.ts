@@ -17,9 +17,9 @@ it('should create readonly proxy', () => {
   }).toThrow();
 
   tick();
-  expect($b()).toBe(10);
+  expect($b.get()).toBe(10);
 
   $a.set(20);
   tick();
-  expect($b()).toBe(20);
+  expect($b.get()).toBe(20);
 });

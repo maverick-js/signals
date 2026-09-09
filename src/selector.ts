@@ -1,4 +1,5 @@
 import { isNotEqual, onDispose, read, setValue } from './core.js';
+import { SIGNAL } from './symbols.js';
 import { effect } from './signals.js';
 import { Computation, ReadSignal } from './types.js';
 
@@ -15,7 +16,7 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     nodes = new Map<T, Selector<T>>();
 
   effect(() => {
-    const newKey = source(),
+    const newKey = source.get(),
       prev = nodes.get(currentKey!),
       next = nodes.get(newKey);
     if (prev) setValue(prev, false);
@@ -31,7 +32,7 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     node!._refs += 1;
     onDispose(node);
 
-    return read.bind(node!);
+    return node!;
   };
 }
 
@@ -54,7 +55,12 @@ function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Ma
 }
 
 const SelectorProto = Selector.prototype;
+SelectorProto[SIGNAL] = true;
 SelectorProto._changed = isNotEqual;
+SelectorProto.get = read;
+SelectorProto.peek = function (this: Selector) {
+  return this._value;
+};
 SelectorProto.call = function (this: Selector) {
   this._refs -= 1;
   if (!this._refs) {

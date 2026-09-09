@@ -6,7 +6,6 @@ import {
   createScope,
   dispose,
   disposeNode,
-  read,
   removeDisposedChildren,
   scoped,
   setValue,
@@ -29,27 +28,25 @@ export function computedMap<Item, MappedItem>(
   map: (value: ReadSignal<Item>, index: number) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
-    createComputation<MappedItem[]>(
-      [],
-      updateMap.bind({
-        _scope: createScope(),
-        _len: 0,
-        _list: list,
-        _items: [],
-        _map: map,
-        _mappings: [],
-        _nodes: [],
-      }),
-      options,
-    ),
-  );
+  return createComputation<MappedItem[]>(
+    [],
+    updateMap.bind({
+      _scope: createScope(),
+      _len: 0,
+      _list: list,
+      _items: [],
+      _map: map,
+      _mappings: [],
+      _nodes: [],
+    }),
+    options,
+  ) as unknown as ReadSignal<MappedItem[]>;
 }
 
 function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
   let i = 0,
-    newItems = this._list() || [],
-    mapper = () => this._map(read.bind(this._nodes[i]), i);
+    newItems = this._list.get() || [],
+    mapper = () => this._map(this._nodes[i], i);
 
   scoped(() => {
     if (newItems.length === 0) {
@@ -106,25 +103,23 @@ export function computedKeyedMap<Item, MappedItem>(
   map: (value: Item, index: ReadSignal<number>) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
-    createComputation<MappedItem[]>(
-      [],
-      updateKeyedMap.bind({
-        _scope: createScope(),
-        _len: 0,
-        _list: list,
-        _items: [],
-        _map: map,
-        _mappings: [],
-        _nodes: [],
-      }),
-      options,
-    ),
-  );
+  return createComputation<MappedItem[]>(
+    [],
+    updateKeyedMap.bind({
+      _scope: createScope(),
+      _len: 0,
+      _list: list,
+      _items: [],
+      _map: map,
+      _mappings: [],
+      _nodes: [],
+    }),
+    options,
+  ) as unknown as ReadSignal<MappedItem[]>;
 }
 
 function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>): any[] {
-  const newItems = this._list() || [],
+  const newItems = this._list.get() || [],
     indexed = this._map.length > 1;
 
   scoped(() => {
@@ -132,7 +127,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
       i: number,
       j: number,
       mapper = indexed
-        ? () => this._map(newItems[j], read.bind(this._nodes[j]))
+        ? () => this._map(newItems[j], this._nodes[j])
         : () => (this._map as (value: Item) => MappedItem)(newItems[j]);
 
     // fast path for empty arrays

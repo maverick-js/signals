@@ -63,7 +63,7 @@ it('should forward error to another handler', () => {
       onError(handler);
 
       effect(() => {
-        $a();
+        $a.get();
 
         onError((error) => {
           throw error;
@@ -91,7 +91,7 @@ it('should not duplicate error handler', () => {
 
   root(() => {
     effect(() => {
-      $a();
+      $a.get();
       onError(() => handler());
       if (shouldThrow) throw error;
     });
@@ -118,7 +118,7 @@ it('should not trigger wrong handler', () => {
     onError(rootHandler);
 
     effect(() => {
-      $a();
+      $a.get();
       if (shouldThrow) throw error;
     });
 
@@ -156,7 +156,7 @@ it('should use a handler registered on the parent after the child was created', 
 
   root(() => {
     effect(() => {
-      if ($a() === 1) throw error;
+      if ($a.get() === 1) throw error;
     });
 
     onError(handler);
@@ -193,7 +193,7 @@ it('should handle errors thrown in disposal callbacks during a re-run', () => {
   root(() => {
     onError(handler);
     effect(() => {
-      $a();
+      $a.get();
       onDispose(() => {
         throw error;
       });
@@ -256,12 +256,12 @@ it('should handle errors thrown by a computed created in the scope', () => {
     onError(handler);
 
     const $b = computed(() => {
-      if ($a() === 1) throw error;
-      return $a();
+      if ($a.get() === 1) throw error;
+      return $a.get();
     });
 
     effect(() => {
-      $b();
+      $b.get();
     });
   });
 
@@ -276,15 +276,15 @@ it('should handle errors thrown by a computed read during an effect run with the
     handler = vi.fn(),
     $a = signal(0),
     $b = computed(() => {
-      if ($a() === 1) throw error;
-      return $a();
+      if ($a.get() === 1) throw error;
+      return $a.get();
     });
 
   root(() => {
     onError(handler);
     effect(() => {
-      $a();
-      $b();
+      $a.get();
+      $b.get();
     });
   });
 
@@ -301,8 +301,8 @@ it('should let an effect continue after a handled error', () => {
   root(() => {
     onError(handler);
     effect(() => {
-      spy($a());
-      if ($a() === 1) throw new Error();
+      spy($a.get());
+      if ($a.get() === 1) throw new Error();
     });
   });
 

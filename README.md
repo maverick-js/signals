@@ -7,9 +7,9 @@
 > be built on top of. It follows the "lazy principle" that Svelte adheres to - don't
 > do any unnecessary work and don't place the burden of figuring it out on the developer.
 
-This is a tiny (~2kB minzipped) library for creating reactive observables via functions called
-signals. You can use signals to store state, create computed properties (`y = mx + b`), and subscribe
-to updates as its value changes.
+This is a tiny (~2kB minzipped) library for creating reactive observables called signals. You can
+use signals to store state, create computed properties (`y = mx + b`), and subscribe to updates as
+its value changes.
 
 - 🪶 Light (~2kB minzipped)
 - 💽 Works in both browsers and Node.js
@@ -42,11 +42,11 @@ root((dispose) => {
   const $b = signal(0);
 
   // Compute - only re-computed when `$m`, `$x`, or `$b` changes.
-  const $y = computed(() => $m() * $x() + $b());
+  const $y = computed(() => $m.get() * $x.get() + $b.get());
 
   // Effect - this will run whenever `$y` is updated.
   const stop = effect(() => {
-    console.log($y());
+    console.log($y.get());
 
     // Called each time `effect` ends and when finally disposed.
     return () => {};
@@ -63,7 +63,7 @@ root((dispose) => {
   tick();
 
   // Nothing has changed - no re-compute.
-  $y();
+  $y.get();
 
   // Stop running effect.
   stop();
@@ -130,9 +130,9 @@ import { root, signal, computed, effect } from '@maverick-js/signals';
 
 root((dispose) => {
   const $a = signal(10);
-  const $b = computed(() => $a());
+  const $b = computed(() => $a.get());
 
-  effect(() => console.log($b()));
+  effect(() => console.log($b.get()));
 
   // Disposes of `$b` and the effect. Signals hold no subscriptions of their own, so they are
   // never owned by a scope and never need disposing.
@@ -149,16 +149,17 @@ console.log(result); // logs `10`
 
 ### `signal`
 
-Wraps the given value into a signal. The signal will return the current value when invoked `fn()`,
-and provide a simple write API via `set()`. The value can now be observed when used
-inside other computations created with [`computed`](#computed) and [`effect`](#effect).
+Wraps the given value into a signal. Read the current value with `get()`, write with `set()`, and
+read without tracking with `peek()`. The value can now be observed when read inside other
+computations created with [`computed`](#computed) and [`effect`](#effect).
 
 ```js
 import { signal } from '@maverick-js/signals';
 
 const $a = signal(10);
 
-$a(); // read
+$a.get(); // read
+$a.peek(); // read without tracking
 $a.set(20); // write (1)
 $a.set((prev) => prev + 10); // write (2)
 ```
@@ -177,20 +178,20 @@ import { signal, computed, tick } from '@maverick-js/signals';
 
 const $a = signal(10);
 const $b = signal(10);
-const $c = computed(() => $a() + $b());
+const $c = computed(() => $a.get() + $b.get());
 
-console.log($c()); // logs 20
+console.log($c.get()); // logs 20
 
 $a.set(20);
 tick();
-console.log($c()); // logs 30
+console.log($c.get()); // logs 30
 
 $b.set(20);
 tick();
-console.log($c()); // logs 40
+console.log($c.get()); // logs 40
 
 // Nothing changed - no re-compute.
-console.log($c()); // logs 40
+console.log($c.get()); // logs 40
 ```
 
 ```js
@@ -198,11 +199,11 @@ import { signal, computed } from '@maverick-js/signals';
 
 const $a = signal(10);
 const $b = signal(10);
-const $c = computed(() => $a() + $b());
+const $c = computed(() => $a.get() + $b.get());
 
 // Computed signals can be deeply nested.
-const $d = computed(() => $a() + $b() + $c());
-const $e = computed(() => $d());
+const $d = computed(() => $a.get() + $b.get() + $c.get());
+const $e = computed(() => $d.get());
 ```
 
 ### `effect`
@@ -215,10 +216,10 @@ import { signal, computed, effect } from '@maverick-js/signals';
 
 const $a = signal(10);
 const $b = signal(20);
-const $c = computed(() => $a() + $b());
+const $c = computed(() => $a.get() + $b.get());
 
 // This effect will run each time `$a` or `$b` is updated.
-const stop = effect(() => console.log($c()));
+const stop = effect(() => console.log($c.get()));
 
 // Stop observing.
 stop();
@@ -237,8 +238,9 @@ effect(() => {
 
 ### `peek`
 
-Returns the current value stored inside the given compute function whilst disabling observer tracking, i.e.
-without triggering any dependencies. Use [`unscope`](#unscope) if you want to also disable scope tracking.
+Runs the given function whilst disabling observer tracking, i.e. without registering any
+dependencies. Every signal also has a `peek()` method for reading a single value untracked. Use
+[`unscope`](#unscope) if you want to also disable scope tracking.
 
 ```js
 import { signal, computed, peek } from '@maverick-js/signals';
@@ -247,7 +249,9 @@ const $a = signal(10);
 
 const $b = computed(() => {
   // `$a` will not trigger updates on `$b`.
-  const value = peek($a);
+  const value = $a.peek();
+  // Same, for a whole block:
+  const other = peek(() => $a.get() + $c.get());
 });
 ```
 
@@ -280,12 +284,12 @@ import { signal, readonly } from '@maverick-js/signals';
 const $a = signal(10);
 const $b = readonly($a);
 
-console.log($b()); // logs 10
+console.log($b.get()); // logs 10
 
 // We can still update value through `$a`.
 $a.set(20);
 
-console.log($b()); // logs 20
+console.log($b.get()); // logs 20
 ```
 
 ### `tick`
@@ -339,18 +343,18 @@ const map = computedMap(source, (value, index) => {
   return {
     i: index,
     get id() {
-      return value() * 2;
+      return value.get() * 2;
     },
   };
 });
 
-console.log(map()); // logs `[{ i: 0, id: $2 }, { i: 1, id: $4 }, { i: 2, id: $6 }]`
+console.log(map.get()); // logs `[{ i: 0, id: $2 }, { i: 1, id: $4 }, { i: 2, id: $6 }]`
 
 source.set([3, 2, 1]);
 tick();
 
 // Notice the index `i` remains fixed but `id` has updated.
-console.log(map()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2 }]`
+console.log(map.get()); // logs `[{ i: 0, id: $6 }, { i: 1, id: $4 }, { i: 2, id: $2 }]`
 ```
 
 ### `computedKeyedMap`
@@ -375,14 +379,14 @@ const nodes = computedKeyedMap(source, (value, index) => {
   div.setAttribute('id', String(value.id));
   Object.defineProperty(div, 'i', {
     get() {
-      return index();
+      return index.get();
     },
   });
 
   return div;
 });
 
-console.log(nodes()); // [{ id: 0, i: $0 }, { id: 1, i: $1 }, { id: 2, i: $2 }];
+console.log(nodes.get()); // [{ id: 0, i: $0 }, { id: 1, i: $1 }, { id: 2, i: $2 }];
 
 source.set((prev) => {
   // Swap index 0 and 1
@@ -395,7 +399,7 @@ source.set((prev) => {
 tick();
 
 // No nodes were created/destroyed, simply nodes at index 0 and 1 switched.
-console.log(nodes()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];
+console.log(nodes.get()); // [{ id: 1, i: $0 }, { id: 0, i: $1 }, { id: 2, i: $2 }];
 ```
 
 ### `onError`
@@ -453,13 +457,13 @@ Whether the given value is a readonly signal.
 
 ```js
 // True
-isReadSignal(10);
-isReadSignal(() => {});
 isReadSignal(signal(10));
 isReadSignal(computed(() => 10));
 isReadSignal(readonly(signal(10)));
 
 // False
+isReadSignal(10);
+isReadSignal(() => {});
 isReadSignal(false);
 isReadSignal(null);
 isReadSignal(undefined);
@@ -591,7 +595,7 @@ const $a = computed<string>(() => /* ... */);
 const $b: MaybeSignal<number>;
 
 if (isReadSignal($b)) {
-  $b(); // ReadSignal<number>
+  $b.get(); // ReadSignal<number>
 }
 
 if (isWriteSignal($b)) {

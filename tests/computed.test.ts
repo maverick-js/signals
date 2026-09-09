@@ -1,50 +1,51 @@
 import { computed, effect, signal, onError, root, tick } from '../src';
+import { internals } from './utils';
 
 afterEach(() => tick());
 
 it('should store and return value on read', () => {
   const $a = signal(10);
   const $b = signal(10);
-  const $c = computed(() => $a() + $b());
+  const $c = computed(() => $a.get() + $b.get());
 
-  expect($c()).toBe(20);
+  expect($c.get()).toBe(20);
   tick();
 
   // Try again to ensure state is maintained.
-  expect($c()).toBe(20);
+  expect($c.get()).toBe(20);
 });
 
 it('should update when dependency is updated', () => {
   const $a = signal(10);
   const $b = signal(10);
-  const $c = computed(() => $a() + $b());
+  const $c = computed(() => $a.get() + $b.get());
 
   $a.set(20);
-  expect($c()).toBe(30);
+  expect($c.get()).toBe(30);
 
   $b.set(20);
-  expect($c()).toBe(40);
+  expect($c.get()).toBe(40);
 });
 
 it('should update when deep dependency is updated', () => {
   const $a = signal(10);
   const $b = signal(10);
-  const $c = computed(() => $a() + $b());
-  const $d = computed(() => $c());
+  const $c = computed(() => $a.get() + $b.get());
+  const $d = computed(() => $c.get());
 
   $a.set(20);
-  expect($d()).toBe(30);
+  expect($d.get()).toBe(30);
 });
 
 it('should update when deep computed dependency is updated', () => {
   const $a = signal(10);
   const $b = signal(10);
-  const $c = computed(() => $a() + $b());
-  const $d = computed(() => $c());
-  const $e = computed(() => $d());
+  const $c = computed(() => $a.get() + $b.get());
+  const $d = computed(() => $c.get());
+  const $e = computed(() => $d.get());
 
   $a.set(20);
-  expect($e()).toBe(30);
+  expect($e.get()).toBe(30);
 });
 
 it('should only re-compute when needed', () => {
@@ -52,26 +53,26 @@ it('should only re-compute when needed', () => {
 
   const $a = signal(10);
   const $b = signal(10);
-  const $c = computed(() => compute($a() + $b()));
+  const $c = computed(() => compute($a.get() + $b.get()));
 
   expect(compute).not.toHaveBeenCalled();
 
-  $c();
+  $c.get();
   expect(compute).toHaveBeenCalledTimes(1);
   expect(compute).toHaveBeenCalledWith(20);
 
-  $c();
+  $c.get();
   expect(compute).toHaveBeenCalledTimes(1);
 
   $a.set(20);
-  $c();
+  $c.get();
   expect(compute).toHaveBeenCalledTimes(2);
 
   $b.set(20);
-  $c();
+  $c.get();
   expect(compute).toHaveBeenCalledTimes(3);
 
-  $c();
+  $c.get();
   expect(compute).toHaveBeenCalledTimes(3);
 });
 
@@ -82,40 +83,40 @@ it('should only re-compute whats needed', () => {
   const $a = signal(10);
   const $b = signal(10);
   const $c = computed(() => {
-    const a = $a();
+    const a = $a.get();
     computeC(a);
     return a;
   });
   const $d = computed(() => {
-    const b = $b();
+    const b = $b.get();
     computeD(b);
     return b;
   });
-  const $e = computed(() => $c() + $d());
+  const $e = computed(() => $c.get() + $d.get());
 
   expect(computeC).not.toHaveBeenCalled();
   expect(computeD).not.toHaveBeenCalled();
 
-  $e();
+  $e.get();
   expect(computeC).toHaveBeenCalledTimes(1);
   expect(computeD).toHaveBeenCalledTimes(1);
-  expect($e()).toBe(20);
+  expect($e.get()).toBe(20);
 
   $a.set(20);
   tick();
 
-  $e();
+  $e.get();
   expect(computeC).toHaveBeenCalledTimes(2);
   expect(computeD).toHaveBeenCalledTimes(1);
-  expect($e()).toBe(30);
+  expect($e.get()).toBe(30);
 
   $b.set(20);
   tick();
 
-  $e();
+  $e.get();
   expect(computeC).toHaveBeenCalledTimes(2);
   expect(computeD).toHaveBeenCalledTimes(2);
-  expect($e()).toBe(40);
+  expect($e.get()).toBe(40);
 });
 
 it('should discover new dependencies', () => {
@@ -123,50 +124,50 @@ it('should discover new dependencies', () => {
   const $b = signal(0);
 
   const $c = computed(() => {
-    if ($a()) {
-      return $a();
+    if ($a.get()) {
+      return $a.get();
     } else {
-      return $b();
+      return $b.get();
     }
   });
 
-  expect($c()).toBe(1);
+  expect($c.get()).toBe(1);
 
   $a.set(0);
   tick();
-  expect($c()).toBe(0);
+  expect($c.get()).toBe(0);
 
   $b.set(10);
   tick();
-  expect($c()).toBe(10);
+  expect($c.get()).toBe(10);
 });
 
 it('should accept dirty option', () => {
   const $a = signal(0);
 
-  const $b = computed(() => $a(), {
+  const $b = computed(() => $a.get(), {
     // Skip odd numbers.
     dirty: (prev, next) => prev + 1 !== next,
   });
 
   const effectA = vi.fn();
   effect(() => {
-    $b();
+    $b.get();
     effectA();
   });
 
-  expect($b()).toBe(0);
+  expect($b.get()).toBe(0);
   expect(effectA).toHaveBeenCalledTimes(1);
 
   $a.set(2);
   tick();
-  expect($b()).toBe(2);
+  expect($b.get()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 
   // no-change
   $a.set(3);
   tick();
-  expect($b()).toBe(2);
+  expect($b.get()).toBe(2);
   expect(effectA).toHaveBeenCalledTimes(2);
 });
 
@@ -181,7 +182,7 @@ it('should use fallback if error is thrown during init', () => {
       { initial: 'foo' },
     );
 
-    expect($a()).toBe('foo');
+    expect($a.get()).toBe('foo');
   });
 });
 
@@ -190,15 +191,15 @@ it('should store function values without invoking them', () => {
     fnA = () => 'a',
     fnB = () => 'b';
 
-  const $fn = computed(() => ($a() === 0 ? fnA : fnB));
+  const $fn = computed(() => ($a.get() === 0 ? fnA : fnB));
 
-  expect($fn()).toBe(fnA);
+  expect($fn.get()).toBe(fnA);
 
   $a.set(1);
-  expect($fn()).toBe(fnB);
+  expect($fn.get()).toBe(fnB);
 
   $a.set(2);
-  expect($fn()).toBe(fnB);
+  expect($fn.get()).toBe(fnB);
 });
 
 it('should not notify observers when a function value is unchanged', () => {
@@ -206,11 +207,11 @@ it('should not notify observers when a function value is unchanged', () => {
     fn = () => {};
 
   const $fn = computed(() => {
-    $a();
+    $a.get();
     return fn;
   });
 
-  const spy = vi.fn(() => void $fn());
+  const spy = vi.fn(() => void $fn.get());
   effect(spy);
 
   $a.set(1);
@@ -222,18 +223,18 @@ it('should keep the previous value and stay clean after throwing', () => {
   const $a = signal(1);
 
   const $b = computed(() => {
-    if ($a() === 2) throw new Error('bad');
-    return $a() * 10;
+    if ($a.get() === 2) throw new Error('bad');
+    return $a.get() * 10;
   });
 
-  expect($b()).toBe(10);
+  expect($b.get()).toBe(10);
 
   $a.set(2);
-  expect(() => $b()).toThrow('bad');
-  expect($b()).toBe(10);
+  expect(() => $b.get()).toThrow('bad');
+  expect($b.get()).toBe(10);
 
   $a.set(3);
-  expect($b()).toBe(30);
+  expect($b.get()).toBe(30);
 });
 
 it('should keep tracking dependencies read before an error', () => {
@@ -243,24 +244,24 @@ it('should keep tracking dependencies read before an error', () => {
 
   const $c = computed(() => {
     spy();
-    const a = $a();
+    const a = $a.get();
     if (a === 2) throw new Error('bad');
-    return a + $b();
+    return a + $b.get();
   });
 
-  expect($c()).toBe(2);
+  expect($c.get()).toBe(2);
 
   $a.set(2);
-  expect(() => $c()).toThrow('bad');
+  expect(() => $c.get()).toThrow('bad');
   expect(spy).toHaveBeenCalledTimes(2);
 
   // `$b` was not read during the failed run so it is no longer a dependency.
   $b.set(5);
-  expect($c()).toBe(2);
+  expect($c.get()).toBe(2);
   expect(spy).toHaveBeenCalledTimes(2);
 
   $a.set(3);
-  expect($c()).toBe(8);
+  expect($c.get()).toBe(8);
   expect(spy).toHaveBeenCalledTimes(3);
 });
 
@@ -270,12 +271,12 @@ it('should not recompute when a dependency is set to the same value', () => {
 
   const $b = computed(() => {
     spy();
-    return $a();
+    return $a.get();
   });
 
-  expect($b()).toBe(1);
+  expect($b.get()).toBe(1);
   $a.set(1);
-  expect($b()).toBe(1);
+  expect($b.get()).toBe(1);
   expect(spy).toHaveBeenCalledTimes(1);
 });
 
@@ -285,14 +286,14 @@ it('should recompute only once after multiple writes', () => {
 
   const $b = computed(() => {
     spy();
-    return $a();
+    return $a.get();
   });
 
-  $b();
+  $b.get();
   $a.set(2);
   $a.set(3);
   $a.set(4);
-  expect($b()).toBe(4);
+  expect($b.get()).toBe(4);
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -302,25 +303,25 @@ it('should not recompute an unobserved computed until it is read', () => {
 
   const $b = computed(() => {
     spy();
-    return $a();
+    return $a.get();
   });
 
-  $b();
+  $b.get();
   $a.set(2);
   tick();
   expect(spy).toHaveBeenCalledTimes(1);
-  $b();
+  $b.get();
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
 it('should compute with an object initial value that is later replaced', () => {
   const $a = signal<{ v: number } | null>(null);
 
-  const $b = computed(() => $a()?.v ?? -1, { initial: 100 });
+  const $b = computed(() => $a.get()?.v ?? -1, { initial: 100 });
 
-  expect($b()).toBe(-1);
+  expect($b.get()).toBe(-1);
   $a.set({ v: 5 });
-  expect($b()).toBe(5);
+  expect($b.get()).toBe(5);
 });
 
 it('should use a dev id derived from the kind of computation', () => {
@@ -328,7 +329,7 @@ it('should use a dev id derived from the kind of computation', () => {
     $b = computed(() => 0),
     $c = computed(() => 0, { id: 'c' });
 
-  expect($a.node!.id).toBe('signal');
-  expect($b.node!.id).toBe('computed');
-  expect($c.node!.id).toBe('c');
+  expect(internals($a).id).toBe('signal');
+  expect(internals($b).id).toBe('computed');
+  expect(internals($c).id).toBe('c');
 });

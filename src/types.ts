@@ -1,6 +1,7 @@
-import type { SCOPE } from './symbols.js';
+import type { SCOPE, SIGNAL } from './symbols.js';
 
 export interface Computation<T = any> extends Scope {
+  readonly [SIGNAL]: true;
   id?: string | undefined;
 
   /** @internal */
@@ -16,14 +17,18 @@ export interface Computation<T = any> extends Scope {
   _compute: (() => T) | null;
   /** @internal */
   _changed: (prev: T, next: T) => boolean;
-  /** read */
-  call(this: Computation<T>): T;
+  /** Reads the current value and tracks it as a dependency of the running computation. */
+  get(): T;
+  /** Reads the current value without tracking it. */
+  peek(): T;
 }
 
 export interface ReadSignal<T> {
-  (): T;
-  /** only available during dev. */
-  node?: Computation;
+  readonly [SIGNAL]: true;
+  /** Reads the current value and tracks it as a dependency of the running computation. */
+  get(): T;
+  /** Reads the current value without tracking it. */
+  peek(): T;
 }
 
 export interface SignalOptions<T> {
@@ -38,9 +43,8 @@ export interface ComputedSignalOptions<T, R = never> extends SignalOptions<T> {
 export type InferSignalValue<T> = T extends ReadSignal<infer R> ? R : T;
 
 export interface WriteSignal<T> extends ReadSignal<T> {
-  /** only available during dev. */
-  node?: Computation;
-  set: (value: T | NextValue<T>) => T;
+  /** Sets the value, or derives it from the previous one when given a function. */
+  set(value: T | NextValue<T>): T;
 }
 
 export interface NextValue<T> {
@@ -87,7 +91,7 @@ export type Maybe<T> = T | void | null | undefined | false;
 export type MaybeFunction = Maybe<(...args: any) => any>;
 export type MaybeDisposable = Maybe<Disposable>;
 export type MaybeStopEffect = Maybe<StopEffect>;
-export type MaybeSignal<T> = MaybeFunction | ReadSignal<T>;
+export type MaybeSignal<T> = Maybe<T> | ReadSignal<T>;
 export type ContextRecord = Record<string | symbol, unknown>;
 
 export interface ErrorHandler<T = Error> {

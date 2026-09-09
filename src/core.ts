@@ -1,4 +1,4 @@
-import { SCOPE } from './symbols.js';
+import { SCOPE, SIGNAL } from './symbols.js';
 import type {
   Callable,
   Computation,
@@ -476,7 +476,13 @@ const SignalNode = function Signal(
 };
 
 const SignalProto = SignalNode.prototype;
+SignalProto[SIGNAL] = true;
 SignalProto._changed = isNotEqual;
+SignalProto.get = readSignal;
+SignalProto.set = write;
+SignalProto.peek = function peekSignal(this: Computation) {
+  return this._value;
+};
 // Read by `updateCheck` when walking sources - a prototype hit keeps that check cheap.
 SignalProto._compute = null;
 
@@ -523,8 +529,18 @@ const ComputeNode = function Computation(
 
 const ComputeProto: Computation = ComputeNode.prototype;
 Object.setPrototypeOf(ComputeProto, ScopeProto);
+(ComputeProto as { [SIGNAL]: boolean })[SIGNAL] = true;
 ComputeProto._changed = isNotEqual;
-ComputeProto.call = read;
+ComputeProto.get = read;
+ComputeProto.peek = function peekComputed(this: Computation) {
+  const prevObserver = currentObserver;
+  currentObserver = null;
+  try {
+    return read.call(this);
+  } finally {
+    currentObserver = prevObserver;
+  }
+};
 
 export function createComputation<T>(
   initialValue: T,

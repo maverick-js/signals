@@ -1,6 +1,7 @@
 // https://github.com/preactjs/signals/blob/main/packages/core/test/signal.test.tsx#L1249
 
 import { computed, signal, tick, effect, root, type ReadSignal } from '../src';
+import { internals } from './utils';
 
 it('should drop A->B->A updates', () => {
   //     A
@@ -12,18 +13,18 @@ it('should drop A->B->A updates', () => {
   //     D
 
   const $a = signal(2);
-  const $b = computed(() => $a() - 1);
-  const $c = computed(() => $a() + $b());
+  const $b = computed(() => $a.get() - 1);
+  const $c = computed(() => $a.get() + $b.get());
 
-  const compute = vi.fn(() => 'd: ' + $c());
+  const compute = vi.fn(() => 'd: ' + $c.get());
   const $d = computed(compute);
 
-  expect($d()).toBe('d: 3');
+  expect($d.get()).toBe('d: 3');
   expect(compute).toHaveBeenCalledTimes(1);
   compute.mockReset();
 
   $a.set(4);
-  $d();
+  $d.get();
   tick();
   expect(compute).toHaveBeenCalledTimes(1);
 });
@@ -38,18 +39,18 @@ it('should only update every signal once (diamond graph)', () => {
   //     D
 
   const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => $a());
+  const $b = computed(() => $a.get());
+  const $c = computed(() => $a.get());
 
-  const spy = vi.fn(() => $b() + ' ' + $c());
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get());
   const $d = computed(spy);
 
-  expect($d()).toBe('a a');
+  expect($d.get()).toBe('a a');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   tick();
-  expect($d()).toBe('aa aa');
+  expect($d.get()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -64,19 +65,19 @@ it('should only update every signal once (diamond graph + tail)', () => {
   //     E
 
   const $a = signal('a');
-  const $b = computed(() => $a());
-  const $c = computed(() => $a());
-  const $d = computed(() => $b() + ' ' + $c());
+  const $b = computed(() => $a.get());
+  const $c = computed(() => $a.get());
+  const $d = computed(() => $b.get() + ' ' + $c.get());
 
-  const spy = vi.fn(() => $d());
+  const spy = vi.fn(() => $d.get());
   const $e = computed(spy);
 
-  expect($e()).toBe('a a');
+  expect($e.get()).toBe('a a');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   tick();
-  expect($e()).toBe('aa aa');
+  expect($e.get()).toBe('aa aa');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -87,19 +88,19 @@ it('should bail out if result is the same', () => {
   const $a = signal('a');
 
   const $b = computed(() => {
-    $a();
+    $a.get();
     return 'foo';
   });
 
-  const spy = vi.fn(() => $b());
+  const spy = vi.fn(() => $b.get());
   const $c = computed(spy);
 
-  expect($c()).toBe('foo');
+  expect($c.get()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set('aa');
   tick();
-  expect($c()).toBe('foo');
+  expect($c.get()).toBe('foo');
   expect(spy).toHaveBeenCalledTimes(1);
 });
 
@@ -116,46 +117,46 @@ it('should only update every signal once (jagged diamond graph + tails)', () => 
   //  F     G
 
   const $a = signal('a', { id: '$a' });
-  const $b = computed(() => $a(), { id: '$b' });
-  const $c = computed(() => $a(), { id: '$c' });
-  const $d = computed(() => $c(), { id: '$d' });
+  const $b = computed(() => $a.get(), { id: '$b' });
+  const $c = computed(() => $a.get(), { id: '$c' });
+  const $d = computed(() => $c.get(), { id: '$d' });
 
-  const eSpy = vi.fn(() => $b() + ' ' + $d());
+  const eSpy = vi.fn(() => $b.get() + ' ' + $d.get());
   const $e = computed(eSpy, { id: '$e' });
 
-  const fSpy = vi.fn(() => $e());
+  const fSpy = vi.fn(() => $e.get());
   const $f = computed(fSpy, { id: '$f' });
-  const gSpy = vi.fn(() => $e());
+  const gSpy = vi.fn(() => $e.get());
   const $g = computed(gSpy, { id: '$g' });
 
-  expect($f()).toBe('a a');
+  expect($f.get()).toBe('a a');
   expect(fSpy).toHaveBeenCalledTimes(1);
 
-  expect($g()).toBe('a a');
+  expect($g.get()).toBe('a a');
   expect(gSpy).toHaveBeenCalledTimes(1);
 
   $a.set('b');
   tick();
 
-  expect($e()).toBe('b b');
+  expect($e.get()).toBe('b b');
   expect(eSpy).toHaveBeenCalledTimes(2);
 
-  expect($f()).toBe('b b');
+  expect($f.get()).toBe('b b');
   expect(fSpy).toHaveBeenCalledTimes(2);
 
-  expect($g()).toBe('b b');
+  expect($g.get()).toBe('b b');
   expect(gSpy).toHaveBeenCalledTimes(2);
 
   $a.set('c');
   tick();
 
-  expect($e()).toBe('c c');
+  expect($e.get()).toBe('c c');
   expect(eSpy).toHaveBeenCalledTimes(3);
 
-  expect($f()).toBe('c c');
+  expect($f.get()).toBe('c c');
   expect(fSpy).toHaveBeenCalledTimes(3);
 
-  expect($g()).toBe('c c');
+  expect($g.get()).toBe('c c');
   expect(gSpy).toHaveBeenCalledTimes(3);
 });
 
@@ -166,17 +167,17 @@ it('should only subscribe to signals listened to', () => {
 
   const $a = signal('a');
 
-  const $b = computed(() => $a());
-  const spy = vi.fn(() => $a());
+  const $b = computed(() => $a.get());
+  const spy = vi.fn(() => $a.get());
   computed(spy);
 
-  expect($b()).toBe('a');
+  expect($b.get()).toBe('a');
   expect(spy).toBeCalledTimes(0);
 
   $a.set('aa');
   tick();
 
-  expect($b()).toBe('aa');
+  expect($b.get()).toBe('aa');
   expect(spy).toBeCalledTimes(0);
 });
 
@@ -192,21 +193,21 @@ it('should ensure subs update even if one dep unmarks it', () => {
   //     D
 
   const $a = signal('a');
-  const $b = computed(() => $a());
+  const $b = computed(() => $a.get());
   const $c = computed(() => {
-    $a();
+    $a.get();
     return 'c';
   });
 
-  const spy = vi.fn(() => $b() + ' ' + $c());
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get());
   const $d = computed(spy);
 
-  expect($d()).toBe('a c');
+  expect($d.get()).toBe('a c');
 
   $a.set('aa');
   tick();
 
-  expect($d()).toBe('aa c');
+  expect($d.get()).toBe('aa c');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -221,24 +222,24 @@ it('should ensure subs update even if two deps unmark it', () => {
   //     E
 
   const $a = signal('a');
-  const $b = computed(() => $a());
+  const $b = computed(() => $a.get());
   const $c = computed(() => {
-    $a();
+    $a.get();
     return 'c';
   });
   const $d = computed(() => {
-    $a();
+    $a.get();
     return 'd';
   });
 
-  const spy = vi.fn(() => $b() + ' ' + $c() + ' ' + $d());
+  const spy = vi.fn(() => $b.get() + ' ' + $c.get() + ' ' + $d.get());
   const $e = computed(spy);
-  expect($e()).toBe('a c d');
+  expect($e.get()).toBe('a c d');
 
   $a.set('aa');
   tick();
 
-  expect($e()).toBe('aa c d');
+  expect($e.get()).toBe('aa c d');
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -251,26 +252,26 @@ it('should track dependencies read in a different order', () => {
     $b = signal(2),
     $order = signal(true);
 
-  const spy = vi.fn(() => ($order() ? $a() + $b() : $b() + $a()));
+  const spy = vi.fn(() => ($order.get() ? $a.get() + $b.get() : $b.get() + $a.get()));
   const $c = computed(spy);
 
-  expect($c()).toBe(3);
+  expect($c.get()).toBe(3);
 
   $order.set(false);
-  expect($c()).toBe(3);
+  expect($c.get()).toBe(3);
   expect(spy).toHaveBeenCalledTimes(2);
 
   $a.set(10);
-  expect($c()).toBe(12);
+  expect($c.get()).toBe(12);
   expect(spy).toHaveBeenCalledTimes(3);
 
   $b.set(20);
-  expect($c()).toBe(30);
+  expect($c.get()).toBe(30);
   expect(spy).toHaveBeenCalledTimes(4);
 
-  expect($a.node!._observers).toHaveLength(1);
-  expect($b.node!._observers).toHaveLength(1);
-  expect($c.node!._sources).toHaveLength(3);
+  expect(internals($a)._observers).toHaveLength(1);
+  expect(internals($b)._observers).toHaveLength(1);
+  expect(internals($c)._sources).toHaveLength(3);
 });
 
 it('should unsubscribe from dependencies that are no longer read', () => {
@@ -278,39 +279,39 @@ it('should unsubscribe from dependencies that are no longer read', () => {
     $a = signal(1),
     $b = signal(2);
 
-  const $c = computed(() => ($cond() ? $a() : $b()));
+  const $c = computed(() => ($cond.get() ? $a.get() : $b.get()));
 
-  expect($c()).toBe(1);
-  expect($a.node!._observers).toHaveLength(1);
-  expect($b.node!._observers).toBeNull();
+  expect($c.get()).toBe(1);
+  expect(internals($a)._observers).toHaveLength(1);
+  expect(internals($b)._observers).toBeNull();
 
   $cond.set(false);
-  expect($c()).toBe(2);
-  expect($a.node!._observers).toHaveLength(0);
-  expect($b.node!._observers).toHaveLength(1);
+  expect($c.get()).toBe(2);
+  expect(internals($a)._observers).toHaveLength(0);
+  expect(internals($b)._observers).toHaveLength(1);
 
   $a.set(100);
-  expect($c()).toBe(2);
+  expect($c.get()).toBe(2);
 });
 
 it('should become constant when the last dependency is dropped', () => {
   const $cond = signal(true),
     $a = signal(1),
-    spy = vi.fn(() => ($cond() ? $a() : 0));
+    spy = vi.fn(() => ($cond.get() ? $a.get() : 0));
 
   const $c = computed(spy);
   const $stop = signal(false);
   void $stop;
 
-  expect($c()).toBe(1);
+  expect($c.get()).toBe(1);
 
   $cond.set(false);
-  expect($c()).toBe(0);
+  expect($c.get()).toBe(0);
   expect(spy).toHaveBeenCalledTimes(2);
-  expect($a.node!._observers).toHaveLength(0);
+  expect(internals($a)._observers).toHaveLength(0);
 
   $a.set(2);
-  expect($c()).toBe(0);
+  expect($c.get()).toBe(0);
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -318,12 +319,12 @@ it('should handle an effect that switches between two computeds', () => {
   const $cond = signal(true),
     $a = signal(1),
     $b = signal(10),
-    $c = computed(() => $a() * 2),
-    $d = computed(() => $b() * 2),
+    $c = computed(() => $a.get() * 2),
+    $d = computed(() => $b.get() * 2),
     spy = vi.fn();
 
   effect(() => {
-    spy($cond() ? $c() : $d());
+    spy($cond.get() ? $c.get() : $d.get());
   });
 
   expect(spy).toHaveBeenLastCalledWith(2);
@@ -340,7 +341,7 @@ it('should handle an effect that switches between two computeds', () => {
   $a.set(5);
   tick();
   expect(spy).toHaveBeenCalledTimes(2);
-  expect($c.node!._observers).toHaveLength(0);
+  expect(internals($c)._observers).toHaveLength(0);
 });
 
 it('should grow and shrink dependencies across runs', () => {
@@ -348,27 +349,27 @@ it('should grow and shrink dependencies across runs', () => {
     signals = Array.from({ length: 5 }, (_, i) => signal(i));
 
   const $sum = computed(() => {
-    const n = $n();
+    const n = $n.get();
     let sum = 0;
-    for (let i = 0; i < n; i++) sum += signals[i]();
+    for (let i = 0; i < n; i++) sum += signals[i].get();
     return sum;
   });
 
-  expect($sum()).toBe(0);
-  expect($sum.node!._sources).toHaveLength(2);
+  expect($sum.get()).toBe(0);
+  expect(internals($sum)._sources).toHaveLength(2);
 
   $n.set(5);
-  expect($sum()).toBe(10);
-  expect($sum.node!._sources).toHaveLength(6);
-  for (const $s of signals) expect($s.node!._observers).toHaveLength(1);
+  expect($sum.get()).toBe(10);
+  expect(internals($sum)._sources).toHaveLength(6);
+  for (const $s of signals) expect(internals($s)._observers).toHaveLength(1);
 
   $n.set(2);
-  expect($sum()).toBe(1);
-  expect($sum.node!._sources).toHaveLength(3);
-  expect(signals[4].node!._observers).toHaveLength(0);
+  expect($sum.get()).toBe(1);
+  expect(internals($sum)._sources).toHaveLength(3);
+  expect(internals(signals[4])._observers).toHaveLength(0);
 
   signals[4].set(100);
-  expect($sum()).toBe(1);
+  expect($sum.get()).toBe(1);
 });
 
 it('should keep edges for sources re-read after a divergence', () => {
@@ -378,28 +379,28 @@ it('should keep edges for sources re-read after a divergence', () => {
     stable = Array.from({ length: 5 }, (_, i) => signal(i));
 
   const $c = computed(() => {
-    let total = $toggle() ? $a() : $b();
-    for (const $s of stable) total += $s();
+    let total = $toggle.get() ? $a.get() : $b.get();
+    for (const $s of stable) total += $s.get();
     return total;
   });
 
-  expect($c()).toBe(2 + 10);
-  const observersBefore = stable.map(($s) => $s.node!._observers);
+  expect($c.get()).toBe(2 + 10);
+  const observersBefore = stable.map(($s) => internals($s)._observers);
 
   $toggle.set(true);
-  expect($c()).toBe(1 + 10);
+  expect($c.get()).toBe(1 + 10);
 
   // Same edge arrays, no unsubscribe/resubscribe of the stable suffix.
   stable.forEach(($s, i) => {
-    expect($s.node!._observers).toBe(observersBefore[i]);
-    expect($s.node!._observers).toHaveLength(1);
+    expect(internals($s)._observers).toBe(observersBefore[i]);
+    expect(internals($s)._observers).toHaveLength(1);
   });
-  expect($a.node!._observers).toHaveLength(1);
-  expect($b.node!._observers).toHaveLength(0);
-  expect($c.node!._sources).toEqual([$toggle.node, $a.node, ...stable.map(($s) => $s.node)]);
+  expect(internals($a)._observers).toHaveLength(1);
+  expect(internals($b)._observers).toHaveLength(0);
+  expect(internals($c)._sources).toEqual([$toggle, $a, ...stable.map(($s) => $s)]);
 
   stable[3].set(100);
-  expect($c()).toBe(1 + 10 - 3 + 100);
+  expect($c.get()).toBe(1 + 10 - 3 + 100);
 });
 
 it('should preserve duplicate edge counts across divergent runs', () => {
@@ -408,23 +409,23 @@ it('should preserve duplicate edge counts across divergent runs', () => {
     $b = signal(2),
     $c = signal(3);
 
-  const $d = computed(() => ($toggle() ? $a() : $b()) + $c() + $c());
+  const $d = computed(() => ($toggle.get() ? $a.get() : $b.get()) + $c.get() + $c.get());
 
-  expect($d()).toBe(2 + 6);
-  expect($c.node!._observers).toHaveLength(2);
+  expect($d.get()).toBe(2 + 6);
+  expect(internals($c)._observers).toHaveLength(2);
 
   $toggle.set(true);
-  expect($d()).toBe(1 + 6);
-  expect($c.node!._observers).toHaveLength(2);
-  expect($d.node!._sources).toEqual([$toggle.node, $a.node, $c.node, $c.node]);
+  expect($d.get()).toBe(1 + 6);
+  expect(internals($c)._observers).toHaveLength(2);
+  expect(internals($d)._sources).toEqual([$toggle, $a, $c, $c]);
 
   $c.set(10);
-  expect($d()).toBe(21);
+  expect($d.get()).toBe(21);
 
   $toggle.set(false);
-  expect($d()).toBe(22);
-  expect($c.node!._observers).toHaveLength(2);
-  expect($a.node!._observers).toHaveLength(0);
+  expect($d.get()).toBe(22);
+  expect(internals($c)._observers).toHaveLength(2);
+  expect(internals($a)._observers).toHaveLength(0);
 });
 
 it('should handle a source moving between prefix and suffix across runs', () => {
@@ -432,21 +433,23 @@ it('should handle a source moving between prefix and suffix across runs', () => 
     $a = signal(1),
     $b = signal(2);
 
-  const $c = computed(() => ($order() ? $a() + $b() + $a() : $b() + $a() + $a()));
+  const $c = computed(() =>
+    $order.get() ? $a.get() + $b.get() + $a.get() : $b.get() + $a.get() + $a.get(),
+  );
 
-  expect($c()).toBe(4);
-  expect($a.node!._observers).toHaveLength(2);
-  expect($b.node!._observers).toHaveLength(1);
+  expect($c.get()).toBe(4);
+  expect(internals($a)._observers).toHaveLength(2);
+  expect(internals($b)._observers).toHaveLength(1);
 
   $order.set(false);
-  expect($c()).toBe(4);
-  expect($a.node!._observers).toHaveLength(2);
-  expect($b.node!._observers).toHaveLength(1);
+  expect($c.get()).toBe(4);
+  expect(internals($a)._observers).toHaveLength(2);
+  expect(internals($b)._observers).toHaveLength(1);
 
   $a.set(5);
-  expect($c()).toBe(12);
+  expect($c.get()).toBe(12);
   $b.set(0);
-  expect($c()).toBe(10);
+  expect($c.get()).toBe(10);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -458,9 +461,9 @@ it('should run an effect once when the same signal is read multiple times', () =
     spy = vi.fn();
 
   effect(() => {
-    $a();
-    $a();
-    $a();
+    $a.get();
+    $a.get();
+    $a.get();
     spy();
   });
 
@@ -471,15 +474,15 @@ it('should run an effect once when the same signal is read multiple times', () =
 
 it('should recompute once when the same computed is read multiple times', () => {
   const $a = signal(0),
-    computeB = vi.fn(() => $a() + 1),
+    computeB = vi.fn(() => $a.get() + 1),
     $b = computed(computeB),
-    spy = vi.fn(() => $b() + $b() + $b());
+    spy = vi.fn(() => $b.get() + $b.get() + $b.get());
 
   const $c = computed(spy);
 
-  expect($c()).toBe(3);
+  expect($c.get()).toBe(3);
   $a.set(1);
-  expect($c()).toBe(6);
+  expect($c.get()).toBe(6);
   expect(computeB).toHaveBeenCalledTimes(2);
   expect(spy).toHaveBeenCalledTimes(2);
 });
@@ -492,29 +495,29 @@ it('should recompute each node once in a deep chain', () => {
   const $a = signal(0),
     spies: ReturnType<typeof vi.fn>[] = [];
 
-  let $prev = $a as () => number;
+  let $prev = $a as ReadSignal<number>;
   for (let i = 0; i < 100; i++) {
     const $source = $prev,
-      spy = vi.fn(() => $source() + 1);
+      spy = vi.fn(() => $source.get() + 1);
     spies.push(spy);
     $prev = computed(spy);
   }
 
-  expect($prev()).toBe(100);
+  expect($prev.get()).toBe(100);
 
   $a.set(1);
-  expect($prev()).toBe(101);
+  expect($prev.get()).toBe(101);
 
   for (const spy of spies) expect(spy).toHaveBeenCalledTimes(2);
 });
 
 it('should handle wide fan-out into a single effect', () => {
   const $a = signal(1),
-    computeds = Array.from({ length: 100 }, (_, i) => computed(() => $a() * i)),
+    computeds = Array.from({ length: 100 }, (_, i) => computed(() => $a.get() * i)),
     spy = vi.fn();
 
   effect(() => {
-    spy(computeds.reduce((sum, $c) => sum + $c(), 0));
+    spy(computeds.reduce((sum, $c) => sum + $c.get(), 0));
   });
 
   expect(spy).toHaveBeenLastCalledWith(4950);
@@ -527,17 +530,17 @@ it('should handle wide fan-out into a single effect', () => {
 
 it('should handle fan-in from many signals', () => {
   const signals = Array.from({ length: 100 }, (_, i) => signal(i)),
-    spy = vi.fn(() => signals.reduce((sum, $s) => sum + $s(), 0)),
+    spy = vi.fn(() => signals.reduce((sum, $s) => sum + $s.get(), 0)),
     $sum = computed(spy);
 
-  expect($sum()).toBe(4950);
+  expect($sum.get()).toBe(4950);
 
   signals[50].set(0);
-  expect($sum()).toBe(4900);
+  expect($sum.get()).toBe(4900);
   expect(spy).toHaveBeenCalledTimes(2);
 
   for (const $s of signals) $s.set(1);
-  expect($sum()).toBe(100);
+  expect($sum.get()).toBe(100);
   expect(spy).toHaveBeenCalledTimes(3);
 });
 
@@ -546,7 +549,7 @@ it('should run an effect once when many dependencies change in the same tick', (
     spy = vi.fn();
 
   effect(() => {
-    spy(signals.reduce((sum, $s) => sum + $s(), 0));
+    spy(signals.reduce((sum, $s) => sum + $s.get(), 0));
   });
 
   for (const $s of signals) $s.set(1);
@@ -557,13 +560,13 @@ it('should run an effect once when many dependencies change in the same tick', (
 
 it('should bail out along a chain when an intermediate value does not change', () => {
   const $a = signal(1),
-    $b = computed(() => ($a() > 0 ? 'pos' : 'neg')),
-    computeC = vi.fn(() => $b() + '!'),
+    $b = computed(() => ($a.get() > 0 ? 'pos' : 'neg')),
+    computeC = vi.fn(() => $b.get() + '!'),
     $c = computed(computeC),
     spy = vi.fn();
 
   effect(() => {
-    spy($c());
+    spy($c.get());
   });
 
   $a.set(2);
@@ -580,13 +583,13 @@ it('should bail out along a chain when an intermediate value does not change', (
 
 it('should not glitch: effects see consistent derived values', () => {
   const $a = signal(1),
-    $b = computed(() => $a() * 2),
-    $c = computed(() => $a() * 3),
-    $d = computed(() => $b() + $c()),
+    $b = computed(() => $a.get() * 2),
+    $c = computed(() => $a.get() * 3),
+    $d = computed(() => $b.get() + $c.get()),
     seen: number[][] = [];
 
   effect(() => {
-    seen.push([$a(), $b(), $c(), $d()]);
+    seen.push([$a.get(), $b.get(), $c.get(), $d.get()]);
   });
 
   $a.set(2);
@@ -603,15 +606,15 @@ it('should not glitch: effects see consistent derived values', () => {
 
 it('should not glitch when an effect reads a signal and a computed derived from it', () => {
   const $a = signal(1),
-    $b = computed(() => $a() + 1),
+    $b = computed(() => $a.get() + 1),
     seen: string[] = [];
 
   effect(() => {
-    seen.push(`${$b()}-${$a()}`);
+    seen.push(`${$b.get()}-${$a.get()}`);
   });
 
   effect(() => {
-    seen.push(`${$a()}-${$b()}`);
+    seen.push(`${$a.get()}-${$b.get()}`);
   });
 
   $a.set(5);
@@ -621,13 +624,13 @@ it('should not glitch when an effect reads a signal and a computed derived from 
 
 it('should handle a computed depending on a computed that depends on the same signal', () => {
   const $a = signal(1),
-    $b = computed(() => $a() + 1),
-    computeC = vi.fn(() => $a() + $b()),
+    $b = computed(() => $a.get() + 1),
+    computeC = vi.fn(() => $a.get() + $b.get()),
     $c = computed(computeC);
 
-  expect($c()).toBe(3);
+  expect($c.get()).toBe(3);
   $a.set(2);
-  expect($c()).toBe(5);
+  expect($c.get()).toBe(5);
   expect(computeC).toHaveBeenCalledTimes(2);
 });
 
@@ -640,18 +643,18 @@ it('should handle a jagged graph where a leaf is both direct and indirect depend
   //   \ | /
   //     F
   const $a = signal(1),
-    $b = computed(() => $a() + 1),
-    $c = computed(() => $a() + 2),
-    $d = computed(() => $b() * 2),
-    $e = computed(() => $c() * 2),
-    computeF = vi.fn(() => $d() + $a() + $e()),
+    $b = computed(() => $a.get() + 1),
+    $c = computed(() => $a.get() + 2),
+    $d = computed(() => $b.get() * 2),
+    $e = computed(() => $c.get() * 2),
+    computeF = vi.fn(() => $d.get() + $a.get() + $e.get()),
     $f = computed(computeF);
 
-  expect($f()).toBe(4 + 1 + 6);
+  expect($f.get()).toBe(4 + 1 + 6);
 
   $a.set(2);
   tick();
-  expect($f()).toBe(6 + 2 + 8);
+  expect($f.get()).toBe(6 + 2 + 8);
   expect(computeF).toHaveBeenCalledTimes(2);
 });
 
@@ -664,17 +667,17 @@ it('should run sibling effects in creation order', () => {
     order: string[] = [];
 
   effect(() => {
-    $a();
+    $a.get();
     order.push('a');
   });
 
   effect(() => {
-    $a();
+    $a.get();
     order.push('b');
   });
 
   effect(() => {
-    $a();
+    $a.get();
     order.push('c');
   });
 
@@ -689,10 +692,10 @@ it('should run parent before child and dispose the stale child when both are dir
     order: string[] = [];
 
   effect(() => {
-    $a();
+    $a.get();
     order.push('parent');
     effect(() => {
-      $a();
+      $a.get();
       order.push('child');
     });
   });
@@ -710,10 +713,10 @@ it('should recreate nested computeds on each parent run', () => {
     spy = vi.fn();
 
   effect(() => {
-    $a();
+    $a.get();
     created();
-    const $c = computed(() => $b() + 1);
-    spy($c());
+    const $c = computed(() => $b.get() + 1);
+    spy($c.get());
   });
 
   expect(created).toHaveBeenCalledTimes(1);
@@ -734,11 +737,11 @@ it('should see writes from an earlier sibling effect in the same flush', () => {
     spy = vi.fn();
 
   effect(() => {
-    $b.set($a() * 2);
+    $b.set($a.get() * 2);
   });
 
   effect(() => {
-    spy($b());
+    spy($b.get());
   });
 
   $a.set(5);
@@ -753,11 +756,11 @@ it('should see writes from a later sibling effect in the same flush', () => {
     spy = vi.fn();
 
   effect(() => {
-    spy($b());
+    spy($b.get());
   });
 
   effect(() => {
-    $b.set($a() * 2);
+    $b.set($a.get() * 2);
   });
 
   $a.set(5);
@@ -771,17 +774,17 @@ it('should ignore a write to its own dependency during the run', () => {
     spy = vi.fn();
 
   effect(() => {
-    spy($a());
-    if ($a() < 3) $a.set($a() + 1);
+    spy($a.get());
+    if ($a.get() < 3) $a.set($a.get() + 1);
   });
 
   tick();
-  expect($a()).toBe(1);
+  expect($a.get()).toBe(1);
   expect(spy).toHaveBeenCalledTimes(1);
 
   $a.set(2);
   tick();
-  expect($a()).toBe(3);
+  expect($a.get()).toBe(3);
   expect(spy).toHaveBeenCalledTimes(2);
 });
 
@@ -792,12 +795,12 @@ it('should read the latest value of a disposed computed without tracking it', ()
   let $c!: ReadSignal<number>;
 
   const dispose = root((dispose) => {
-    $c = computed(() => $s() * 10);
+    $c = computed(() => $s.get() * 10);
     return dispose;
   });
 
   effect(() => {
-    spy($c());
+    spy($c.get());
   });
 
   expect(spy).toHaveBeenLastCalledWith(10);
@@ -806,7 +809,7 @@ it('should read the latest value of a disposed computed without tracking it', ()
   $s.set(2);
   tick();
   expect(spy).toHaveBeenCalledTimes(1);
-  expect($c()).toBe(10);
+  expect($c.get()).toBe(10);
 });
 
 it('should keep observers of a root-level signal working after an inner root is disposed', () => {
@@ -814,10 +817,10 @@ it('should keep observers of a root-level signal working after an inner root is 
     outer = vi.fn(),
     inner = vi.fn();
 
-  effect(() => outer($a()));
+  effect(() => outer($a.get()));
 
   const dispose = root((dispose) => {
-    effect(() => inner($a()));
+    effect(() => inner($a.get()));
     return dispose;
   });
 
@@ -834,7 +837,7 @@ it('should handle many independent roots', () => {
     spies = Array.from({ length: 20 }, () => vi.fn()),
     disposers = spies.map((spy) =>
       root((dispose) => {
-        effect(() => spy($a()));
+        effect(() => spy($a.get()));
         return dispose;
       }),
     );
@@ -848,7 +851,7 @@ it('should handle many independent roots', () => {
   $a.set(2);
   tick();
   spies.forEach((spy, i) => expect(spy).toHaveBeenCalledTimes(i % 2 === 0 ? 2 : 3));
-  expect($a.node!._observers).toHaveLength(10);
+  expect(internals($a)._observers).toHaveLength(10);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -879,7 +882,7 @@ it('should match a naive model on random graphs', () => {
       computedCount = 10 + Math.floor(rng() * 40),
       values = Array.from({ length: signalCount }, (_, i) => i),
       signals = values.map((v) => signal(v)),
-      nodes: FuzzNode[] = signals.map((s) => ({ deps: [], optional: -1, read: s })),
+      nodes: FuzzNode[] = signals.map((s) => ({ deps: [], optional: -1, read: () => s.get() })),
       computeCounts = new Array(signalCount + computedCount).fill(0);
 
     for (let i = signalCount; i < signalCount + computedCount; i++) {
@@ -896,7 +899,7 @@ it('should match a naive model on random graphs', () => {
         return sum;
       });
 
-      nodes.push({ deps, optional, read: $c });
+      nodes.push({ deps, optional, read: () => $c.get() });
     }
 
     // Naive model: recompute everything from scratch each time.

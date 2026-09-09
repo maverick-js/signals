@@ -14,6 +14,7 @@ import {
   type ReadSignal,
   type Scope,
 } from '../src';
+import { internals } from './utils';
 
 const STATE_DISPOSED = 3,
   STATE_MASK = 3;
@@ -26,23 +27,23 @@ it('should keep a disposed computed disposed when an observer is checked', () =>
   let $c!: ReadSignal<number>;
 
   const disposeRoot = root((dispose) => {
-    $c = computed(() => $s());
+    $c = computed(() => $s.get());
     return dispose;
   });
 
-  const $d = computed(() => $s() * 10),
-    spy = vi.fn(() => $c() + $d());
+  const $d = computed(() => $s.get() * 10),
+    spy = vi.fn(() => $c.get() + $d.get());
 
   effect(() => void spy());
   expect(spy).toHaveBeenCalledTimes(1);
 
   disposeRoot();
-  expect($c.node!._state & STATE_MASK).toBe(STATE_DISPOSED);
+  expect(internals($c)._state & STATE_MASK).toBe(STATE_DISPOSED);
 
   $s.set(1);
   tick();
-  expect($c.node!._state & STATE_MASK).toBe(STATE_DISPOSED);
-  expect($c()).toBe(0); // last value.
+  expect(internals($c)._state & STATE_MASK).toBe(STATE_DISPOSED);
+  expect($c.get()).toBe(0); // last value.
 });
 
 it('should keep a disposed child effect disposed when its parent re-runs mid-flush', () => {
@@ -51,9 +52,9 @@ it('should keep a disposed child effect disposed when its parent re-runs mid-flu
   let child!: Computation;
 
   effect(() => {
-    $a();
+    $a.get();
     effect(() => {
-      $a();
+      $a.get();
       child = getScope() as Computation;
     });
   });
@@ -73,8 +74,8 @@ it('should not re-link an effect that stops itself during its own run', () => {
     cleanup = vi.fn();
 
   const stop = effect(() => {
-    spy($a());
-    if ($a() === 1) stop();
+    spy($a.get());
+    if ($a.get() === 1) stop();
     return cleanup;
   });
 
@@ -83,7 +84,7 @@ it('should not re-link an effect that stops itself during its own run', () => {
   expect(spy).toHaveBeenCalledTimes(2);
   // Cleanup from run 1 (before run 2) + cleanup returned by run 2 (scope already disposed).
   expect(cleanup).toHaveBeenCalledTimes(2);
-  expect($a.node!._observers).toHaveLength(0);
+  expect(internals($a)._observers).toHaveLength(0);
 
   $a.set(2);
   tick();
@@ -156,16 +157,16 @@ it('should unlink from sources on dispose', () => {
     $b = signal(0);
 
   const stop = effect(() => {
-    $a();
-    $b();
+    $a.get();
+    $b.get();
   });
 
-  expect($a.node!._observers).toHaveLength(1);
-  expect($b.node!._observers).toHaveLength(1);
+  expect(internals($a)._observers).toHaveLength(1);
+  expect(internals($b)._observers).toHaveLength(1);
 
   stop();
-  expect($a.node!._observers).toHaveLength(0);
-  expect($b.node!._observers).toHaveLength(0);
+  expect(internals($a)._observers).toHaveLength(0);
+  expect(internals($b)._observers).toHaveLength(0);
 });
 
 it('should unlink a disposed computed from its sources and its observers from it', () => {
@@ -174,18 +175,18 @@ it('should unlink a disposed computed from its sources and its observers from it
   let $c!: ReadSignal<number>;
 
   const dispose = root((dispose) => {
-    $c = computed(() => $a());
+    $c = computed(() => $a.get());
     return dispose;
   });
 
-  const stop = effect(() => void $c());
-  expect($a.node!._observers).toHaveLength(1);
-  expect($c.node!._observers).toHaveLength(1);
+  const stop = effect(() => void $c.get());
+  expect(internals($a)._observers).toHaveLength(1);
+  expect(internals($c)._observers).toHaveLength(1);
 
   dispose();
-  expect($a.node!._observers).toHaveLength(0);
-  expect($c.node!._observers).toBeNull();
-  expect($c.node!._sources).toBeNull();
+  expect(internals($a)._observers).toHaveLength(0);
+  expect(internals($c)._observers).toBeNull();
+  expect(internals($c)._sources).toBeNull();
 
   stop();
 });
@@ -283,7 +284,7 @@ it('should fully unlink a node whose disposal callback throws unhandled', () => 
 
   const dispose = root((dispose) => {
     effect(() => {
-      $a();
+      $a.get();
       onDispose(() => {
         throw new Error('boom');
       });
@@ -291,9 +292,9 @@ it('should fully unlink a node whose disposal callback throws unhandled', () => 
     return dispose;
   });
 
-  expect($a.node!._observers).toHaveLength(1);
+  expect(internals($a)._observers).toHaveLength(1);
   expect(() => dispose()).toThrow('boom');
-  expect($a.node!._observers).toHaveLength(0);
+  expect(internals($a)._observers).toHaveLength(0);
 });
 
 it('should handle dispose called from within a child disposal callback', () => {
@@ -318,7 +319,7 @@ it('should not run a disposed effect even if it was notified before disposal', (
     spy = vi.fn();
 
   const stop = effect(() => {
-    spy($a());
+    spy($a.get());
   });
 
   $a.set(1);
