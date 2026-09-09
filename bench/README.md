@@ -35,17 +35,46 @@ again. Without a baseline only `current` is measured.
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | `synthetic.bench.js`     | Raw micro-benchmarks (create, re-run, fan-in/out, chains, diamonds, dispose, maps, ...). |
 | `graph.bench.js`         | Reactively-style random dependency graphs (static + dynamic, push + pull).               |
-| `dom.bench.js`           | "Real work" scenarios (TodoMVC, data grid, nested components, form) against a fake DOM.  |
+| `dom.bench.js`           | "Real work" UI scenarios against a fake DOM (list below).                                |
 | `build-baseline.js`      | Bundles `src/` at a git ref into `bench/.baseline/index.js` (single file, esbuild).      |
 | `layers.js`              | Cross-library layers benchmark (maverick vs S.js vs solid); unrelated to the baseline.   |
 | `lib/scenario.js`        | `scenario()`: one `describe()` per scenario with one `bench()` per library; run options. |
 | `lib/load.js`            | Snapshots/loads `current` + `baseline`; adapts a legacy (callable) baseline to `.get()`. |
 | `lib/rng.js`             | Seeded PRNG + shuffle so every library sees the identical random sequence.               |
-| `lib/fake-dom.js`        | `FakeNode` + `syncChildren` with a global mutation counter.                              |
+| `lib/fake-dom.js`        | `FakeNode` + `syncChildren` (keyed reconciliation) with a global mutation counter.       |
 | `.baseline/` (generated) | Baseline bundle + `REF` file (ref and commit sha). Git-ignored.                          |
 
 Bench files are matched by `test.benchmark.include` in `vite.config.ts` (`bench/**/*.bench.js`);
 `vp test` (the regular test suite) skips them and `vp test bench` runs only them.
+
+### `dom.bench.js` scenarios
+
+Whole-app scenarios (creation, interaction and disposal are all timed):
+
+- **TodoMVC** - `computedKeyedMap` over a filtered list: add, toggle, edit, filter, remove, clear.
+- **data grid** - the same rows rendered through `computedMap` _and_ `computedKeyedMap`, with a
+  `selector` for the selected row: cell updates, sort, select, page, scroll.
+- **nested components** - a tree of `root`s (depth 6, branching 3) reading context, with leaf
+  updates and one subtree re-render.
+- **form** - 50 fields with validation computeds, keystrokes and submit toggles.
+
+Stateful scenarios (the state is built untimed in `beforeAll`, one operation is timed, and the
+state is restored untimed after every iteration where the operation is not its own inverse):
+
+- **js-framework-benchmark** - the [Krausest](https://github.com/krausest/js-framework-benchmark)
+  operations on a `computedKeyedMap` of `{ id, label: signal }` rows rendered to `<tr>`s (label
+  cell bound by an effect, selected class via `selector`), one row per operation: create 1,000
+  rows, replace all 1,000, partial update (every 10th label, x50), select row (x500), swap rows 1
+  and 998 (x10), remove one row (x10), create 10,000 rows (2,500 in quick mode), append 1,000 rows
+  to 1,000, clear 1,000 rows.
+- **media player** - a Vidstack-shaped player: `currentTime` written 60 times per second of
+  playback fanning out to ~20 computeds (formatted times, progress / buffered percentages, chapter,
+  volume level, ...) and 15 effects writing attributes and text, with `paused`, `volume`, `muted`,
+  `playbackRate` and `duration` touched occasionally; 10 seconds per iteration (5 in quick mode).
+- **component churn** - route changes: mount 100 component `root`s under an app scope (3 signals,
+  2 computeds, 3 effects and a `getContext` read each; every other one renders a
+  `computedKeyedMap` of 10 children) and dispose them all again; x4 per iteration (x2 in quick
+  mode). Disposal is part of the timed work.
 
 ## Running
 
@@ -118,6 +147,25 @@ Setup and teardown (graph construction, disposal of previous state, restoring a 
 starting length) run in tinybench hooks (`beforeAll` / `beforeEach` / `afterEach` / `afterAll`)
 and are **never timed** - unless the scenario is explicitly about creation or disposal, in which
 case the untimed hook builds the state and the timed function creates/disposes it.
+
+### In real browsers
+
+`pnpm bench:browser` (`bench/browser.js`) bundles the six libraries, the adapters and the nine
+scenarios into a single page and runs it headless in Chromium, WebKit and Firefox through
+Playwright (`pnpm exec playwright install chromium webkit firefox` once), printing one chart block
+per engine. Browsers coarsen `performance.now()` to 100µs (Chromium) or 1ms (WebKit, Firefox), so
+every sample repeats the operation until at least 20ms have elapsed and reports the per-call time;
+the Node harness uses the same rule. `--quick` and `--browsers chromium,webkit` narrow a run. The
+"Browser benchmarks" workflow runs it weekly and on demand and posts the charts to the job summary;
+it never gates a merge.
+
+### Memory
+
+Leak coverage lives in `tests/memory/` (`pnpm test:memory`), not in the benchmarks: WeakRef and
+FinalizationRegistry checks that every node created inside a root is collectable after dispose,
+that effect re-runs release the previous generation of nested computations, that map items removed
+across grow/shrink cycles are released and the map scope stays compact, plus a heap soak that runs a
+TodoMVC-shaped app through 200 mount/update/unmount cycles and asserts the heap does not grow.
 
 ### Sanity checks
 
@@ -220,7 +268,11 @@ pessimistic.
 `synthetic.bench.js` has two shortcuts: `steady(name, setup, fn)` for scenarios whose state is
 built once and reused by every iteration, and `mapPhase(...)` for the map phases, where `afterEach`
 restores the starting list length so each phase (create / update / grow / shrink / clear) stays
-independent. `dom.bench.js`: add `{ name, reps, run(lib) }` to `scenarios`; everything in `run` is
-timed, so create all reactive state inside a `root` and dispose it at the end. `graph.bench.js`:
+independent. `dom.bench.js`: add `{ name, reps, run(lib) }` to `scenarios` for a whole-app
+scenario (everything in `run` is timed, so create all reactive state inside a `root` and dispose
+it at the end), or use `stateful(name, { create, run, restore? })` when the state should be built
+once and only one operation timed (`create` runs in `beforeAll`, `restore` in `afterEach`, and
+`ctx.dispose()` in `afterAll`; `check` counts the mutations of a single `run` against fresh state).
+`create` must return an object with a `dispose()` (build it with `withRoot()`). `graph.bench.js`:
 add `{ name, config: { width, depth, nSources, dynamicFraction, readFraction }, iterations }` to
 `configs`; both `pull` and `push` variants are generated automatically.

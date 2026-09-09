@@ -741,6 +741,8 @@ $: pnpm bench:baseline v6.0.0 # build bench/.baseline from a git ref
 $: pnpm bench                 # run synthetic + graph + DOM emulation suites (~4 min)
 $: pnpm bench:quick           # smaller sizes, ~1 min
 $: pnpm bench -t dispose      # only scenarios whose name matches
+$: pnpm bench:compare         # cross-library charts (rewrites the section above)
+$: pnpm bench:browser         # the same comparison in Chromium, WebKit and Firefox
 ```
 
 - `bench/synthetic.bench.js` - raw micro-benchmarks (create/read/write, static/dynamic deps,
@@ -749,7 +751,8 @@ $: pnpm bench -t dispose      # only scenarios whose name matches
 - `bench/graph.bench.js` - Reactively-style random graphs (`width x depth`, static/dynamic,
   pull/push) that assert both builds run the same number of computations.
 - `bench/dom.bench.js` - "real work" emulation on a fake DOM (TodoMVC, data grid, nested
-  components, form) that asserts both builds perform identical DOM mutations.
+  components, form, the js-framework-benchmark row operations, a media-player update loop and
+  component mount/unmount churn) that asserts both builds perform identical DOM mutations.
 
 See [`bench/README.md`](./bench/README.md) for reading the tables, the A/A calibration mode, and
 notes on noise.

@@ -97,7 +97,9 @@ export class FakeNode {
 
 /**
  * Minimal keyed reconciliation of `parent.children` towards `next` using only remove / insert
- * operations - roughly what a fine-grained renderer does for a mapped list.
+ * operations - roughly what a fine-grained renderer does for a mapped list: drop the nodes that are
+ * gone, skip the common prefix and suffix, move a node that jumped from one end of the changed
+ * range to the other directly, and insert / move whatever is still out of place at its position.
  *
  * @param {FakeNode} parent
  * @param {FakeNode[]} next
@@ -121,13 +123,37 @@ export function syncChildren(parent, next) {
     return;
   }
 
+  // 1) remove nodes that are no longer wanted (`prev` is the live children array, so from here on
+  //    every remaining node is somewhere in `next`)
   const keep = new Set(next);
   for (let i = prev.length - 1; i >= 0; i--) {
     if (!keep.has(prev[i])) parent.removeChild(prev[i]);
   }
 
-  for (let i = 0; i < next.length; i++) {
+  // 2) skip the common prefix and suffix
+  let start = 0;
+  let prevEnd = prev.length;
+  let nextEnd = next.length;
+  while (start < prevEnd && start < nextEnd && prev[start] === next[start]) start++;
+  while (prevEnd > start && nextEnd > start && prev[prevEnd - 1] === next[nextEnd - 1]) {
+    prevEnd--;
+    nextEnd--;
+  }
+  if (start === nextEnd && start === prevEnd) return;
+
+  // 3) a node moved from one end of the remaining range to the other (a swap is both at once):
+  //    move it directly instead of shifting every node in between (`first` sits at `start + 1`
+  //    once `last` has been moved in front of it)
+  if (prevEnd - start >= 2) {
+    const first = prev[start];
+    const last = prev[prevEnd - 1];
+    if (last === next[start]) parent.insertBefore(last, first);
+    if (first === next[nextEnd - 1]) parent.insertBefore(first, prev[prevEnd] ?? null);
+  }
+
+  // 4) insert / move whatever is still out of place at its position
+  for (let i = start; i < next.length; i++) {
     const node = next[i];
-    if (parent.children[i] !== node) parent.insertBefore(node, parent.children[i] ?? null);
+    if (prev[i] !== node) parent.insertBefore(node, prev[i] ?? null);
   }
 }
