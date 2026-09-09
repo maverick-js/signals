@@ -29,7 +29,8 @@ const NOOP = () => {},
   // The low two bits of `_state` hold the state above, the rest are flags.
   STATE_MASK = 3,
   FLAG_EFFECT = 1 << 2,
-  FLAG_INIT = 1 << 3;
+  FLAG_INIT = 1 << 3,
+  FLAG_RUNNING = 1 << 4;
 
 export { FLAG_EFFECT };
 
@@ -583,6 +584,13 @@ function cleanup(node: Computation) {
 }
 
 export function update(node: Computation) {
+  // Reached while this computation is already running: it (transitively) read itself.
+  if (node._state & FLAG_RUNNING) {
+    throw new Error(
+      __DEV__ ? `Cycle detected: computation \`${node.id}\` depends on itself.` : 'Cycle detected',
+    );
+  }
+
   const prevScope = currentScope,
     prevObserver = currentObserver,
     prevObservers = currentObservers,
@@ -597,6 +605,7 @@ export function update(node: Computation) {
 
     currentScope = node;
     currentObserver = node;
+    node._state |= FLAG_RUNNING;
 
     const result = node._compute!.call(node);
 
@@ -640,6 +649,7 @@ export function update(node: Computation) {
     currentObserver = prevObserver;
     currentObservers = prevObservers;
     currentObserversIndex = prevObserversIndex;
+    node._state &= ~FLAG_RUNNING;
     if ((node._state & STATE_MASK) !== STATE_DISPOSED) node._state &= ~STATE_MASK;
   }
 }

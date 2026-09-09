@@ -215,6 +215,10 @@ const $d = computed(() => $a.get() + $b.get() + $c.get());
 const $e = computed(() => $d.get());
 ```
 
+A computation that reads itself, directly or through other computeds, throws a `Cycle detected`
+error to the reader (or to the nearest [`onError`](#onerror) handler) instead of overflowing the
+stack.
+
 ### `effect`
 
 Invokes the given function each time any of the signals that are read inside are updated

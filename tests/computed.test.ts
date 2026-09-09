@@ -1,4 +1,4 @@
-import { computed, effect, signal, onError, root, tick } from '../src';
+import { computed, effect, signal, onError, root, tick, type ReadSignal } from '../src';
 import { internals } from './utils';
 
 afterEach(() => tick());
@@ -343,4 +343,56 @@ it('should not notify observers when a recomputed value is Object.is-equal', () 
   $a.set(2);
   tick();
   expect(spy).toHaveBeenCalledTimes(1);
+});
+
+it('should throw on a self-referencing computed', () => {
+  const $a = signal(1);
+
+  let $c!: ReadSignal<number>;
+  $c = computed(() => $a.get() + ($c ? $c.get() : 0));
+
+  expect(() => $c.get()).toThrow(/cycle/i);
+
+  // The graph is left in a usable state.
+  $a.set(2);
+  expect(() => $c.get()).toThrow(/cycle/i);
+});
+
+it('should throw on a mutual dependency cycle', () => {
+  const $a = signal(1);
+
+  let $b!: ReadSignal<number>, $c!: ReadSignal<number>;
+  $b = computed(() => $a.get() + ($c ? $c.get() : 0));
+  $c = computed(() => $b.get() * 2);
+
+  expect(() => $c.get()).toThrow(/cycle/i);
+
+  // Like any other error, the failed computeds keep their previous value and are marked clean, so
+  // the cycle is reported again once a dependency changes.
+  $a.set(2);
+  expect(() => $b.get()).toThrow(/cycle/i);
+});
+
+it('should route a cycle error to onError like any other error', () => {
+  const handler = vi.fn();
+
+  root(() => {
+    onError(handler);
+    let $c!: ReadSignal<number>;
+    $c = computed(() => ($c ? $c.get() : 0) + 1, { initial: -1 });
+    expect($c.get()).toBe(-1);
+  });
+
+  expect(handler).toHaveBeenCalledTimes(1);
+  expect(handler.mock.calls[0][0].message).toMatch(/cycle/i);
+});
+
+it('should not report a cycle for a computed that is read again after it finished', () => {
+  const $a = signal(1),
+    $b = computed(() => $a.get() * 2),
+    $c = computed(() => $b.get() + $b.get());
+
+  expect($c.get()).toBe(4);
+  $a.set(2);
+  expect($c.get()).toBe(8);
 });
