@@ -4,7 +4,7 @@ afterEach(() => tick());
 
 it('should batch updates', () => {
   const $a = signal(10);
-  const $effect = vi.fn(() => void $a());
+  const $effect = vi.fn(() => void $a.get());
 
   effect($effect);
 
@@ -19,7 +19,7 @@ it('should batch updates', () => {
 
 it('should wait for queue to flush', () => {
   const $a = signal(10);
-  const $effect = vi.fn(() => void $a());
+  const $effect = vi.fn(() => void $a.get());
 
   effect($effect);
 
@@ -37,7 +37,7 @@ it('should wait for queue to flush', () => {
 it('should not fail if called while flushing', () => {
   const $a = signal(10);
   const $effect = vi.fn(() => {
-    $a();
+    $a.get();
     tick();
   });
 

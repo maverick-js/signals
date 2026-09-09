@@ -1,9 +1,18 @@
 // Adapted from: https://github.com/solidjs/solid/blob/main/packages/solid/src/reactive/array.ts#L153
 
-import { compute, createComputation, createScope, dispose, read, scoped, write } from './core';
-import type { Computation, Maybe, ReadSignal, Scope } from './types';
+import {
+  compute,
+  createComputation,
+  createScope,
+  dispose,
+  disposeNode,
+  removeDisposedChildren,
+  scoped,
+  setValue,
+} from './core.js';
+import type { Computation, Maybe, ReadSignal, Scope } from './types.js';
 
-export * from './selector';
+export * from './selector.js';
 
 /**
  * Reactive map helper that caches each item by index to reduce unnecessary mapping on updates.
@@ -19,27 +28,25 @@ export function computedMap<Item, MappedItem>(
   map: (value: ReadSignal<Item>, index: number) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
-    createComputation<MappedItem[]>(
-      [],
-      updateMap.bind({
-        _scope: createScope(),
-        _len: 0,
-        _list: list,
-        _items: [],
-        _map: map,
-        _mappings: [],
-        _nodes: [],
-      }),
-      options,
-    ),
-  );
+  return createComputation<MappedItem[]>(
+    [],
+    updateMap.bind({
+      _scope: createScope(),
+      _len: 0,
+      _list: list,
+      _items: [],
+      _map: map,
+      _mappings: [],
+      _nodes: [],
+    }),
+    options,
+  ) as unknown as ReadSignal<MappedItem[]>;
 }
 
 function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
   let i = 0,
-    newItems = this._list() || [],
-    mapper = () => this._map(read.bind(this._nodes[i]), i);
+    newItems = this._list.get() || [],
+    mapper = () => this._map(this._nodes[i], i);
 
   scoped(() => {
     if (newItems.length === 0) {
@@ -56,7 +63,7 @@ function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
 
     for (i = 0; i < newItems.length; i++) {
       if (i < this._items.length && this._items[i] !== newItems[i]) {
-        write.call(this._nodes[i], newItems[i]);
+        setValue(this._nodes[i], newItems[i]);
       } else if (i >= this._items.length) {
         this._mappings[i] = compute<MappedItem>(
           (this._nodes[i] = createComputation(newItems[i], null)),
@@ -66,7 +73,12 @@ function updateMap<Item, MappedItem>(this: MapData<Item, MappedItem>): any[] {
       }
     }
 
-    for (; i < this._items.length; i++) dispose.call(this._nodes[i]);
+    if (i < this._items.length) {
+      // Dispose removed tail items in reverse creation order (cheapest for observer removal) and
+      // then detach them all from the scope in a single pass.
+      for (let j = this._items.length - 1; j >= i; j--) disposeNode(this._nodes[j]);
+      removeDisposedChildren(this._scope);
+    }
 
     this._len = this._nodes.length = newItems.length;
     this._items = newItems.slice(0);
@@ -91,25 +103,23 @@ export function computedKeyedMap<Item, MappedItem>(
   map: (value: Item, index: ReadSignal<number>) => MappedItem,
   options?: { id?: string },
 ): ReadSignal<MappedItem[]> {
-  return read.bind(
-    createComputation<MappedItem[]>(
-      [],
-      updateKeyedMap.bind({
-        _scope: createScope(),
-        _len: 0,
-        _list: list,
-        _items: [],
-        _map: map,
-        _mappings: [],
-        _nodes: [],
-      }),
-      options,
-    ),
-  );
+  return createComputation<MappedItem[]>(
+    [],
+    updateKeyedMap.bind({
+      _scope: createScope(),
+      _len: 0,
+      _list: list,
+      _items: [],
+      _map: map,
+      _mappings: [],
+      _nodes: [],
+    }),
+    options,
+  ) as unknown as ReadSignal<MappedItem[]>;
 }
 
 function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>): any[] {
-  const newItems = this._list() || [],
+  const newItems = this._list.get() || [],
     indexed = this._map.length > 1;
 
   scoped(() => {
@@ -117,7 +127,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
       i: number,
       j: number,
       mapper = indexed
-        ? () => this._map(newItems[j], read.bind(this._nodes[j]))
+        ? () => this._map(newItems[j], this._nodes[j])
         : () => (this._map as (value: Item) => MappedItem)(newItems[j]);
 
     // fast path for empty arrays
@@ -149,6 +159,7 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
         end: number,
         newEnd: number,
         item: Item,
+        removed = false,
         newIndices: Map<Item, number>,
         newIndicesNext: number[],
         temp: MappedItem[] = new Array(newLen),
@@ -190,15 +201,18 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
           tempNodes[j] = this._nodes[i];
           j = newIndicesNext[j];
           newIndices.set(item, j);
-        } else dispose.call(this._nodes[i]);
+        } else {
+          disposeNode(this._nodes[i]);
+          removed = true;
+        }
       }
 
       // 2) set all the new values, pulling from the temp array if copied, otherwise entering the new value
       for (j = start; j < newLen; j++) {
-        if (j in temp) {
+        if (tempNodes[j]) {
           this._mappings[j] = temp[j];
           this._nodes[j] = tempNodes[j];
-          write.call(this._nodes[j], j);
+          setValue(this._nodes[j], j);
         } else {
           this._mappings[j] = compute<MappedItem>(
             (this._nodes[j] = createComputation(j, null)),
@@ -208,10 +222,15 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
         }
       }
 
-      // 3) in case the new set is shorter than the old, set the length of the mapped array
-      this._mappings = this._mappings.slice(0, (this._len = newLen));
+      // 3) detach all disposed nodes from the scope in a single pass
+      if (removed) removeDisposedChildren(this._scope);
 
-      // 4) save a copy of the mapped items for the next update
+      // 4) in case the new set is shorter than the old, set the length of the mapped and node
+      // arrays so removed nodes are not retained
+      this._mappings = this._mappings.slice(0, (this._len = newLen));
+      this._nodes.length = newLen;
+
+      // 5) save a copy of the mapped items for the next update
       this._items = newItems.slice(0);
     }
   }, this._scope);

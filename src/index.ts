@@ -8,12 +8,11 @@ export {
   scoped,
   setContext,
   tick,
-  untrack,
+  unscope,
   isFunction,
-  isNotEqual,
   createScope,
   createComputation,
-} from './core';
-export * from './signals';
-export * from './types';
-export * from './symbols';
+} from './core.js';
+export * from './signals.js';
+export * from './types.js';
+export * from './symbols.js';

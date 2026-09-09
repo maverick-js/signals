@@ -1,4 +1,4 @@
-import { computed, effect, getScope, root, signal, tick } from '../src';
+import { computed, effect, getScope, root, signal, tick, type WriteSignal } from '../src';
 
 function gc() {
   return new Promise((resolve) =>
@@ -13,24 +13,32 @@ function gc() {
 if (global.gc) {
   it('should gc computed if there are no observers', async () => {
     const $a = signal(0),
-      ref = new WeakRef(computed(() => $a()));
+      ref = new WeakRef(computed(() => $a.get()));
 
     await gc();
     expect(ref.deref()).toBeUndefined();
   });
 
-  it('should _not_ gc computed if there are observers', async () => {
-    let $a = signal(0),
+  it('should _not_ gc a computed that has been read while its source is alive', async () => {
+    let $a: WriteSignal<number> | undefined = signal(0),
       pointer;
 
-    const ref = new WeakRef((pointer = computed(() => $a())));
+    const ref = new WeakRef((pointer = computed(() => $a!.get())));
 
-    ref.deref()!();
+    expect(pointer).toBeDefined();
+
+    ref.deref()!.get();
 
     await gc();
     expect(ref.deref()).toBeDefined();
 
+    // Reading subscribed the computed to `$a`, so `$a` keeps it alive until it is disposed or
+    // the source itself becomes unreachable.
     pointer = undefined;
+    await gc();
+    expect(ref.deref()).toBeDefined();
+
+    $a = undefined;
     await gc();
     expect(ref.deref()).toBeUndefined();
   });
@@ -43,13 +51,14 @@ if (global.gc) {
     const dispose = root((dispose) => {
       ref = new WeakRef(
         (pointer = computed(() => {
-          $a();
+          $a.get();
         })),
       );
 
       return dispose;
     });
 
+    expect(pointer).toBeDefined();
     await gc();
     expect(ref.deref()).toBeDefined();
 
@@ -68,7 +77,7 @@ if (global.gc) {
 
     const dispose = root((dispose) => {
       effect(() => {
-        $a();
+        $a.get();
         ref = new WeakRef(getScope()!);
       });
 

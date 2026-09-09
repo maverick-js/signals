@@ -1,40 +1,39 @@
-import { createComputation, dispose, isFunction, onDispose, read, update, write } from './core';
-import { SCOPE } from './symbols';
+import {
+  FLAG_EFFECT,
+  createComputation,
+  createSignal,
+  dispose,
+  isFunction,
+  update,
+} from './core.js';
+import { SIGNAL } from './symbols.js';
 import type {
   ComputedSignalOptions,
   Effect,
-  MaybeSignal,
   ReadSignal,
   SignalOptions,
   StopEffect,
   WriteSignal,
-} from './types';
+} from './types.js';
 
 /**
- * Wraps the given value into a signal. The signal will return the current value when invoked
- * `fn()`, and provide a simple write API via `set()`. The value can now be observed
- * when used inside other computations created with `computed` and `effect`.
+ * Wraps the given value into a signal. Read the current value with `get()`, write with `set()`,
+ * and read without tracking with `peek()`. The value can be observed when read inside other
+ * computations created with `computed` and `effect`.
  *
  * @see {@link https://github.com/maverick-js/signals#signal}
  */
 export function signal<T>(initialValue: T, options?: SignalOptions<T>): WriteSignal<T> {
-  const node = createComputation(initialValue, null, options),
-    signal = read.bind(node) as WriteSignal<T>;
-
-  if (__DEV__) signal.node = node;
-  signal[SCOPE] = true;
-  signal.set = write.bind(node) as WriteSignal<T>['set'];
-
-  return signal;
+  return createSignal(initialValue, options) as unknown as WriteSignal<T>;
 }
 
 /**
- * Whether the given value is a readonly signal.
+ * Whether the given value is a readable signal (a signal, computed, or readonly view).
  *
  * @see {@link https://github.com/maverick-js/signals#isreadsignal}
  */
-export function isReadSignal<T>(fn: MaybeSignal<T>): fn is ReadSignal<T> {
-  return isFunction(fn) && SCOPE in fn;
+export function isReadSignal<T>(value: unknown): value is ReadSignal<T> {
+  return !!value && (value as ReadSignal<T>)[SIGNAL] === true;
 }
 
 /**
@@ -48,16 +47,11 @@ export function computed<T, R = never>(
   compute: () => T,
   options?: ComputedSignalOptions<T, R>,
 ): ReadSignal<T | R> {
-  const node = createComputation<T | R>(
-      options?.initial as R,
-      compute,
-      options as ComputedSignalOptions<T | R>,
-    ),
-    signal = read.bind(node) as ReadSignal<T | R>;
-
-  signal[SCOPE] = true;
-  if (__DEV__) signal.node = node;
-  return signal;
+  return createComputation<T | R>(
+    options?.initial as R,
+    compute,
+    options as ComputedSignalOptions<T | R>,
+  ) as unknown as ReadSignal<T | R>;
 }
 
 /**
@@ -69,15 +63,12 @@ export function computed<T, R = never>(
 export function effect(effect: Effect, options?: { id?: string }): StopEffect {
   const signal = createComputation<null>(
     null,
-    function runEffect() {
-      let effectResult = effect();
-      isFunction(effectResult) && onDispose(effectResult);
-      return null;
-    },
+    // The returned disposer (if any) is registered by `update` - no wrapper closure needed.
+    effect as unknown as () => null,
     __DEV__ ? { id: options?.id ?? 'effect' } : void 0,
   );
 
-  signal._effect = true;
+  signal._state |= FLAG_EFFECT;
   update(signal);
 
   if (__DEV__) {
@@ -89,6 +80,23 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
   return dispose.bind(signal, true);
 }
 
+interface ReadonlySignal<T> extends ReadSignal<T> {
+  _source: ReadSignal<T>;
+}
+
+const ReadonlyNode = function Readonly<T>(this: ReadonlySignal<T>, source: ReadSignal<T>) {
+  this._source = source;
+};
+
+const ReadonlyProto = ReadonlyNode.prototype;
+ReadonlyProto[SIGNAL] = true;
+ReadonlyProto.get = function (this: ReadonlySignal<unknown>) {
+  return this._source.get();
+};
+ReadonlyProto.peek = function (this: ReadonlySignal<unknown>) {
+  return this._source.peek();
+};
+
 /**
  * Takes in the given signal and makes it read only by removing access to write operations
  * (i.e., `set()`).
@@ -96,17 +104,14 @@ export function effect(effect: Effect, options?: { id?: string }): StopEffect {
  * @see {@link https://github.com/maverick-js/signals#readonly}
  */
 export function readonly<T>(signal: ReadSignal<T>): ReadSignal<T> {
-  const readonly = (() => signal()) as ReadSignal<T>;
-  readonly[SCOPE] = true;
-  if (__DEV__) readonly.node = signal.node;
-  return readonly;
+  return new ReadonlyNode(signal);
 }
 
 /**
- * Whether the given value is a write signal (i.e., can produce new values via write API).
+ * Whether the given value is a write signal (i.e., can produce new values via `set()`).
  *
  * @see {@link https://github.com/maverick-js/signals#iswritesignal}
  */
-export function isWriteSignal<T>(fn: MaybeSignal<T>): fn is WriteSignal<T> {
-  return isReadSignal(fn) && 'set' in fn;
+export function isWriteSignal<T>(value: unknown): value is WriteSignal<T> {
+  return isReadSignal(value) && isFunction((value as WriteSignal<T>).set);
 }

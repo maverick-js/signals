@@ -1,9 +1,10 @@
-import { isNotEqual, onDispose, read, write } from './core';
-import { effect } from './signals';
-import { Computation, ReadSignal } from './types';
+import { onDispose, read, setValue } from './core.js';
+import { SIGNAL } from './symbols.js';
+import { effect } from './signals.js';
+import { Computation, ReadSignal } from './types.js';
 
 export interface SelectorSignal<T> {
-  (key: T): ReadSignal<Boolean>;
+  (key: T): ReadSignal<boolean>;
 }
 
 /**
@@ -15,11 +16,11 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     nodes = new Map<T, Selector<T>>();
 
   effect(() => {
-    const newKey = source(),
+    const newKey = source.get(),
       prev = nodes.get(currentKey!),
       next = nodes.get(newKey);
-    prev && write.call(prev, false);
-    next && write.call(next, true);
+    if (prev) setValue(prev, false);
+    if (next) setValue(next, true);
     currentKey = newKey;
   });
 
@@ -31,7 +32,7 @@ export function selector<T>(source: ReadSignal<T>): SelectorSignal<T> {
     node!._refs += 1;
     onDispose(node);
 
-    return read.bind(node!);
+    return node!;
   };
 }
 
@@ -50,10 +51,16 @@ function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Ma
   this._refs = 0;
   this._nodes = nodes;
   this._observers = null;
+  this._mark = 0;
 }
 
 const SelectorProto = Selector.prototype;
-SelectorProto._changed = isNotEqual;
+SelectorProto[SIGNAL] = true;
+SelectorProto._equals = null;
+SelectorProto.get = read;
+SelectorProto.peek = function (this: Selector) {
+  return this._value;
+};
 SelectorProto.call = function (this: Selector) {
   this._refs -= 1;
   if (!this._refs) {

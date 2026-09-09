@@ -1,0 +1,62 @@
+name: Browser benchmarks
+
+# Manual (or scheduled) run of the cross-library scenarios inside real browser engines. The
+# numbers are informational: they go to the job summary, never gate a merge.
+on:
+  workflow_dispatch:
+    inputs:
+      quick:
+        description: Quick mode (smaller sizes, fewer samples)
+        type: boolean
+        default: false
+  schedule:
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  bench:
+    name: Chromium, WebKit and Firefox
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec playwright install --with-deps chromium webkit firefox
+
+      - run: pnpm build
+
+      - name: Run
+        run: |
+          node bench/browser.js ${{ inputs.quick && '--quick' || '--update-readme' }} | tee bench-browser.txt
+          {
+            echo '## Browser benchmarks'
+            echo
+            echo '```'
+            cat bench-browser.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-browser
+          path: bench-browser.txt
+
+      # Full runs on the default branch refresh the README's per-engine table.
+      - name: Commit README table
+        if: ${{ !inputs.quick && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        run: |
+          if git diff --quiet README.md; then echo "README unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: refresh browser benchmark table" README.md
+          git push
