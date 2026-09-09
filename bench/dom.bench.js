@@ -57,10 +57,10 @@ function todoMVC(lib, { todos: n }) {
     const filter = signal('all');
 
     const visible = computed(() => {
-      const list = todos();
-      const f = filter();
+      const list = todos.get();
+      const f = filter.get();
       if (f === 'all') return list;
-      return list.filter((t) => (f === 'active' ? !t.completed() : t.completed()));
+      return list.filter((t) => (f === 'active' ? !t.completed.get() : t.completed.get()));
     });
 
     const items = computedKeyedMap(visible, (todo) => {
@@ -70,10 +70,10 @@ function todoMVC(lib, { todos: n }) {
       li.appendChild(toggle);
       li.appendChild(label);
       effect(() => {
-        label.textContent = todo.title();
+        label.textContent = todo.title.get();
       });
       effect(() => {
-        if (todo.completed()) {
+        if (todo.completed.get()) {
           li.setAttribute('class', 'completed');
           toggle.setAttribute('checked', '');
         } else {
@@ -85,13 +85,13 @@ function todoMVC(lib, { todos: n }) {
     });
 
     effect(() => {
-      syncChildren(ul, items());
+      syncChildren(ul, items.get());
     });
 
     effect(() => {
-      const list = todos();
+      const list = todos.get();
       let active = 0;
-      for (let i = 0; i < list.length; i++) if (!list[i].completed()) active++;
+      for (let i = 0; i < list.length; i++) if (!list[i].completed.get()) active++;
       count.textContent = `${active} item${active === 1 ? '' : 's'} left`;
       if (list.length) footer.removeAttribute('hidden');
       else footer.setAttribute('hidden', '');
@@ -106,7 +106,7 @@ function todoMVC(lib, { todos: n }) {
     }
 
     // toggle N/2 random todos
-    const all = todos();
+    const all = todos.get();
     for (let i = 0; i < n / 2; i++) {
       all[rand.int(all.length)].completed.set((v) => !v);
       tick();
@@ -115,7 +115,7 @@ function todoMVC(lib, { todos: n }) {
     // edit N/5 titles
     for (let i = 0; i < n / 5; i++) {
       const todo = all[rand.int(all.length)];
-      todo.title.set(todo.title() + ' (edited)');
+      todo.title.set(todo.title.get() + ' (edited)');
       tick();
     }
 
@@ -129,14 +129,14 @@ function todoMVC(lib, { todos: n }) {
 
     // remove N/2 random todos one by one
     for (let i = 0; i < n / 2; i++) {
-      const list = todos();
+      const list = todos.get();
       const victim = list[rand.int(list.length)];
       todos.set(list.filter((t) => t !== victim));
       tick();
     }
 
     // clear completed
-    todos.set((list) => list.filter((t) => !t.completed()));
+    todos.set((list) => list.filter((t) => !t.completed.get()));
     tick();
 
     // clear all
@@ -185,18 +185,18 @@ function dataGrid(lib, { rows: n, cols }) {
       const tds = range(cols).map(() => tr.appendChild(new FakeNode('td')));
       for (let c = 0; c < cols; c++) {
         effect(() => {
-          tds[c].textContent = $row().cells[c]();
+          tds[c].textContent = $row.get().cells[c].get();
         });
       }
       effect(() => {
-        if (isSelected($row().id)()) tr.setAttribute('class', 'selected');
+        if (isSelected($row.get().id).get()) tr.setAttribute('class', 'selected');
         else tr.removeAttribute('class');
       });
       return tr;
     });
 
     effect(() => {
-      syncChildren(tbody, trs());
+      syncChildren(tbody, trs.get());
     });
 
     // Keyed: the row object is fixed, the index is a signal.
@@ -205,25 +205,25 @@ function dataGrid(lib, { rows: n, cols }) {
       const tds = range(cols).map(() => tr.appendChild(new FakeNode('td')));
       for (let c = 0; c < cols; c++) {
         effect(() => {
-          tds[c].textContent = row.cells[c]();
+          tds[c].textContent = row.cells[c].get();
         });
       }
       const $selected = isSelected(row.id);
       effect(() => {
-        if ($selected()) tr.setAttribute('class', 'selected');
+        if ($selected.get()) tr.setAttribute('class', 'selected');
         else tr.removeAttribute('class');
       });
       return tr;
     });
 
     effect(() => {
-      syncChildren(keyedBody, keyedTrs());
+      syncChildren(keyedBody, keyedTrs.get());
     });
 
     // update 10% of the visible cells in 10 batches
     const perBatch = Math.max(1, Math.round((n * cols) / 100));
     for (let b = 0; b < 10; b++) {
-      const visible = rows();
+      const visible = rows.get();
       for (let i = 0; i < perBatch; i++) {
         visible[rand.int(visible.length)].cells[rand.int(cols)].set((v) => v + 1);
       }
@@ -232,13 +232,15 @@ function dataGrid(lib, { rows: n, cols }) {
 
     // sort by the first column (descending), then back by id
     rows.set(
-      rows()
+      rows
+        .get()
         .slice()
-        .sort((a, b) => b.cells[0]() - a.cells[0]()),
+        .sort((a, b) => b.cells[0].get() - a.cells[0].get()),
     );
     tick();
     rows.set(
-      rows()
+      rows
+        .get()
         .slice()
         .sort((a, b) => a.id - b.id),
     );
@@ -246,7 +248,7 @@ function dataGrid(lib, { rows: n, cols }) {
 
     // select 100 rows one after another
     for (let i = 0; i < 100; i++) {
-      selected.set(rows()[rand.int(n)].id);
+      selected.set(rows.get()[rand.int(n)].id);
       tick();
     }
 
@@ -311,17 +313,17 @@ function nestedComponents(lib, { depth, branching }) {
       const b = signal(1);
       const c = signal('idle');
 
-      const sum = computed(() => a() + b());
-      const label = computed(() => `${theme}: ${sum()}`);
+      const sum = computed(() => a.get() + b.get());
+      const label = computed(() => `${theme}: ${sum.get()}`);
 
       effect(() => {
-        title.textContent = label();
+        title.textContent = label.get();
       });
       effect(() => {
-        el.setAttribute('data-state', c());
+        el.setAttribute('data-state', c.get());
       });
       effect(() => {
-        el.setAttribute('class', sum() % 2 ? `${theme} odd` : `${theme} even`);
+        el.setAttribute('class', sum.get() % 2 ? `${theme} odd` : `${theme} even`);
       });
 
       /** @type {Component[]} */
@@ -392,7 +394,7 @@ function form(lib, { fields: n, keystrokes }) {
     const fields = range(n).map((i) => {
       const value = signal('');
       const error = computed(() => {
-        const v = value();
+        const v = value.get();
         if (v.length === 0) return 'Required';
         if (v.length < 5) return 'Too short';
         if (i % 3 === 0 && !/\d/.test(v)) return 'Must contain a digit';
@@ -408,12 +410,12 @@ function form(lib, { fields: n, keystrokes }) {
       wrapper.appendChild(message);
 
       effect(() => {
-        input.setAttribute('value', value());
+        input.setAttribute('value', value.get());
       });
 
       effect(() => {
-        const e = error();
-        const show = submitted() && e;
+        const e = error.get();
+        const show = submitted.get() && e;
         message.textContent = show ? e : '';
         if (show) wrapper.setAttribute('class', 'invalid');
         else wrapper.removeAttribute('class');
@@ -423,8 +425,8 @@ function form(lib, { fields: n, keystrokes }) {
     });
 
     const formValid = computed(() => {
-      if (!submitted()) return false;
-      for (let i = 0; i < fields.length; i++) if (fields[i].error()) return false;
+      if (!submitted.get()) return false;
+      for (let i = 0; i < fields.length; i++) if (fields[i].error.get()) return false;
       return true;
     });
 
@@ -434,10 +436,14 @@ function form(lib, { fields: n, keystrokes }) {
     formEl.appendChild(button);
 
     effect(() => {
-      summary.textContent = !submitted() ? '' : formValid() ? 'All good' : 'Please fix the errors';
+      summary.textContent = !submitted.get()
+        ? ''
+        : formValid.get()
+          ? 'All good'
+          : 'Please fix the errors';
     });
     effect(() => {
-      if (formValid()) button.removeAttribute('disabled');
+      if (formValid.get()) button.removeAttribute('disabled');
       else button.setAttribute('disabled', '');
     });
 

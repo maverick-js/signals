@@ -39,7 +39,7 @@ again. Without a baseline only `current` is measured.
 | `build-baseline.js`      | Bundles `src/` at a git ref into `bench/.baseline/index.js` (single file, esbuild).      |
 | `layers.js`              | Cross-library layers benchmark (maverick vs S.js vs solid); unrelated to the baseline.   |
 | `lib/scenario.js`        | `scenario()`: one `describe()` per scenario with one `bench()` per library; run options. |
-| `lib/load.js`            | Snapshots and loads `current` (`dist/prod`) and `baseline` (`bench/.baseline`).          |
+| `lib/load.js`            | Snapshots/loads `current` + `baseline`; adapts a legacy (callable) baseline to `.get()`. |
 | `lib/rng.js`             | Seeded PRNG + shuffle so every library sees the identical random sequence.               |
 | `lib/fake-dom.js`        | `FakeNode` + `syncChildren` with a global mutation counter.                              |
 | `.baseline/` (generated) | Baseline bundle + `REF` file (ref and commit sha). Git-ignored.                          |
@@ -198,6 +198,15 @@ All scenarios go through `scenario(libs, name, make, extra?)` from `lib/scenario
 Write results into `sink.value` so the JIT cannot eliminate the work, use `rng(seed)` for anything
 random, repeat small operations inside `fn` so an iteration takes at least a few milliseconds,
 and put the repetition count in the name (`x${iters}`). Honour `quick` for large sizes.
+
+Scenarios use the object API only: `s.get()` / `c.get()` to read, `s.set(v)` to write, `s.peek()`
+to read untracked, `computedMap(list, (item, i) => item.get())`,
+`computedKeyedMap(list, (item, $index) => $index.get())` and `selector(source)(key).get()`.
+Never call a signal or computed as a function. A baseline built from a ref that still has the
+callable API (v6.0.0 and earlier: `s()` reads) is wrapped by `lib/load.js` so it presents the same
+`.get()` surface; `get` is the legacy read function itself, so reads are not slowed down, but one
+small wrapper object is allocated per node, which makes the baseline's _creation_ rows slightly
+pessimistic.
 
 `synthetic.bench.js` has two shortcuts: `steady(name, setup, fn)` for scenarios whose state is
 built once and reused by every iteration, and `mapPhase(...)` for the map phases, where `afterEach`

@@ -15,6 +15,10 @@
  *
  * `BENCH_CALIBRATE=1` switches to an A/A test: the "baseline" becomes an independent second copy
  * of `dist/prod`, so both sides run identical code and every reported difference is pure noise.
+ *
+ * Baselines built from a ref that still has the callable-signal API (`s()` reads, e.g. v6.0.0) are
+ * wrapped by {@link adaptLegacy} so every scenario can use the object API (`s.get()`) regardless
+ * of which build it is talking to.
  */
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -77,6 +81,58 @@ function requireDist() {
   }
 }
 
+/**
+ * `true` when `lib` has the pre-7 callable API: `signal()` returns the read function itself
+ * (`s()` reads, `s.set()` writes) instead of an object with `get` / `set` / `peek`.
+ *
+ * @param {Lib} lib
+ */
+function isLegacyApi(lib) {
+  return typeof lib.signal(0) === 'function';
+}
+
+/**
+ * Presents the current object API (`{ get, set, peek }`) on top of a legacy callable-signal build
+ * so the scenarios only ever have to speak one dialect.
+ *
+ * Reads stay free: `get` IS the legacy read function (no extra call or closure in the hot path).
+ * The adapter does allocate one small wrapper object per signal / computed / map / selector node,
+ * which the current build does not have to pay for, so treat the baseline's *creation* rows as
+ * slightly pessimistic (a few percent at most; steady-state rows are unaffected).
+ *
+ * @param {Lib} lib legacy build
+ * @returns {Lib}
+ */
+function adaptLegacy(lib) {
+  const { signal, computed, computedMap, computedKeyedMap, selector, peek } = lib;
+  return {
+    ...lib,
+    signal(value, options) {
+      const s = signal(value, options);
+      return { get: s, set: s.set, peek: () => peek(s) };
+    },
+    computed(fn, options) {
+      const c = computed(fn, options);
+      return { get: c, peek: () => peek(c) };
+    },
+    // `list` / `source` are signal objects created through this adapter, so `.get` is exactly the
+    // legacy callable the old helpers expect (they call and track `list()` themselves).
+    computedMap(list, map, options) {
+      return { get: computedMap(list.get, (item, i) => map({ get: item }, i), options) };
+    },
+    computedKeyedMap(list, map, options) {
+      // Preserve the callback's arity: both builds only create index signals when `map.length > 1`.
+      const legacyMap =
+        map.length > 1 ? (item, index) => map(item, { get: index }) : (item) => map(item);
+      return { get: computedKeyedMap(list.get, legacyMap, options) };
+    },
+    selector(source) {
+      const select = selector(source.get);
+      return (key) => ({ get: select(key) });
+    },
+  };
+}
+
 /** Contents of `bench/.baseline/REF` as `ref (sha)`, or `undefined` when there is no baseline. */
 export function readBaselineRef() {
   if (!existsSync(BASELINE_REF_FILE)) return undefined;
@@ -111,7 +167,9 @@ export function loadLibs({ calibrate = process.env.BENCH_CALIBRATE === '1' } = {
   } else if (existsSync(BASELINE_FILE)) {
     mkdirSync(baselineDir, { recursive: true });
     cpSync(BASELINE_FILE, path.join(baselineDir, 'index.js'));
-    libs.baseline = { ...require(path.join(baselineDir, 'index.js')) };
+    /** @type {Lib} */
+    const baseline = { ...require(path.join(baselineDir, 'index.js')) };
+    libs.baseline = isLegacyApi(baseline) ? adaptLegacy(baseline) : baseline;
     libs.baselineRef = readBaselineRef();
   }
 

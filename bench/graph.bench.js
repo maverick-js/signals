@@ -47,10 +47,10 @@ const ITER = (n) => (quick ? Math.max(1, Math.ceil(n / 4)) : n);
  * @property {number} seed
  *
  * @typedef {object} Graph
- * @property {Array<{ (): number, set: (v: number) => void }>} sources layer-0 signals
- * @property {Array<Array<() => number>>} layers computed layers (last one = leaves)
- * @property {Array<() => number>} leaves
- * @property {Array<() => number>} readLeaves leaves read on every iteration
+ * @property {Array<{ get: () => number, set: (v: number) => void }>} sources layer-0 signals
+ * @property {Array<Array<{ get: () => number }>>} layers computed layers (last one = leaves)
+ * @property {Array<{ get: () => number }>} leaves
+ * @property {Array<{ get: () => number }>} readLeaves leaves read on every iteration
  * @property {{ count: number }} counter number of computed executions
  * @property {any} scope the root scope (use with `scoped()` to attach observers to the graph)
  * @property {() => void} dispose
@@ -74,13 +74,13 @@ export function makeGraph(lib, config) {
     const scope = lib.getScope();
     const sources = Array.from({ length: width }, (_, i) => lib.signal(i));
 
-    /** @type {Array<Array<() => number>>} */
+    /** @type {Array<Array<{ get: () => number }>>} */
     const layers = [];
-    /** @type {Array<() => number>} */
+    /** @type {Array<{ get: () => number }>} */
     let prev = sources;
 
     for (let l = 0; l < depth; l++) {
-      /** @type {Array<() => number>} */
+      /** @type {Array<{ get: () => number }>} */
       const layer = new Array(width);
 
       for (let i = 0; i < width; i++) {
@@ -91,7 +91,7 @@ export function makeGraph(lib, config) {
           layer[i] = lib.computed(() => {
             counter.count++;
             let sum = 0;
-            for (let j = 0; j < picks.length; j++) sum += picks[j]();
+            for (let j = 0; j < picks.length; j++) sum += picks[j].get();
             return sum;
           });
         } else {
@@ -100,10 +100,10 @@ export function makeGraph(lib, config) {
           const first = picks[0];
           layer[i] = lib.computed(() => {
             counter.count++;
-            const head = first();
+            const head = first.get();
             const set = head & 1 ? alt : picks;
             let sum = head;
-            for (let j = 1; j < set.length; j++) sum += set[j]();
+            for (let j = 1; j < set.length; j++) sum += set[j].get();
             return sum;
           });
         }
@@ -144,9 +144,9 @@ export function runGraph(lib, graph, iterations, seed) {
 
   for (let i = 1; i <= iterations; i++) {
     const source = sources[rand.int(sources.length)];
-    source.set(source() + i);
+    source.set(source.get() + i);
     lib.tick();
-    for (let j = 0; j < readLeaves.length; j++) sum += readLeaves[j]();
+    for (let j = 0; j < readLeaves.length; j++) sum += readLeaves[j].get();
   }
 
   sink.value = sum;
@@ -169,12 +169,12 @@ function setupGraph(lib, config, mode) {
     lib.scoped(() => {
       lib.effect(() => {
         let sum = 0;
-        for (let i = 0; i < graph.leaves.length; i++) sum += graph.leaves[i]();
+        for (let i = 0; i < graph.leaves.length; i++) sum += graph.leaves[i].get();
         sink.value = sum;
       });
     }, graph.scope);
   } else {
-    for (let i = 0; i < graph.leaves.length; i++) sink.value = graph.leaves[i]();
+    for (let i = 0; i < graph.leaves.length; i++) sink.value = graph.leaves[i].get();
   }
   graph.counter.count = 0;
   return graph;

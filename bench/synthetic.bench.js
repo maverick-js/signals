@@ -63,7 +63,7 @@ function steady(name, setup, fn) {
     (lib) => withRoot(lib, () => ({ s: lib.signal(1) })),
     (_, { s }) => {
       let total = 0;
-      for (let i = 0; i < iters; i++) total += s();
+      for (let i = 0; i < iters; i++) total += s.get();
       sink.value = total;
     },
   );
@@ -73,7 +73,7 @@ function steady(name, setup, fn) {
     (lib) => withRoot(lib, () => ({ s: lib.signal(0) })),
     (_, { s }) => {
       for (let i = 0; i < iters; i++) s.set(i);
-      sink.value = s();
+      sink.value = s.get();
     },
   );
 }
@@ -86,7 +86,7 @@ function steady(name, setup, fn) {
       withRoot(lib, () => {
         const s = lib.signal(0);
         lib.effect(() => {
-          sink.value = s();
+          sink.value = s.get();
         });
         return { s };
       }),
@@ -108,7 +108,7 @@ function steady(name, setup, fn) {
         const sources = range(100).map((i) => lib.signal(i));
         lib.effect(() => {
           let total = 0;
-          for (let i = 0; i < sources.length; i++) total += sources[i]();
+          for (let i = 0; i < sources.length; i++) total += sources[i].get();
           sink.value = total;
         });
         return { sources };
@@ -137,7 +137,7 @@ function steady(name, setup, fn) {
       for (let r = 0; r < reps; r++) {
         for (let i = 0; i < n; i++) last = signal(i);
       }
-      sink.value = last();
+      sink.value = last.get();
     },
   }));
 
@@ -160,7 +160,7 @@ function steady(name, setup, fn) {
           const dispose = root((dispose) => {
             for (let i = 0; i < n; i++) {
               const s = signal(i);
-              sink.value = computed(() => s() + 1)();
+              sink.value = computed(() => s.get() + 1).get();
             }
             return dispose;
           });
@@ -180,7 +180,7 @@ function steady(name, setup, fn) {
             for (let i = 0; i < n; i++) {
               const s = signal(i);
               effect(() => {
-                sink.value = s();
+                sink.value = s.get();
               });
             }
             return dispose;
@@ -205,17 +205,17 @@ for (const K of [1, 5, 20]) {
         const sources = range(K).map((i) => lib.signal(i));
         const c = lib.computed(() => {
           let total = 0;
-          for (let i = 0; i < K; i++) total += sources[i]();
+          for (let i = 0; i < K; i++) total += sources[i].get();
           return total;
         });
-        c();
+        c.get();
         return { sources, c };
       }),
     (_, { sources, c }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         sources[i % K].set(i);
-        total += c();
+        total += c.get();
       }
       sink.value = total;
     },
@@ -232,19 +232,19 @@ for (const K of [1, 5, 20]) {
         const a = range(10).map((i) => lib.signal(i));
         const b = range(10).map((i) => lib.signal(i * 2));
         const c = lib.computed(() => {
-          const set = toggle() ? a : b;
+          const set = toggle.get() ? a : b;
           let total = 0;
-          for (let i = 0; i < set.length; i++) total += set[i]();
+          for (let i = 0; i < set.length; i++) total += set[i].get();
           return total;
         });
-        c();
+        c.get();
         return { toggle, c };
       }),
     (_, { toggle, c }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         toggle.set((i & 1) === 1);
-        total += c();
+        total += c.get();
       }
       sink.value = total;
     },
@@ -262,18 +262,18 @@ for (const K of [1, 5, 20]) {
         const b = lib.signal(2);
         const stable = range(20).map((i) => lib.signal(i));
         const c = lib.computed(() => {
-          let total = toggle() ? a() : b();
-          for (let i = 0; i < stable.length; i++) total += stable[i]();
+          let total = toggle.get() ? a.get() : b.get();
+          for (let i = 0; i < stable.length; i++) total += stable[i].get();
           return total;
         });
-        c();
+        c.get();
         return { toggle, c };
       }),
     (_, { toggle, c }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         toggle.set((i & 1) === 1);
-        total += c();
+        total += c.get();
       }
       sink.value = total;
     },
@@ -293,19 +293,19 @@ for (const K of [1, 5, 20]) {
         const stable = range(20).map((i) => lib.signal(i));
         const computeds = range(count).map((k) =>
           lib.computed(() => {
-            let total = (toggle() ? a() : b()) + k;
-            for (let i = 0; i < stable.length; i++) total += stable[i]();
+            let total = (toggle.get() ? a.get() : b.get()) + k;
+            for (let i = 0; i < stable.length; i++) total += stable[i].get();
             return total;
           }),
         );
-        for (const c of computeds) c();
+        for (const c of computeds) c.get();
         return { toggle, computeds };
       }),
     (_, { toggle, computeds }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         toggle.set((i & 1) === 1);
-        for (let k = 0; k < computeds.length; k++) total += computeds[k]();
+        for (let k = 0; k < computeds.length; k++) total += computeds[k].get();
       }
       sink.value = total;
     },
@@ -320,10 +320,10 @@ for (const size of [1_000, 10_000]) {
     (lib) =>
       withRoot(lib, () => {
         const s = lib.signal(0);
-        const computeds = range(n).map((i) => lib.computed(() => s() + i));
+        const computeds = range(n).map((i) => lib.computed(() => s.get() + i));
         lib.effect(() => {
           let total = 0;
-          for (let i = 0; i < computeds.length; i++) total += computeds[i]();
+          for (let i = 0; i < computeds.length; i++) total += computeds[i].get();
           sink.value = total;
         });
         return { s };
@@ -347,17 +347,17 @@ for (const size of [1_000, 10_000]) {
         const sources = range(n).map((i) => lib.signal(i));
         const c = lib.computed(() => {
           let total = 0;
-          for (let i = 0; i < sources.length; i++) total += sources[i]();
+          for (let i = 0; i < sources.length; i++) total += sources[i].get();
           return total;
         });
-        c();
+        c.get();
         return { sources, c, rand: rng(42) };
       }),
     (_, { sources, c, rand }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         sources[rand.int(sources.length)].set(i);
-        total += c();
+        total += c.get();
       }
       sink.value = total;
     },
@@ -374,16 +374,16 @@ for (const depth of [10, 100, 1_000]) {
         let leaf = s;
         for (let i = 0; i < depth; i++) {
           const prev = leaf;
-          leaf = lib.computed(() => prev() + 1);
+          leaf = lib.computed(() => prev.get() + 1);
         }
-        leaf();
+        leaf.get();
         return { s, leaf };
       }),
     (_, { s, leaf }) => {
       let total = 0;
       for (let i = 0; i < iters; i++) {
         s.set(i);
-        total += leaf();
+        total += leaf.get();
       }
       sink.value = total;
     },
@@ -399,11 +399,11 @@ for (const depth of [10, 100, 1_000]) {
       withRoot(lib, () => {
         const sources = range(n).map((i) => {
           const a = lib.signal(i);
-          const b = lib.computed(() => a() + 1);
-          const c = lib.computed(() => a() * 2);
-          const d = lib.computed(() => b() + c());
+          const b = lib.computed(() => a.get() + 1);
+          const c = lib.computed(() => a.get() * 2);
+          const d = lib.computed(() => b.get() + c.get());
           lib.effect(() => {
-            sink.value = d();
+            sink.value = d.get();
           });
           return a;
         });
@@ -466,7 +466,7 @@ for (const size of [1_000, 10_000]) {
               const s = lib.signal(0);
               for (let i = 0; i < n; i++) {
                 lib.effect(() => {
-                  sink.value = s();
+                  sink.value = s.get();
                 });
               }
               return dispose;
@@ -498,7 +498,7 @@ for (const order of ['creation order', 'reverse order']) {
                 const s = lib.signal(i);
                 stops.push(
                   lib.effect(() => {
-                    sink.value = s();
+                    sink.value = s.get();
                   }),
                 );
               }
@@ -531,7 +531,7 @@ for (const order of ['creation order', 'reverse order']) {
       withRoot(lib, () => {
         const s = lib.signal(0);
         lib.effect(() => {
-          sink.value = s();
+          sink.value = s.get();
           for (let i = 0; i < 5; i++) lib.onDispose(NOOP);
         });
         return { s };
@@ -557,7 +557,7 @@ for (const order of ['creation order', 'reverse order']) {
  * @template T
  * @param {string} name
  * @param {object} phase
- * @param {(lib: Lib) => T & { list: any, mapped: () => unknown[], dispose: () => void }} phase.create
+ * @param {(lib: Lib) => T & { list: any, mapped: { get: () => unknown[] }, dispose: () => void }} phase.create
  *   builds one map (inside a root) with an empty list
  * @param {(ctx: T) => unknown[]} phase.initial list value every iteration starts from
  * @param {(lib: Lib, ctx: T) => void} phase.run  the timed step (set + tick + read)
@@ -577,7 +577,7 @@ function mapPhase(name, { create, initial, run, restore, rebuild }, reps, option
         for (const ctx of contexts) {
           ctx.list.set(value(ctx));
           lib.tick();
-          sink.value = ctx.mapped().length;
+          sink.value = ctx.mapped.get().length;
         }
       };
       const build = () => {
@@ -608,7 +608,7 @@ function mapPhase(name, { create, initial, run, restore, rebuild }, reps, option
 function setList(lib, { list, mapped }, next) {
   list.set(next);
   lib.tick();
-  sink.value = mapped().length;
+  sink.value = mapped.get().length;
 }
 
 {
@@ -624,12 +624,12 @@ function setList(lib, { list, mapped }, next) {
       const store = new Array(n * 2);
       const mapped = lib.computedMap(list, ($item, index) => {
         lib.effect(() => {
-          store[index] = $item();
+          store[index] = $item.get();
         });
         return index;
       });
       lib.effect(() => {
-        sink.value = mapped().length;
+        sink.value = mapped.get().length;
       });
       return { list, mapped, store, flip: false };
     });
@@ -704,12 +704,12 @@ function setList(lib, { list, mapped }, next) {
       const store = new Array(n);
       const mapped = lib.computedKeyedMap(list, (item, $index) => {
         lib.effect(() => {
-          store[$index()] = item.value;
+          store[$index.get()] = item.value;
         });
         return item.id;
       });
       lib.effect(() => {
-        sink.value = mapped().length;
+        sink.value = mapped.get().length;
       });
       return { items, list, mapped, store, rand: rng(7) };
     });
@@ -730,7 +730,7 @@ function setList(lib, { list, mapped }, next) {
       create,
       initial: all,
       run(lib, ctx) {
-        const next = ctx.list().slice();
+        const next = ctx.list.get().slice();
         const first = next[0];
         next[0] = next[next.length - 1];
         next[next.length - 1] = first;
@@ -742,7 +742,11 @@ function setList(lib, { list, mapped }, next) {
 
   mapPhase(
     `${prefix}: reverse`,
-    { create, initial: all, run: (lib, ctx) => setList(lib, ctx, ctx.list().slice().reverse()) },
+    {
+      create,
+      initial: all,
+      run: (lib, ctx) => setList(lib, ctx, ctx.list.get().slice().reverse()),
+    },
     reps,
   );
 
@@ -762,7 +766,7 @@ function setList(lib, { list, mapped }, next) {
     {
       create,
       initial: all,
-      run: (lib, ctx) => setList(lib, ctx, shuffle(ctx.list().slice(), ctx.rand)),
+      run: (lib, ctx) => setList(lib, ctx, shuffle(ctx.list.get().slice(), ctx.rand)),
     },
     reps,
   );
@@ -797,7 +801,7 @@ function setList(lib, { list, mapped }, next) {
         const s = lib.signal(0);
         const error = new Error('boom');
         lib.effect(() => {
-          s();
+          s.get();
           throw error;
         });
         return { s };
