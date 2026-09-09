@@ -630,82 +630,82 @@ which rewrites this section.
 
 <!-- bench:start -->
 
-Measured 2026-09-09 on Apple M4 Max, Node 26.8.1. Libraries: maverick 6.0.0, alien-signals 3.2.1, preact 1.14.4, solid 1.x 1.9.15, solid 2.x 2.0.0-rc.0, signal-polyfill 0.2.2. Same process, each scenario best of 3 rounds of the median of 5 timed runs after warm-up. Bars ending in » are clipped; the value is exact.
+Measured 2026-09-09 on Apple M4 Max, Node 26.8.1. Libraries: maverick 6.0.0, alien-signals 3.2.1, preact 1.14.4, solid 1.x 1.9.15, solid 2.x 2.0.0-rc.0, signal-polyfill 0.2.2. Same process, each scenario best of 3 rounds of the median of 5 samples after warm-up; a sample repeats the operation for at least 20 ms and reports the time per call. Bars ending in » are clipped; the value is exact.
 
 ```
 Performance (ms, lower is better; ×: relative to maverick)
 
 Create 10k signals + computeds
-  maverick         █████████▊                    1.05 ms  1.00×
-  alien-signals    ████████▍                     0.90 ms  0.86×
-  preact           ████████████████▉             1.80 ms  1.72×
-  solid 1.x        ████████████▏                 1.31 ms  1.25×
-  solid 2.x        ███████████▉                  1.27 ms  1.21×
-  signal-polyfill  ██████████████████████████    2.79 ms  2.66×
+  maverick         █████▍                        0.70 ms  1.00×
+  alien-signals    ██████▋                       0.88 ms  1.25×
+  preact           ████                          0.53 ms  0.75×
+  solid 1.x        ███████                       0.92 ms  1.30×
+  solid 2.x        █████████▋                    1.27 ms  1.80×
+  signal-polyfill  ██████████████████████████    3.43 ms  4.88×
 
 Create 10k effects, then dispose
-  maverick         ███▏                          0.87 ms  1.00×
-  alien-signals    ███▉                          1.06 ms  1.22×
-  preact           ████████▏                     2.23 ms  2.56×
-  solid 1.x        ████▋                         1.26 ms  1.45×
-  solid 2.x        ███████████▉                  3.26 ms  3.74×
-  signal-polyfill  ██████████████████████████»    204 ms  234.81×
+  maverick         █▊                            0.61 ms  1.00×
+  alien-signals    ██▋                           0.93 ms  1.53×
+  preact           ██▉                           1.01 ms  1.66×
+  solid 1.x        ██                            0.71 ms  1.17×
+  solid 2.x        ███████████▉                  4.13 ms  6.77×
+  signal-polyfill  ██████████████████████████»    211 ms  345.65×
 
 Static deps: 5 sources, set + read ×200k
-  maverick         ████▉                         6.81 ms  1.00×
-  alien-signals    ███████████▏                  15.5 ms  2.28×
-  preact           █████████▋                    13.4 ms  1.97×
-  solid 1.x        ███████████████▎              21.2 ms  3.11×
-  solid 2.x        ██████████████████████▌       31.2 ms  4.59×
-  signal-polyfill  ██████████████████████████    36.1 ms  5.31×
+  maverick         ████▌                         6.54 ms  1.00×
+  alien-signals    ███████████▏                  16.2 ms  2.48×
+  preact           ██████████▍                   15.2 ms  2.32×
+  solid 1.x        ██████████████▋               21.3 ms  3.26×
+  solid 2.x        ██████████████████████▋       32.9 ms  5.03×
+  signal-polyfill  ██████████████████████████    37.9 ms  5.79×
 
 Dynamic deps: toggle 2 sets of 10 ×100k
-  maverick         █████████████▋                17.9 ms  1.00×
-  alien-signals    ████████████████▉             22.0 ms  1.23×
-  preact           ████████████████▉             22.1 ms  1.24×
-  solid 1.x        ██████████████▋               19.2 ms  1.07×
-  solid 2.x        ██████████████████████▉       29.9 ms  1.67×
-  signal-polyfill  ██████████████████████████    33.9 ms  1.90×
+  maverick         █████████████▊                19.9 ms  1.00×
+  alien-signals    ████████████████████▌         29.7 ms  1.49×
+  preact           ████████████████▏             23.4 ms  1.18×
+  solid 1.x        █████████████▉                20.1 ms  1.01×
+  solid 2.x        ████████████████████▍         29.4 ms  1.48×
+  signal-polyfill  ██████████████████████████    37.7 ms  1.89×
 
 Deep chain: 1000 computeds ×200
-  maverick         █████████████                 10.7 ms  1.00×
-  alien-signals    ████▋                         3.80 ms  0.36×
-  preact           █████▉                        4.87 ms  0.46×
-  solid 1.x        ████████████████▎             13.4 ms  1.25×
-  solid 2.x        ██████████████████████████    21.4 ms  2.00×
-  signal-polyfill  ██████████████▍               11.8 ms  1.11×
+  maverick         █████████████                 11.6 ms  1.00×
+  alien-signals    ███████▏                      6.35 ms  0.55×
+  preact           █████▊                        5.10 ms  0.44×
+  solid 1.x        ████████████████████▉         18.6 ms  1.60×
+  solid 2.x        ██████████████████████████    23.2 ms  2.00×
+  signal-polyfill  ███████████████▏              13.6 ms  1.17×
 
 Fan-out: 1 → 1000 computeds → effect ×400
-  maverick         ████████▊                     13.3 ms  1.00×
-  alien-signals    ████████▊                     13.2 ms  0.99×
-  preact           █████████▎                    14.1 ms  1.06×
-  solid 1.x        ████████████████▌             25.1 ms  1.88×
-  solid 2.x        ████████████████████████      36.3 ms  2.73×
-  signal-polyfill  ██████████████████████████    39.4 ms  2.95×
+  maverick         ████████▋                     13.6 ms  1.00×
+  alien-signals    ████████▋                     13.6 ms  1.00×
+  preact           █████████▌                    15.0 ms  1.10×
+  solid 1.x        █████████████████▎            27.4 ms  2.01×
+  solid 2.x        ███████████████████████▍      36.9 ms  2.72×
+  signal-polyfill  ██████████████████████████    41.2 ms  3.03×
 
 Diamond ×1000 with effects ×100
-  maverick         ████████▊                     15.5 ms  1.00×
-  alien-signals    ███████▎                      12.9 ms  0.83×
-  preact           ████████                      14.1 ms  0.91×
-  solid 1.x        █████████████████▍            30.9 ms  1.99×
-  solid 2.x        █████████████████████▌        38.4 ms  2.48×
-  signal-polyfill  ██████████████████████████    46.3 ms  2.99×
+  maverick         ████████▊                     16.4 ms  1.00×
+  alien-signals    ██████▉                       12.8 ms  0.78×
+  preact           ███████▍                      13.8 ms  0.84×
+  solid 1.x        █████████████████▏            32.3 ms  1.96×
+  solid 2.x        ████████████████████▌         38.4 ms  2.34×
+  signal-polyfill  ██████████████████████████    48.8 ms  2.97×
 
 Batch: 100 signals → 1 effect ×4k
-  maverick         ███▎                          4.58 ms  1.00×
-  alien-signals    ██████▋                       9.13 ms  1.99×
-  preact           ███████▏                      9.97 ms  2.18×
-  solid 1.x        ██████████▌                   14.6 ms  3.19×
-  solid 2.x        ████████████▏                 16.8 ms  3.68×
-  signal-polyfill  ██████████████████████████    36.1 ms  7.89×
+  maverick         ██▍                           3.46 ms  1.00×
+  alien-signals    ██████▎                       8.97 ms  2.59×
+  preact           ██████▉                       9.87 ms  2.85×
+  solid 1.x        ██████████                    14.5 ms  4.18×
+  solid 2.x        ███████████▊                  16.9 ms  4.88×
+  signal-polyfill  ██████████████████████████    37.5 ms  10.83×
 
 Dispose 10k effects on one signal
-  maverick         ████▏                         0.94 ms  1.00×
-  alien-signals    ███▍                          0.77 ms  0.82×
-  preact           █████▏                        1.17 ms  1.25×
-  solid 1.x        █████▉                        1.33 ms  1.42×
-  solid 2.x        ███████████▉                  2.68 ms  2.86×
-  signal-polyfill  ██████████████████████████»    330 ms  351.55×
+  maverick         ██▊                           0.61 ms  1.00×
+  alien-signals    ██▎                           0.50 ms  0.82×
+  preact           ██▊                           0.61 ms  1.00×
+  solid 1.x        ███                           0.67 ms  1.10×
+  solid 2.x        ███████████▉                  2.65 ms  4.33×
+  signal-polyfill  ██████████████████████████»    341 ms  555.75×
 
 
 Bundle size (minified + gzipped, tree-shaken from the listed entry)
