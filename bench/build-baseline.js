@@ -8,7 +8,7 @@
  *   node bench/build-baseline.js <sha>
  *
  * The `src/*.ts` files at the ref are extracted with `git show` into a temp dir and bundled with
- * esbuild into a SINGLE file `bench/.baseline/index.js` (index + map share one module instance of
+ * rolldown into a SINGLE file `bench/.baseline/index.js` (index + map share one module instance of
  * core). The ref and its commit sha are written to `bench/.baseline/REF`.
  */
 
@@ -16,8 +16,9 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { build } from 'esbuild';
 import kleur from 'kleur';
+import { minifySync } from 'oxc-minify';
+import { Rolldown } from 'vite-plus/pack';
 import { BASELINE_DIR, BASELINE_FILE, BASELINE_REF_FILE, ROOT } from './lib/load.js';
 
 const ref = process.argv[2] && !process.argv[2].startsWith('-') ? process.argv[2] : 'v6.0.0';
@@ -70,29 +71,42 @@ try {
 
   mkdirSync(BASELINE_DIR, { recursive: true });
 
-  const result = await build({
-    absWorkingDir: tmp,
-    entryPoints: [path.join(tmpSrc, 'entry.ts')],
-    outfile: BASELINE_FILE,
-    bundle: true,
-    format: 'esm',
+  // Bundle with rolldown (bundled in Vite+), then mangle `_`-prefixed internals with oxc-minify the
+  // same way the current prod build does, so both builds are compared on equal footing.
+  const out = await Rolldown.build({
+    input: path.join(tmpSrc, 'entry.ts'),
     platform: 'neutral',
-    target: 'esnext',
-    treeShaking: true,
-    define: { __DEV__: 'false', __TEST__: 'false' },
-    mangleProps: /^_/,
-    logLevel: 'warning',
-    // Don't pick up any tsconfig from the temp dir's ancestors.
-    tsconfigRaw: { compilerOptions: { target: 'esnext', useDefineForClassFields: false } },
-    banner: {
-      js: `// baseline build of @maverick-js/signals @ ${ref} (${sha}) - generated, do not edit`,
-    },
+    write: false,
+    logLevel: 'silent',
+    treeshake: true,
+    plugins: [
+      {
+        name: 'define-globals',
+        transform(code) {
+          return code.replace(/\b__DEV__\b/g, 'false').replace(/\b__TEST__\b/g, 'false');
+        },
+      },
+    ],
+    output: { format: 'esm', minify: false },
   });
-
-  if (result.errors.length) {
-    console.error(kleur.red('esbuild reported errors'));
+  const mangled = minifySync('index.js', out.output[0].code, {
+    module: true,
+    compress: false,
+    mangle: false,
+    codegen: { removeWhitespace: false },
+    mangleProps: { include: /^_/ },
+  });
+  if (mangled.errors.length) {
+    console.error(
+      kleur.red('oxc-minify reported errors'),
+      mangled.errors.map((e) => e.message),
+    );
     process.exit(1);
   }
+  writeFileSync(
+    BASELINE_FILE,
+    `// baseline build of @maverick-js/signals @ ${ref} (${sha}) - generated, do not edit\n${mangled.code}`,
+  );
 
   writeFileSync(BASELINE_REF_FILE, `${ref}\n${sha}\n`);
 

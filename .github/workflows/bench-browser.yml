@@ -12,6 +12,9 @@ on:
   schedule:
     - cron: '17 6 * * 1' # Mondays 06:17 UTC
 
+permissions:
+  contents: write
+
 jobs:
   bench:
     name: Chromium, WebKit and Firefox
@@ -34,7 +37,7 @@ jobs:
 
       - name: Run
         run: |
-          node bench/browser.js ${{ inputs.quick && '--quick' || '' }} | tee bench-browser.txt
+          node bench/browser.js ${{ inputs.quick && '--quick' || '--update-readme' }} | tee bench-browser.txt
           {
             echo '## Browser benchmarks'
             echo
@@ -47,3 +50,13 @@ jobs:
         with:
           name: bench-browser
           path: bench-browser.txt
+
+      # Full runs on the default branch refresh the README's per-engine table.
+      - name: Commit README table
+        if: ${{ !inputs.quick && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        run: |
+          if git diff --quiet README.md; then echo "README unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "docs: refresh browser benchmark table" README.md
+          git push

@@ -630,84 +630,139 @@ which rewrites this section.
 
 <!-- bench:start -->
 
-Measured 2026-09-09 on Apple M4 Max, Node 26.8.1. Libraries: maverick 6.0.0, alien-signals 3.2.1, preact 1.14.4, solid 1.x 1.9.15, solid 2.x 2.0.0-rc.0, signal-polyfill 0.2.2. Same process, each scenario best of 3 rounds of the median of 5 samples after warm-up; a sample repeats the operation for at least 20 ms and reports the time per call. Bars ending in » are clipped; the value is exact.
+Measured 2026-09-09 on Apple M4 Max, Node 26.8.1. Libraries: maverick 6.0.0, alien-signals 3.2.1, preact 1.14.4, solid 1.x 1.9.15, solid 2.x 2.0.0-rc.0, signal-polyfill 0.2.2; previous release: maverick v6.0.0. Same process, each scenario best of 3 rounds of the median of 5 samples after warm-up; a sample repeats the operation for at least 20 ms and reports the time per call. Memory is the heap delta after a full collection for 100k nodes of each kind, median of 3. Bars ending in » are clipped; the value is exact.
 
 ```
-Performance (ms, lower is better; ×: relative to maverick)
-
-Create 10k signals + computeds
-  maverick         █████▍                        0.70 ms  1.00×
-  alien-signals    ██████▋                       0.88 ms  1.25×
-  preact           ████                          0.53 ms  0.75×
-  solid 1.x        ███████                       0.92 ms  1.30×
-  solid 2.x        █████████▋                    1.27 ms  1.80×
-  signal-polyfill  ██████████████████████████    3.43 ms  4.88×
-
-Create 10k effects, then dispose
-  maverick         █▊                            0.61 ms  1.00×
-  alien-signals    ██▋                           0.93 ms  1.53×
-  preact           ██▉                           1.01 ms  1.66×
-  solid 1.x        ██                            0.71 ms  1.17×
-  solid 2.x        ███████████▉                  4.13 ms  6.77×
-  signal-polyfill  ██████████████████████████»    211 ms  345.65×
+Headline (ms per call, lower is better; ×: relative to maverick)
 
 Static deps: 5 sources, set + read ×200k
-  maverick         ████▌                         6.54 ms  1.00×
-  alien-signals    ███████████▏                  16.2 ms  2.48×
-  preact           ██████████▍                   15.2 ms  2.32×
-  solid 1.x        ██████████████▋               21.3 ms  3.26×
-  solid 2.x        ██████████████████████▋       32.9 ms  5.03×
-  signal-polyfill  ██████████████████████████    37.9 ms  5.79×
-
-Dynamic deps: toggle 2 sets of 10 ×100k
-  maverick         █████████████▊                19.9 ms  1.00×
-  alien-signals    ████████████████████▌         29.7 ms  1.49×
-  preact           ████████████████▏             23.4 ms  1.18×
-  solid 1.x        █████████████▉                20.1 ms  1.01×
-  solid 2.x        ████████████████████▍         29.4 ms  1.48×
-  signal-polyfill  ██████████████████████████    37.7 ms  1.89×
+  maverick         ████▎                         7.42 ms  1.00×
+  alien-signals    ████████▉                     15.7 ms  2.12×
+  preact           ████████▋                     15.1 ms  2.03×
+  solid 1.x        ████████████▊                 22.5 ms  3.03×
+  solid 2.x        ██████████████████▉           33.2 ms  4.47×
+  signal-polyfill  ██████████████████████████    45.8 ms  6.16×
 
 Deep chain: 1000 computeds ×200
-  maverick         █████████████                 11.6 ms  1.00×
-  alien-signals    ███████▏                      6.35 ms  0.55×
-  preact           █████▊                        5.10 ms  0.44×
-  solid 1.x        ████████████████████▉         18.6 ms  1.60×
-  solid 2.x        ██████████████████████████    23.2 ms  2.00×
-  signal-polyfill  ███████████████▏              13.6 ms  1.17×
-
-Fan-out: 1 → 1000 computeds → effect ×400
-  maverick         ████████▋                     13.6 ms  1.00×
-  alien-signals    ████████▋                     13.6 ms  1.00×
-  preact           █████████▌                    15.0 ms  1.10×
-  solid 1.x        █████████████████▎            27.4 ms  2.01×
-  solid 2.x        ███████████████████████▍      36.9 ms  2.72×
-  signal-polyfill  ██████████████████████████    41.2 ms  3.03×
-
-Diamond ×1000 with effects ×100
-  maverick         ████████▊                     16.4 ms  1.00×
-  alien-signals    ██████▉                       12.8 ms  0.78×
-  preact           ███████▍                      13.8 ms  0.84×
-  solid 1.x        █████████████████▏            32.3 ms  1.96×
-  solid 2.x        ████████████████████▌         38.4 ms  2.34×
-  signal-polyfill  ██████████████████████████    48.8 ms  2.97×
+  maverick         ██████████████▎               12.4 ms  1.00×
+  alien-signals    ███████▉                      6.86 ms  0.56×
+  preact           ██████▊                       5.89 ms  0.48×
+  solid 1.x        ████████████████▎             14.0 ms  1.14×
+  solid 2.x        ██████████████████████████    22.5 ms  1.82×
+  signal-polyfill  ███████████████████▎          16.7 ms  1.35×
 
 Batch: 100 signals → 1 effect ×4k
-  maverick         ██▍                           3.46 ms  1.00×
-  alien-signals    ██████▎                       8.97 ms  2.59×
-  preact           ██████▉                       9.87 ms  2.85×
-  solid 1.x        ██████████                    14.5 ms  4.18×
-  solid 2.x        ███████████▊                  16.9 ms  4.88×
-  signal-polyfill  ██████████████████████████    37.5 ms  10.83×
+  maverick         ██▍                           4.06 ms  1.00×
+  alien-signals    █████▎                        8.92 ms  2.20×
+  preact           ██████▎                       10.5 ms  2.58×
+  solid 1.x        █████████▉                    16.6 ms  4.10×
+  solid 2.x        █████████▎                    15.6 ms  3.85×
+  signal-polyfill  ██████████████████████████    43.9 ms  10.82×
+
+
+Dispose N effects on one signal (ms; growth = largest ÷ smallest, linear ≈ 50×)
+  library               N=1k    N=10k    N=50k   growth
+  maverick              0.05     0.50     2.59   52×
+  alien-signals         0.04     0.52     4.09   92×
+  preact                0.05     0.47     5.52   120×
+  solid 1.x             0.06     0.58     3.25   54×
+  solid 2.x             0.14     1.68     14.2   101×
+  signal-polyfill       14.9      335     6004   404×
+  maverick v6.0.0       0.29     15.3      369   1256×
+
+Dispose a root with N computeds (each read once) (ms; growth = largest ÷ smallest, linear ≈ 50×)
+  library               N=1k    N=10k    N=50k   growth
+  maverick              0.08     0.52     4.04   52×
+  alien-signals         0.19     0.54     7.17   37×
+  preact                0.04     0.41     2.03   53×
+  solid 1.x             0.07     0.76     7.35   102×
+  solid 2.x             0.10     1.07     6.01   60×
+  signal-polyfill       0.35     4.20     20.1   58×
+  maverick v6.0.0       0.26     15.1      402   1550×
+```
+
+<details>
+<summary>All nine scenarios</summary>
+
+```
+All scenarios (ms per call, lower is better; ×: relative to maverick)
+
+Create 10k signals + computeds
+  maverick         ████▉                         0.56 ms  1.00×
+  alien-signals    ████████▌                     0.97 ms  1.73×
+  preact           ████▏                         0.47 ms  0.83×
+  solid 1.x        ████████                      0.92 ms  1.64×
+  solid 2.x        ██████████▍                   1.20 ms  2.13×
+  signal-polyfill  ██████████████████████████    2.99 ms  5.32×
+
+Create 10k effects, then dispose
+  maverick         █▉                            0.51 ms  1.00×
+  alien-signals    ███▌                          0.96 ms  1.87×
+  preact           ██▉                           0.79 ms  1.53×
+  solid 1.x        ██▉                           0.79 ms  1.54×
+  solid 2.x        ███████████▉                  3.24 ms  6.30×
+  signal-polyfill  ██████████████████████████»    220 ms  428.91×
+
+Static deps: 5 sources, set + read ×200k
+  maverick         ████▎                         7.42 ms  1.00×
+  alien-signals    ████████▉                     15.7 ms  2.12×
+  preact           ████████▋                     15.1 ms  2.03×
+  solid 1.x        ████████████▊                 22.5 ms  3.03×
+  solid 2.x        ██████████████████▉           33.2 ms  4.47×
+  signal-polyfill  ██████████████████████████    45.8 ms  6.16×
+
+Dynamic deps: toggle 2 sets of 10 ×100k
+  maverick         ████████▍                     14.0 ms  1.00×
+  alien-signals    ████████████████▉             28.2 ms  2.01×
+  preact           ██████████████▎               23.8 ms  1.70×
+  solid 1.x        ████████████                  20.1 ms  1.43×
+  solid 2.x        ███████████████████▏          31.8 ms  2.27×
+  signal-polyfill  ██████████████████████████    43.4 ms  3.09×
+
+Deep chain: 1000 computeds ×200
+  maverick         ██████████████▎               12.4 ms  1.00×
+  alien-signals    ███████▉                      6.86 ms  0.56×
+  preact           ██████▊                       5.89 ms  0.48×
+  solid 1.x        ████████████████▎             14.0 ms  1.14×
+  solid 2.x        ██████████████████████████    22.5 ms  1.82×
+  signal-polyfill  ███████████████████▎          16.7 ms  1.35×
+
+Fan-out: 1 → 1000 computeds → effect ×400
+  maverick         ███████▌                      18.2 ms  1.00×
+  alien-signals    █████▉                        14.1 ms  0.78×
+  preact           ███████▊                      18.8 ms  1.03×
+  solid 1.x        ███████████▏                  26.9 ms  1.48×
+  solid 2.x        ████████████████▋             40.2 ms  2.21×
+  signal-polyfill  ██████████████████████████    63.0 ms  3.47×
+
+Diamond ×1000 with effects ×100
+  maverick         ██████▎                       17.5 ms  1.00×
+  alien-signals    ████▍                         12.1 ms  0.69×
+  preact           █████                         14.1 ms  0.80×
+  solid 1.x        ██████████▎                   28.6 ms  1.63×
+  solid 2.x        ██████████████▉               41.3 ms  2.36×
+  signal-polyfill  ██████████████████████████    72.5 ms  4.14×
+
+Batch: 100 signals → 1 effect ×4k
+  maverick         ██▍                           4.06 ms  1.00×
+  alien-signals    █████▎                        8.92 ms  2.20×
+  preact           ██████▎                       10.5 ms  2.58×
+  solid 1.x        █████████▉                    16.6 ms  4.10×
+  solid 2.x        █████████▎                    15.6 ms  3.85×
+  signal-polyfill  ██████████████████████████    43.9 ms  10.82×
 
 Dispose 10k effects on one signal
-  maverick         ██▊                           0.61 ms  1.00×
-  alien-signals    ██▎                           0.50 ms  0.82×
-  preact           ██▊                           0.61 ms  1.00×
-  solid 1.x        ███                           0.67 ms  1.10×
-  solid 2.x        ███████████▉                  2.65 ms  4.33×
-  signal-polyfill  ██████████████████████████»    341 ms  555.75×
+  maverick         ███▍                          0.47 ms  1.00×
+  alien-signals    ███▋                          0.51 ms  1.07×
+  preact           ███▌                          0.48 ms  1.02×
+  solid 1.x        ████▏                         0.57 ms  1.21×
+  solid 2.x        ███████████▉                  1.63 ms  3.46×
+  signal-polyfill  ██████████████████████████»    335 ms  707.84×
+```
 
+</details>
 
+```
 Bundle size (minified + gzipped, tree-shaken from the listed entry)
 
 min + gzip
@@ -719,6 +774,36 @@ min + gzip
   preact: everything                                     ██████▌                       1.84 kB
   solid 2.x: basics (signal, memo, effect, root, flush)  ██████████████████████████    7.36 kB
   signal-polyfill: Signal namespace                      ██████████▌                   2.98 kB
+
+
+Memory (bytes retained per node, lower is better)
+
+signal (holding a number)
+  maverick         ███▌                             48 B
+  alien-signals    ████████▎                       112 B
+  preact           ██████▌                          88 B
+  solid 1.x        ████████████████████▏           272 B
+  solid 2.x        ██████████████████████████      352 B
+  signal-polyfill  █████████▋                      130 B
+  maverick v6.0.0  █████████████████▊              240 B
+
+computed (one dependency, read once)
+  maverick         ████████▎                       274 B
+  alien-signals    █████████▏                      305 B
+  preact           █████████▏                      305 B
+  solid 1.x        █████████████▌                  451 B
+  solid 2.x        ██████████████▉                 498 B
+  signal-polyfill  ██████████████████████████      867 B
+  maverick v6.0.0  ██████████▋                     354 B
+
+effect (one dependency)
+  maverick         ████▌                           244 B
+  alien-signals    █████▍                          296 B
+  preact           █████▊                          314 B
+  solid 1.x        █████▋                          309 B
+  solid 2.x        █████████████▏                  715 B
+  signal-polyfill  ██████████████████████████     1419 B
+  maverick v6.0.0  ██████▍                         348 B
 ```
 
 <!-- bench:end -->
@@ -727,6 +812,33 @@ Read the shapes, not the milliseconds: absolute numbers move by 5-10% between ma
 Solid 2.x and the polyfill carry features the others do not (transitions, stores, async status;
 watchers and introspection), so their rows are a like-for-like cost of the same nine operations,
 not a verdict on those features.
+
+#### In browsers
+
+The same scenarios run headless in Chromium, WebKit and Firefox through Playwright
+(`pnpm bench:browser`). This table is how many times slower alien-signals and Preact are than this
+library in each engine (above 1 means this library is faster); it is refreshed by the weekly
+"Browser benchmarks" workflow.
+
+<!-- bench-browser:start -->
+
+Measured 2026-09-09 in Chrome/153.0.8010.12, WebKit/26.6, Firefox/155.0 (headless, Playwright 1.63.0), maverick 6.0.0. Times relative to maverick; above 1 means maverick is faster.
+
+```
+scenario                              chromium          webkit            firefox
+                                         alien  preact     alien  preact     alien  preact
+Create 10k signals + computeds           1.07×   0.69×     1.23×   0.78×     0.53×   0.47×
+Create 10k effects, then dispose         1.53×   1.31×     1.44×   1.84×     0.98×   1.56×
+Static deps: 5 sources, set + read       2.33×   2.26×     1.50×   2.17×     2.34×   2.69×
+Dynamic deps: toggle 2 sets of 10        2.24×   1.83×     1.77×   1.19×     1.74×   1.68×
+Deep chain: 1000 computeds               0.45×   0.45×     0.53×   0.66×     0.61×   0.72×
+Fan-out: 1 → 1000 computeds → effect     0.88×   1.01×     1.39×   1.50×     1.24×   1.72×
+Diamond ×1000 with effects               0.86×   0.88×     1.04×   1.13×     1.13×   1.17×
+Batch: 100 signals → 1 effect            2.62×   2.95×     2.86×   2.86×     1.27×   2.09×
+Dispose 10k effects on one signal        1.04×   1.02×     1.04×   1.43×     0.63×   0.94×
+```
+
+<!-- bench-browser:end -->
 
 ### Running
 
@@ -756,39 +868,6 @@ $: pnpm bench:browser         # the same comparison in Chromium, WebKit and Fire
 
 See [`bench/README.md`](./bench/README.md) for reading the tables, the A/A calibration mode, and
 notes on noise.
-
-### Layers
-
-This benchmark was taken from [`cellx`](https://github.com/Riim/cellx#benchmark). It
-tests how long it takes for an `n` deeply layered computation to update. The benchmark can be
-found [here](./bench/layers.js).
-
-Each column represents how deep computations were layered. The average time taken to update the
-computation out of a 100 runs is used for each library.
-
-<img src="./bench/layers.png" alt="Layers benchmark table" width="350px" />
-
-#### Notes
-
-- Nearly all computations in a real world app are going to be less than 10 layers deep, so only the
-  first column really matters.
-- This benchmark favours eagerly scheduling computations and aggresive caching in a single long
-  computation subtree. This is not a great benchmark for signals libraries as it doesn't measure
-  what really matters such as dynamic graph updates, source/observer changes, and scope disposals.
-
-### Reactively
-
-This benchmark was taken from [`reactively`](https://github.com/modderme123/reactively). It sets
-up various computation graphs with a set number of sources (e.g., `1000x5` is 1000 computations with
-a tree depth of 5). The benchmark measures how long it takes for changes to be applied after static
-or dynamic updates are made to the graph (i.e., pick a node and update its value).
-
-<img src="./bench/reactively.png" alt="Reactively benchmark charts" />
-
-#### Notes
-
-- This assumes Solid JS is in batch-only mode which is not realistic as a real world app won't
-  have batch applied everywhere.
 
 ## Inspiration
 

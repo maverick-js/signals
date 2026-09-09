@@ -179,20 +179,87 @@ export async function runPerformance(
         const fn = make(L);
         for (let i = 0; i < warmup; i++) fn();
         const times = [];
-        for (let i = 0; i < samples; i++) {
-          globalThis.gc?.();
-          let calls = 0,
-            elapsed;
-          const start = performance.now();
-          do {
-            fn();
-            calls++;
-            elapsed = performance.now() - start;
-          } while (elapsed < minSampleMs);
-          times.push(elapsed / calls);
-        }
+        for (let i = 0; i < samples; i++) times.push(sample(fn, minSampleMs));
         results[name][lib] = Math.min(results[name][lib] ?? Infinity, median(times));
         // Let the engine settle between libraries (GC, timers) without blocking the page.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+  }
+  return results;
+}
+
+/** Times one sample: repeats `fn` until `minSampleMs` have elapsed and returns the ms per call. */
+export function sample(fn, minSampleMs = 20) {
+  globalThis.gc?.();
+  let calls = 0,
+    elapsed;
+  const start = performance.now();
+  do {
+    fn();
+    calls++;
+    elapsed = performance.now() - start;
+  } while (elapsed < minSampleMs);
+  return elapsed / calls;
+}
+
+/**
+ * Disposal cost as the graph grows. Each factory takes the library adapter and `n` and returns the
+ * timed function; the table these feed shows whether cost grows linearly or quadratically.
+ */
+export function createScalingScenarios() {
+  return {
+    'Dispose N effects on one signal': (L, n) => () => {
+      const s = L.signal(0);
+      const dispose = L.root(() => {
+        for (let i = 0; i < n; i++) {
+          L.effect(() => {
+            sink.value = s.get();
+          });
+        }
+      });
+      dispose();
+    },
+    'Dispose a root with N computeds (each read once)': (L, n) => () => {
+      const s = L.signal(0);
+      const dispose = L.root(() => {
+        for (let i = 0; i < n; i++) {
+          const c = L.computed(() => s.get() + i);
+          sink.value = c();
+        }
+      });
+      dispose();
+    },
+  };
+}
+
+/**
+ * Runs the scaling scenarios at each size. A library that already takes longer than `maxMs` at one
+ * size is not run at the larger ones (its cell is `null`), so a quadratic implementation can't stall
+ * the whole run.
+ *
+ * @returns {Promise<Record<string, Record<string, Record<number, number | null>>>>} scenario -> library -> size -> ms
+ */
+export async function runScaling(libs, scenarios, sizes, { maxMs = 2000, samples = 3, log } = {}) {
+  const results = {};
+  for (const [name, make] of Object.entries(scenarios)) {
+    results[name] = {};
+    log?.(name);
+    for (const [lib, L] of Object.entries(libs)) {
+      results[name][lib] = {};
+      let skip = false;
+      for (const n of sizes) {
+        if (skip) {
+          results[name][lib][n] = null;
+          continue;
+        }
+        const fn = make(L, n);
+        fn();
+        const times = [];
+        for (let i = 0; i < samples; i++) times.push(sample(fn, 20));
+        const ms = median(times);
+        results[name][lib][n] = ms;
+        if (ms > maxMs) skip = true;
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

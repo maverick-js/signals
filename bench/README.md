@@ -80,73 +80,17 @@ state is restored untimed after every iteration where the operation is not its o
 
 ### Cross-library comparison
 
-`pnpm bench:compare` runs `bench/compare.js`: nine graph shapes against alien-signals,
-@preact/signals-core, Solid 1.x (vendored core), @solidjs/signals 2.x and the TC39 signal-polyfill,
-plus tree-shaken bundle sizes, rendered as text bar charts. With `--update-readme` (what the script
-does) it rewrites the section between `<!-- bench:start -->` and `<!-- bench:end -->` in the root
-README, so the published numbers are regenerated per release with `pnpm build && pnpm bench:compare`.
-`pnpm bench:compare:quick` prints a fast smoke run without touching the README.
-
-```sh
-pnpm bench                       # all suites
-pnpm bench:quick                 # BENCH_QUICK=1: smaller sizes, shorter runs (~1 min)
-pnpm bench:calibrate             # BENCH_CALIBRATE=1: A/A noise test (see "Noise")
-pnpm bench:synthetic             # one suite (also bench:graph, bench:dom)
-pnpm bench synthetic             # same thing: vitest file filter
-pnpm bench -t dispose            # only scenarios whose name matches the regexp
-pnpm bench -t "w1000.*push"      # ...any vitest -t / --testNamePattern
-BENCH_QUICK=1 pnpm bench dom -t Todo
-```
-
-Every `pnpm bench*` script is `vp test bench --run` (plus an environment variable), so all vitest
-CLI flags work: `-t <regexp>` filters scenarios by name, positional arguments filter files,
-`--reporter=verbose` prints every scenario on its own line, `--reporter=json --outputFile=...`
-writes machine-readable results. Pass them directly after the script name - pnpm forwards a
-literal `--` to vitest, which then ignores everything behind it (`pnpm bench -- -t dispose` runs
-_all_ scenarios). If no tables show up (vitest picks a minimal reporter when it thinks it is
-running under an agent or CI), add `--reporter=default`.
-
-| Variable            | Meaning                                                                    |
-| ------------------- | -------------------------------------------------------------------------- |
-| `BENCH_QUICK=1`     | Smaller sizes / fewer repetitions and much shorter runs. Smoke tests only. |
-| `BENCH_CALIBRATE=1` | A/A test: `baseline` = an independent second copy of `dist/prod`.          |
-
-`BENCH_QUICK` and the full run use different sizes/repetition counts; only compare numbers within
-the same mode.
-
-## Reading the output
-
-Every scenario is a `describe()` with one `bench()` per library. Vitest compares the tasks of a
-`describe` against each other: it prints one table per scenario and, at the end, a summary of how
-many times faster the fastest task was than the others:
-
-```
- ✓ |bench| bench/dom.bench.js (4 tests) 2691ms
-   ✓ TodoMVC (300 todos) 648ms
-     name          hz     min     max    mean     p75     p99    p995    p999     rme  samples
-     current   199.47  4.3247  8.5824  5.1243  5.2078  8.4697  8.5260  8.5711  ±4.98%       49   fastest
-     baseline  161.39  5.0145  7.9334  6.3330  7.1416  7.8602  7.8968  7.9261  ±4.76%       40
-```
-
-- `hz` - iterations per second. **Higher is better.** One iteration is one call of the scenario's
-  function, i.e. everything after `x<n>` in the name (`x2000000` = two million reads per iteration).
-- `min` / `max` / `mean` - iteration time in milliseconds. **Lower is better.** `mean` is the number
-  that ranks the rows.
-- `p75` / `p99` / `p995` / `p999` - percentiles of the iteration time. A `p99` far above `mean`
-  means GC pauses or scheduling hiccups landed inside a few iterations; compare `p75` if so.
-- `rme` - relative margin of error of the mean (95% confidence). Two rows whose `rme` ranges
-  overlap are not distinguishable in that run.
-- `samples` - number of timed iterations. Each library runs for at least `time` ms (1000 in full
-  mode, 250 in quick mode) and at least `iterations` iterations, after a short warm-up.
-- `fastest` marks the row with the lowest `mean`. The current-vs-baseline ratio is
-  `current.hz / baseline.hz` (or `baseline.mean / current.mean`): 1.35 above means `current` is
-  1.35x faster; below 1 means it is that many times slower. `slowest` is only printed with three or
-  more rows.
-
-Setup and teardown (graph construction, disposal of previous state, restoring a map to its
-starting length) run in tinybench hooks (`beforeAll` / `beforeEach` / `afterEach` / `afterAll`)
-and are **never timed** - unless the scenario is explicitly about creation or disposal, in which
-case the untimed hook builds the state and the timed function creates/disposes it.
+`pnpm bench:compare` runs `bench/compare.js`: this library against alien-signals,
+@preact/signals-core, Solid 1.x (vendored core), @solidjs/signals 2.x and the TC39 signal-polyfill.
+It measures nine graph shapes (`bench/lib/scenarios.js`), disposal cost at 1k/10k/50k nodes with the
+previous release from `bench/.baseline` as an extra row (build it first with
+`pnpm bench:baseline v6.0.0`), tree-shaken bundle size, and bytes retained per signal/computed/effect
+(`bench/lib/memory-probe.js`, one fresh `--expose-gc` process per library and kind so nothing else is
+on the heap). Everything renders as text bar charts. With `--update-readme` (what the script does) it
+rewrites the section between `<!-- bench:start -->` and `<!-- bench:end -->` in the root README:
+three headline panels and the scaling table up front, the nine panels in a collapsed block, then
+size and memory. Regenerate per release with `pnpm build && pnpm bench:baseline <previous tag> &&
+pnpm bench:compare`. `pnpm bench:compare:quick` prints a fast smoke run without touching the README.
 
 ### In real browsers
 
@@ -157,7 +101,10 @@ per engine. Browsers coarsen `performance.now()` to 100µs (Chromium) or 1ms (We
 every sample repeats the operation until at least 20ms have elapsed and reports the per-call time;
 the Node harness uses the same rule. `--quick` and `--browsers chromium,webkit` narrow a run. The
 "Browser benchmarks" workflow runs it weekly and on demand and posts the charts to the job summary;
-it never gates a merge.
+it never gates a merge. With `--update-readme` the run also rewrites the per-engine table between
+`<!-- bench-browser:start -->` and `<!-- bench-browser:end -->` in the root README (how many times
+slower alien-signals and Preact are than this library in each engine); the weekly workflow commits
+that table when it changes.
 
 ### Memory
 

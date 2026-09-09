@@ -5,6 +5,7 @@ const BAR = 26;
 
 /** A bar of `value / max` scaled to `BAR` cells, with eighth-block fractional ends. */
 function bar(value, max) {
+  if (!(max > 0)) return '';
   const cells = (Math.min(value, max) / max) * BAR;
   const full = Math.floor(cells),
     frac = Math.round((cells - full) * 8);
@@ -65,4 +66,53 @@ export function renderSizes(sizes) {
       fmtKb,
     ),
   ].join('\n');
+}
+
+export const fmtBytes = (b) => `${Math.round(b)} B`;
+
+const fmtSize = (n) => (n >= 1000 ? `${n / 1000}k` : String(n));
+
+/**
+ * Disposal scaling as a table: ms at each size plus the growth factor between the smallest and the
+ * largest size a library completed (linear growth ~= the size ratio; quadratic is that squared).
+ *
+ * @param {Record<string, Record<string, Record<number, number | null>>>} results
+ * @param {number[]} sizes
+ */
+export function renderScaling(results, sizes) {
+  const parts = [];
+  const ratio = sizes.at(-1) / sizes[0];
+  for (const [scenario, byLib] of Object.entries(results)) {
+    const nameWidth = Math.max(...Object.keys(byLib).map((k) => k.length));
+    const header = `  ${'library'.padEnd(nameWidth)}  ${sizes.map((n) => `N=${fmtSize(n)}`.padStart(9)).join('')}   growth`;
+    parts.push(`${scenario} (ms; growth = largest ÷ smallest, linear ≈ ${ratio}×)`, header);
+    for (const [lib, bySize] of Object.entries(byLib)) {
+      const cells = sizes.map((n) => {
+        const v = bySize[n];
+        return (
+          v == null ? '—' : v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2)
+        ).padStart(9);
+      });
+      const done = sizes.filter((n) => bySize[n] != null);
+      const growth =
+        done.length > 1
+          ? `${(bySize[done.at(-1)] / bySize[done[0]]).toFixed(0)}×${done.length < sizes.length ? ' (to ' + fmtSize(done.at(-1)) + ')' : ''}`
+          : '—';
+      parts.push(`  ${lib.padEnd(nameWidth)}  ${cells.join('')}   ${growth}`);
+    }
+    parts.push('');
+  }
+  return parts.join('\n').trimEnd();
+}
+
+/**
+ * @param {Record<string, Record<string, number>>} memory kind -> library -> bytes per node
+ */
+export function renderMemory(memory) {
+  const parts = ['Memory (bytes retained per node, lower is better)'];
+  for (const [kind, byLib] of Object.entries(memory)) {
+    const rows = Object.entries(byLib).map(([name, value]) => ({ name, value }));
+    parts.push('', chart(kind, rows, fmtBytes));
+  }
+  return parts.join('\n');
 }

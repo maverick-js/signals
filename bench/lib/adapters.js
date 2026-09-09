@@ -4,11 +4,16 @@
  *   signal(v) -> { get(), set(v) }     computed(fn) -> get       effect(fn) -> stop
  *   root(fn) -> dispose (disposes every effect created inside)   batch(fn) (run, then flush)
  *
+ * `raw` holds the library's own constructors without any wrapper, for measurements (memory per
+ * node) where the adapter's closures would otherwise be counted.
+ *
  * Environment-agnostic: the caller imports the library modules (Node or a bundled browser page)
  * and passes them in.
  */
 
 export const SELF = 'maverick';
+
+const NOOP = () => {};
 
 /**
  * @param {object} modules
@@ -24,6 +29,11 @@ export function createAdapters({ maverick, alien, preact, solid1, solid2, Signal
   const libs = {};
 
   libs[SELF] = {
+    raw: {
+      signal: (v) => maverick.signal(v),
+      computed: (fn) => maverick.computed(fn),
+      read: (c) => c.get(),
+    },
     signal: (v) => maverick.signal(v),
     computed: (fn) => {
       const c = maverick.computed(fn);
@@ -38,6 +48,7 @@ export function createAdapters({ maverick, alien, preact, solid1, solid2, Signal
   };
 
   libs['alien-signals'] = {
+    raw: { signal: (v) => alien.signal(v), computed: (fn) => alien.computed(fn), read: (c) => c() },
     signal: (v) => {
       const s = alien.signal(v);
       return { get: () => s(), set: (v) => s(v) };
@@ -53,6 +64,11 @@ export function createAdapters({ maverick, alien, preact, solid1, solid2, Signal
   };
 
   libs['preact'] = collectingRoot({
+    raw: {
+      signal: (v) => preact.signal(v),
+      computed: (fn) => preact.computed(fn),
+      read: (c) => c.value,
+    },
     signal: (v) => {
       const s = preact.signal(v);
       return {
@@ -70,26 +86,64 @@ export function createAdapters({ maverick, alien, preact, solid1, solid2, Signal
     batch: (fn) => preact.batch(fn),
   });
 
+  // Solid owns computations through the current owner: inside `root()` an effect is created under
+  // that owner (and disposed with it); a standalone effect gets its own root.
+  let solid1Depth = 0;
   libs['solid 1.x'] = {
+    raw: {
+      signal: (v) => solid1.createSignal(v),
+      computed: (fn) => solid1.createMemo(fn),
+      read: (c) => c(),
+    },
     signal: (v) => {
       const [get, set] = solid1.createSignal(v);
       return { get, set: (v) => set(v) };
     },
     computed: (fn) => solid1.createMemo(fn),
-    effect: (fn) => solid1.createRoot((dispose) => (solid1.createComputed(fn), dispose)),
-    root: (fn) => solid1.createRoot((dispose) => (fn(), dispose)),
+    effect: (fn) =>
+      solid1Depth > 0
+        ? (solid1.createComputed(fn), NOOP)
+        : solid1.createRoot((dispose) => (solid1.createComputed(fn), dispose)),
+    root: (fn) => {
+      solid1Depth++;
+      try {
+        return solid1.createRoot((dispose) => (fn(), dispose));
+      } finally {
+        solid1Depth--;
+      }
+    },
     batch: (fn) => solid1.batch(fn),
   };
 
+  let solid2Depth = 0;
   libs['solid 2.x'] = {
+    raw: {
+      signal: (v) => solid2.createSignal(v),
+      computed: (fn) => solid2.createMemo(fn),
+      read: (c) => c(),
+    },
     signal: (v) => {
       const [get, set] = solid2.createSignal(v);
       return { get, set: (v) => set(v) };
     },
     computed: (fn) => solid2.createMemo(fn),
-    effect: (fn) => solid2.createRoot((dispose) => (solid2.createTrackedEffect(fn), dispose)),
+    effect: (fn) => {
+      if (solid2Depth > 0) {
+        solid2.createTrackedEffect(fn);
+        return NOOP;
+      }
+      const dispose = solid2.createRoot((dispose) => (solid2.createTrackedEffect(fn), dispose));
+      solid2.flush(); // effects only run on flush.
+      return dispose;
+    },
     root: (fn) => {
-      const dispose = solid2.createRoot((dispose) => (fn(), dispose));
+      solid2Depth++;
+      let dispose;
+      try {
+        dispose = solid2.createRoot((dispose) => (fn(), dispose));
+      } finally {
+        solid2Depth--;
+      }
       solid2.flush(); // effects created inside only run on flush.
       return dispose;
     },
@@ -106,6 +160,11 @@ export function createAdapters({ maverick, alien, preact, solid1, solid2, Signal
     watcher.watch();
   };
   libs['signal-polyfill'] = collectingRoot({
+    raw: {
+      signal: (v) => new Signal.State(v),
+      computed: (fn) => new Signal.Computed(fn),
+      read: (c) => c.get(),
+    },
     signal: (v) => {
       const s = new Signal.State(v);
       return { get: () => s.get(), set: (v) => s.set(v) };

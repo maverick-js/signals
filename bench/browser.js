@@ -7,6 +7,7 @@
  *   pnpm build
  *   node bench/browser.js                    # chromium, webkit, firefox
  *   node bench/browser.js --quick --browsers chromium
+ *   node bench/browser.js --update-readme      # also rewrite the README's per-engine table
  */
 
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,7 +67,11 @@ window.__signalsBenchReady = true;
 
 const page = await bundlePage();
 const versions = JSON.parse(readFileSync(here('package.json'), 'utf8')).version;
+const playwrightVersion = JSON.parse(
+  readFileSync(here('node_modules/playwright/package.json'), 'utf8'),
+).version;
 const results = {};
+const engines = {};
 
 for (const name of browsers) {
   process.stderr.write(`${name}: launching\n`);
@@ -77,9 +82,9 @@ for (const name of browsers) {
     await tab.goto(`file://${page}`);
     await tab.waitForFunction(() => window.__signalsBenchReady === true);
     const ua = await tab.evaluate(() => navigator.userAgent);
-    process.stderr.write(
-      `${name}: running (${ua.match(/(Chrome|Firefox|Version)\/[\d.]+/)?.[0] ?? ua})\n`,
-    );
+    engines[name] =
+      ua.match(/(Chrome|Firefox|Version)\/[\d.]+/)?.[0]?.replace('Version', 'WebKit') ?? name;
+    process.stderr.write(`${name}: running (${engines[name]})\n`);
     results[name] = await tab.evaluate((q) => window.__signalsBench(q), quick);
   } finally {
     await browser.close();
@@ -87,9 +92,57 @@ for (const name of browsers) {
 }
 
 console.log(
-  `Measured ${new Date().toISOString().slice(0, 10)}, maverick ${versions}, ${quick ? 'quick mode' : 'full mode'}, headless via Playwright ${playwright.default?.version ?? ''}`.trim(),
+  `Measured ${new Date().toISOString().slice(0, 10)}, maverick ${versions}, ${quick ? 'quick mode' : 'full mode'}, headless via Playwright ${playwrightVersion}`.trim(),
 );
 for (const [name, perf] of Object.entries(results)) {
   console.log(`\n\n== ${name} ${'='.repeat(Math.max(0, 70 - name.length))}\n`);
   console.log(renderPerformance(perf, SELF));
+}
+
+/**
+ * Per-engine table: how many times slower alien-signals and Preact are than this library, per
+ * scenario (above 1 means this library is faster).
+ */
+function renderEngineTable(results) {
+  const compare = ['alien-signals', 'preact'];
+  const names = Object.keys(results);
+  const scenarios = Object.keys(results[names[0]] ?? {});
+  // Drop the trailing repetition count (" ×200", " ×4k") and cap the width.
+  const short = (label) => label.replace(/\s*×\d+k?$/, '').replace(/^(.{40}).+$/, '$1…');
+  const nameWidth = Math.max(8, ...scenarios.map((sc) => short(sc).length));
+  const col = 8;
+  const lines = [];
+  lines.push(
+    `${'scenario'.padEnd(nameWidth)}  ${names.map((n) => n.padEnd(col * compare.length)).join('  ')}`,
+  );
+  lines.push(
+    `${''.padEnd(nameWidth)}  ${names
+      .map(() => compare.map((c) => c.replace('-signals', '').padStart(col)).join(''))
+      .join('  ')}`,
+  );
+  for (const sc of scenarios) {
+    const cells = names.map((n) =>
+      compare
+        .map((c) => `${(results[n][sc][c] / results[n][sc][SELF]).toFixed(2)}×`.padStart(col))
+        .join(''),
+    );
+    lines.push(`${short(sc).padEnd(nameWidth)}  ${cells.join('  ')}`);
+  }
+  return lines.map((line) => line.trimEnd()).join('\n');
+}
+
+if (argv.includes('--update-readme') && !quick) {
+  const readme = here('README.md');
+  const src = readFileSync(readme, 'utf8');
+  const start = '<!-- bench-browser:start -->',
+    end = '<!-- bench-browser:end -->';
+  const a = src.indexOf(start),
+    b = src.indexOf(end);
+  if (a === -1 || b === -1) throw new Error(`README.md is missing the ${start} / ${end} markers.`);
+  const engineList = Object.values(engines).join(', ');
+  const section = `${start}\n\nMeasured ${new Date().toISOString().slice(0, 10)} in ${engineList} (headless, Playwright ${playwrightVersion}), maverick ${versions}. Times relative to maverick; above 1 means maverick is faster.\n\n\`\`\`\n${renderEngineTable(results)}\n\`\`\`\n\n${end}`;
+  writeFileSync(readme, src.slice(0, a) + section + src.slice(b + end.length));
+  process.stderr.write('README.md browser table updated.\n');
+} else if (argv.includes('--update-readme')) {
+  process.stderr.write('(--quick results are not written to the README)\n');
 }
