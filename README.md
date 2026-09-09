@@ -164,6 +164,15 @@ $a.set(20); // write (1)
 $a.set((prev) => prev + 10); // write (2)
 ```
 
+Observers are only notified when the value changes. Values are compared with `Object.is`; pass
+`equals` to customize the comparison (the same option is accepted by `computed`):
+
+```js
+const $point = signal({ x: 0, y: 0 }, { equals: (a, b) => a.x === b.x && a.y === b.y });
+
+$point.set({ x: 0, y: 0 }); // equal - observers are not notified
+```
+
 > **Warning**
 > Read the [`tick`](#tick) section below to understand batched updates.
 

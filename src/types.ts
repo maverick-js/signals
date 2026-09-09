@@ -15,8 +15,8 @@ export interface Computation<T = any> extends Scope {
 
   /** @internal */
   _compute: (() => T) | null;
-  /** @internal */
-  _changed: (prev: T, next: T) => boolean;
+  /** @internal - `null` means `Object.is`. */
+  _equals: ((prev: T, next: T) => boolean) | null;
   /** Reads the current value and tracks it as a dependency of the running computation. */
   get(): T;
   /** Reads the current value without tracking it. */
@@ -32,8 +32,13 @@ export interface ReadSignal<T> {
 }
 
 export interface SignalOptions<T> {
+  /** Debugging identifier (development builds only). */
   id?: string;
-  dirty?: (prev: T, next: T) => boolean;
+  /**
+   * Decides whether a new value equals the previous one, in which case observers are not notified.
+   * Defaults to `Object.is`.
+   */
+  equals?: (prev: T, next: T) => boolean;
 }
 
 export interface ComputedSignalOptions<T, R = never> extends SignalOptions<T> {

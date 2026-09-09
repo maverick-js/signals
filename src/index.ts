@@ -10,7 +10,6 @@ export {
   tick,
   unscope,
   isFunction,
-  isNotEqual,
   createScope,
   createComputation,
 } from './core.js';

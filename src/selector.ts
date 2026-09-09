@@ -1,4 +1,4 @@
-import { isNotEqual, onDispose, read, setValue } from './core.js';
+import { onDispose, read, setValue } from './core.js';
 import { SIGNAL } from './symbols.js';
 import { effect } from './signals.js';
 import { Computation, ReadSignal } from './types.js';
@@ -56,7 +56,7 @@ function Selector<T>(this: Selector<T>, key: T, initialValue: boolean, nodes: Ma
 
 const SelectorProto = Selector.prototype;
 SelectorProto[SIGNAL] = true;
-SelectorProto._changed = isNotEqual;
+SelectorProto._equals = null;
 SelectorProto.get = read;
 SelectorProto.peek = function (this: Selector) {
   return this._value;

@@ -142,12 +142,12 @@ it('should discover new dependencies', () => {
   expect($c.get()).toBe(10);
 });
 
-it('should accept dirty option', () => {
+it('should accept equals option', () => {
   const $a = signal(0);
 
   const $b = computed(() => $a.get(), {
-    // Skip odd numbers.
-    dirty: (prev, next) => prev + 1 !== next,
+    // Treat the next number as equal (skip odd numbers).
+    equals: (prev, next) => prev + 1 === next,
   });
 
   const effectA = vi.fn();
@@ -332,4 +332,15 @@ it('should use a dev id derived from the kind of computation', () => {
   expect(internals($a).id).toBe('signal');
   expect(internals($b).id).toBe('computed');
   expect(internals($c).id).toBe('c');
+});
+
+it('should not notify observers when a recomputed value is Object.is-equal', () => {
+  const $a = signal(1),
+    $nan = computed(() => ($a.get(), NaN)),
+    spy = vi.fn(() => void $nan.get());
+
+  effect(spy);
+  $a.set(2);
+  tick();
+  expect(spy).toHaveBeenCalledTimes(1);
 });

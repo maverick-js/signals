@@ -400,7 +400,7 @@ export function read(this: Computation): any {
 export function write(this: Computation, newValue: any): any {
   const value = isFunction(newValue) ? newValue(this._value) : newValue;
 
-  if (this._changed(this._value, value)) {
+  if (!(this._equals ? this._equals(this._value, value) : Object.is(this._value, value))) {
     this._value = value;
     const observers = this._observers;
     if (observers) {
@@ -416,7 +416,7 @@ export function write(this: Computation, newValue: any): any {
  * observers if it changed.
  */
 export function setValue<T>(node: Computation<T>, value: T): T {
-  if (node._changed(node._value, value)) {
+  if (!(node._equals ? node._equals(node._value, value) : Object.is(node._value, value))) {
     node._value = value;
     const observers = node._observers;
     if (observers) {
@@ -472,12 +472,13 @@ const SignalNode = function Signal(
   this._observers = null;
   this._mark = 0;
   if (__DEV__) this.id = options?.id ?? 'signal';
-  if (options && options.dirty) this._changed = options.dirty;
+  if (options && options.equals) this._equals = options.equals;
 };
 
 const SignalProto = SignalNode.prototype;
 SignalProto[SIGNAL] = true;
-SignalProto._changed = isNotEqual;
+// `null` means `Object.is`; only a custom `equals` becomes an own property.
+SignalProto._equals = null;
 SignalProto.get = readSignal;
 SignalProto.set = write;
 SignalProto.peek = function peekSignal(this: Computation) {
@@ -524,13 +525,13 @@ const ComputeNode = function Computation(
   this._compute = compute || null;
 
   if (__DEV__) this.id = options?.id ?? (compute ? 'computed' : 'signal');
-  if (options && options.dirty) this._changed = options.dirty;
+  if (options && options.equals) this._equals = options.equals;
 };
 
 const ComputeProto: Computation = ComputeNode.prototype;
 Object.setPrototypeOf(ComputeProto, ScopeProto);
 (ComputeProto as { [SIGNAL]: boolean })[SIGNAL] = true;
-ComputeProto._changed = isNotEqual;
+ComputeProto._equals = null;
 ComputeProto.get = read;
 ComputeProto.peek = function peekComputed(this: Computation) {
   const prevObserver = currentObserver;
@@ -548,10 +549,6 @@ export function createComputation<T>(
   options?: ComputedSignalOptions<T>,
 ): Computation<T> {
   return new ComputeNode(initialValue, compute, options);
-}
-
-export function isNotEqual(a: unknown, b: unknown) {
-  return a !== b;
 }
 
 export function isFunction(value: unknown): value is Function {
