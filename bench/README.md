@@ -37,7 +37,6 @@ again. Without a baseline only `current` is measured.
 | `graph.bench.js`         | Reactively-style random dependency graphs (static + dynamic, push + pull).               |
 | `dom.bench.js`           | "Real work" UI scenarios against a fake DOM (list below).                                |
 | `build-baseline.js`      | Bundles `src/` at a git ref into `bench/.baseline/index.js` (single file, esbuild).      |
-| `layers.js`              | Cross-library layers benchmark (maverick vs S.js vs solid); unrelated to the baseline.   |
 | `lib/scenario.js`        | `scenario()`: one `describe()` per scenario with one `bench()` per library; run options. |
 | `lib/load.js`            | Snapshots/loads `current` + `baseline`; adapts a legacy (callable) baseline to `.get()`. |
 | `lib/rng.js`             | Seeded PRNG + shuffle so every library sees the identical random sequence.               |
