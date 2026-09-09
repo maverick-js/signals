@@ -49,6 +49,15 @@ Bench files are matched by `test.benchmark.include` in `vite.config.ts` (`bench/
 
 ## Running
 
+### Cross-library comparison
+
+`pnpm bench:compare` runs `bench/compare.js`: nine graph shapes against alien-signals,
+@preact/signals-core, Solid 1.x (vendored core), @solidjs/signals 2.x and the TC39 signal-polyfill,
+plus tree-shaken bundle sizes, rendered as text bar charts. With `--update-readme` (what the script
+does) it rewrites the section between `<!-- bench:start -->` and `<!-- bench:end -->` in the root
+README, so the published numbers are regenerated per release with `pnpm build && pnpm bench:compare`.
+`pnpm bench:compare:quick` prints a fast smoke run without touching the README.
+
 ```sh
 pnpm bench                       # all suites
 pnpm bench:quick                 # BENCH_QUICK=1: smaller sizes, shorter runs (~1 min)

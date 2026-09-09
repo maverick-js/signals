@@ -31,7 +31,9 @@
     "format:check": "vp fmt --check",
     "lint": "vp lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "types": "tsc -p tsconfig.build.json"
+    "types": "tsc -p tsconfig.build.json",
+    "bench:compare": "node bench/compare.js --update-readme",
+    "bench:compare:quick": "node bench/compare.js --quick"
   },
   "contributors": [
     "Rahim Alwer <rahim.alwer@gmail.com>"
@@ -47,13 +49,16 @@
     "@arethetypeswrong/core": "^0.18.5",
     "@preact/signals-core": "^1.14.4",
     "@reactively/core": "^0.0.8",
+    "@solidjs/signals": "2.0.0-rc.0",
     "@types/node": "^26.4.1",
+    "alien-signals": "^3.2.1",
     "cellx": "^2.4.0",
     "cli-table": "^0.3.11",
     "kleur": "^4.1.5",
     "oxc-minify": "^0.148.0",
     "publint": "^0.3.24",
     "s-js": "^0.4.9",
+    "signal-polyfill": "^0.2.2",
     "solid-js": "^1.9.15",
     "standard-version": "^9.5.0",
     "typescript": "^7.0.2",

@@ -17,12 +17,18 @@ importers:
       '@reactively/core':
         specifier: ^0.0.8
         version: 0.0.8
+      '@solidjs/signals':
+        specifier: 2.0.0-rc.0
+        version: 2.0.0-rc.0
       '@types/node':
         specifier: ^26.4.1
         version: 26.4.1
+      alien-signals:
+        specifier: ^3.2.1
+        version: 3.2.1
       cellx:
         specifier: ^2.4.0
-        version: 2.4.0(@artalar/act@3.2.1)(@frp-ts/core@1.0.0-beta.6(tslib@2.8.1))(@preact/signals-core@1.14.4)(@reatom/core@3.10.3)(@webreflection/signal@2.1.2)(alien-signals@3.1.2)(effector@23.4.4)(mobx@6.15.0)(mol_wire_lib@1.0.1682)(nanostores@1.1.0)(s-js@0.4.9)(solid-js@1.9.15)(spred@0.34.0)(usignal@0.10.0)(whatsup@2.6.0)
+        version: 2.4.0(@artalar/act@3.2.1)(@frp-ts/core@1.0.0-beta.6(tslib@2.8.1))(@preact/signals-core@1.14.4)(@reatom/core@3.10.3)(@webreflection/signal@2.1.2)(alien-signals@3.2.1)(effector@23.4.4)(mobx@6.15.0)(mol_wire_lib@1.0.1682)(nanostores@1.1.0)(s-js@0.4.9)(solid-js@1.9.15)(spred@0.34.0)(usignal@0.10.0)(whatsup@2.6.0)
       cli-table:
         specifier: ^0.3.11
         version: 0.3.11
@@ -38,6 +44,9 @@ importers:
       s-js:
         specifier: ^0.4.9
         version: 0.4.9
+      signal-polyfill:
+        specifier: ^0.2.2
+        version: 0.2.2
       solid-js:
         specifier: ^1.9.15
         version: 1.9.15
@@ -785,6 +794,9 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
+  '@solidjs/signals@2.0.0-rc.0':
+    resolution: {integrity: sha512-oKZSfvsCcKw1uJjOGbUkJ+OqlhXLHtZ+rShSyu9KH0lUH7UUwfMfsKeh81JPiQxDDg4YLhEwI38hg0JkwzTdvA==}
+
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
@@ -1237,8 +1249,8 @@ packages:
   add-stream@1.0.0:
     resolution: {integrity: sha512-qQLMr+8o0WC4FZGQTcJiKBVC59JylcPSrTtk6usvmIDFUOCKegapy1VHQwRbFMOFyb/inzUVqHs+eMYKDM1YeQ==}
 
-  alien-signals@3.1.2:
-    resolution: {integrity: sha512-d9dYqZTS90WLiU0I5c6DHj/HcKkF8ZyGN3G5x8wSbslulz70KOxaqCT0hQCo9KOyhVqzqGojvNdJXoTumZOtcw==}
+  alien-signals@3.2.1:
+    resolution: {integrity: sha512-I8FjmltrfnDFoZedi5CG8DghVYNhzb/Ijluz7tCSJH0xpd0484Kowhbb1XDYOxfJpU1p5wnM2X54dA+IfGyD1g==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -2086,6 +2098,9 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  signal-polyfill@0.2.2:
+    resolution: {integrity: sha512-p63Y4Er5/eMQ9RHg0M0Y64NlsQKpiu6MDdhBXpyywRuWiPywhJTpKJ1iB5K2hJEbFZ0BnDS7ZkJ+0AfTuL37Rg==}
+
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
     engines: {node: '>=18'}
@@ -2793,6 +2808,8 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
+  '@solidjs/signals@2.0.0-rc.0': {}
+
   '@standard-schema/spec@1.1.0': {}
 
   '@testing-library/dom@10.4.1':
@@ -3105,7 +3122,7 @@ snapshots:
 
   add-stream@1.0.0: {}
 
-  alien-signals@3.1.2: {}
+  alien-signals@3.2.1: {}
 
   ansi-regex@5.0.1: {}
 
@@ -3146,7 +3163,7 @@ snapshots:
 
   camelcase@5.3.1: {}
 
-  cellx@2.4.0(@artalar/act@3.2.1)(@frp-ts/core@1.0.0-beta.6(tslib@2.8.1))(@preact/signals-core@1.14.4)(@reatom/core@3.10.3)(@webreflection/signal@2.1.2)(alien-signals@3.1.2)(effector@23.4.4)(mobx@6.15.0)(mol_wire_lib@1.0.1682)(nanostores@1.1.0)(s-js@0.4.9)(solid-js@1.9.15)(spred@0.34.0)(usignal@0.10.0)(whatsup@2.6.0):
+  cellx@2.4.0(@artalar/act@3.2.1)(@frp-ts/core@1.0.0-beta.6(tslib@2.8.1))(@preact/signals-core@1.14.4)(@reatom/core@3.10.3)(@webreflection/signal@2.1.2)(alien-signals@3.2.1)(effector@23.4.4)(mobx@6.15.0)(mol_wire_lib@1.0.1682)(nanostores@1.1.0)(s-js@0.4.9)(solid-js@1.9.15)(spred@0.34.0)(usignal@0.10.0)(whatsup@2.6.0):
     dependencies:
       '@artalar/act': 3.2.1
       '@frp-ts/core': 1.0.0-beta.6(tslib@2.8.1)
@@ -3154,7 +3171,7 @@ snapshots:
       '@reatom/core': 3.10.3
       '@riim/event': 0.2.1
       '@webreflection/signal': 2.1.2
-      alien-signals: 3.1.2
+      alien-signals: 3.2.1
       effector: 23.4.4
       mobx: 6.15.0
       mol_wire_lib: 1.0.1682
@@ -3969,6 +3986,8 @@ snapshots:
   seroval@1.5.6: {}
 
   siginfo@2.0.0: {}
+
+  signal-polyfill@0.2.2: {}
 
   sirv@3.0.2:
     dependencies:
