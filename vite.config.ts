@@ -1,5 +1,6 @@
 import { minifySync } from 'oxc-minify';
 import { defineConfig } from 'vite-plus';
+import { playwright } from 'vite-plus/test/browser-playwright';
 
 const entry = ['src/index.ts', 'src/core.ts', 'src/signals.ts', 'src/map.ts', 'src/symbols.ts'];
 
@@ -45,11 +46,38 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // Required by `tests/gc.test.ts` so `global.gc` is available inside the worker.
-    execArgv: ['--expose-gc'],
     benchmark: {
       include: ['bench/**/*.bench.js'],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          include: ['tests/**/*.test.ts'],
+          // Required by tests/gc.test.ts and tests/memory so `global.gc` exists in the worker.
+          execArgv: ['--expose-gc'],
+        },
+      },
+      {
+        // The same suite in real browser engines (`pnpm test:browser`). The gc/memory tests need
+        // `--expose-gc` and are Node-only.
+        extends: true,
+        test: {
+          name: 'browser',
+          include: ['tests/**/*.test.ts'],
+          exclude: ['tests/gc.test.ts', 'tests/memory/**'],
+          // Benchmarks read the filesystem and are Node-only.
+          benchmark: { include: [] },
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: 'chromium' }, { browser: 'webkit' }, { browser: 'firefox' }],
+          },
+        },
+      },
+    ],
   },
   pack: [
     // Development build: readable, with dev-only diagnostics and debugging ids.
