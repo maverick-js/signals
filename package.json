@@ -35,7 +35,9 @@
     "bench:compare": "node bench/compare.js --update-readme",
     "bench:compare:quick": "node bench/compare.js --quick",
     "test:memory": "vp test --project node tests/memory tests/gc.test.ts",
-    "test:browser": "vp test --project browser"
+    "test:browser": "vp test --project browser",
+    "bench:browser": "node bench/browser.js",
+    "bench:browser:quick": "node bench/browser.js --quick"
   },
   "contributors": [
     "Rahim Alwer <rahim.alwer@gmail.com>"
