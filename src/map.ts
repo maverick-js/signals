@@ -225,8 +225,10 @@ function updateKeyedMap<Item, MappedItem>(this: KeyedMapData<Item, MappedItem>):
       // 3) detach all disposed nodes from the scope in a single pass
       if (removed) removeDisposedChildren(this._scope);
 
-      // 4) in case the new set is shorter than the old, set the length of the mapped array
+      // 4) in case the new set is shorter than the old, set the length of the mapped and node
+      // arrays so removed nodes are not retained
       this._mappings = this._mappings.slice(0, (this._len = newLen));
+      this._nodes.length = newLen;
 
       // 5) save a copy of the mapped items for the next update
       this._items = newItems.slice(0);
